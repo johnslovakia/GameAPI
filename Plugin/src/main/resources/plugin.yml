@@ -1,0 +1,12 @@
+name: MinigameAPI
+api-version: '1.21'
+version: '${project.version}'
+main: cz.johnslovakia.gameapi.GameAPI
+author: Hunzek_
+description: MinigameAPI developed by john.slovakia (Hunzek_)
+website: linktree.com/john.slovakia
+softdepend: [Parties, PartyAndFriends, FriendSystem-Spigot-API]
+
+
+
+

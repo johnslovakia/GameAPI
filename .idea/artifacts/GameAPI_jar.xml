@@ -1,0 +1,17 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="GameAPI:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/GameAPI_jar</output-path>
+    <root id="archive" name="GameAPI.jar">
+      <element id="module-output" name="Plugin" />
+      <element id="module-output" name="v1_21_R1" />
+      <element id="module-output" name="API" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/comphenix/protocol/ProtocolLib/4.8.0/ProtocolLib-4.8.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/github/cryptomorin/XSeries/9.10.0/XSeries-9.10.0.jar" path-in-jar="/" />
+      <element id="library" level="project" name="Maven Shade: cz.johnslovakia:API:API" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/code/gson/gson/2.10.1/gson-2.10.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/github/ZorTik/AdvancedSQLClient/0.7-pre5/AdvancedSQLClient-0.7-pre5.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/zaxxer/HikariCP/5.1.0/HikariCP-5.1.0.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

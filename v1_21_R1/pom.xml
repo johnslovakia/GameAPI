@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>cz.johnslovakia</groupId>
+        <artifactId>GameAPI</artifactId>
+        <version>1.0</version>
+    </parent>
+
+    <artifactId>v1_21_R1</artifactId>
+    <version>v1_21_R1</version>
+
+    <repositories>
+        <repository>
+            <id>enginehub</id>
+            <url>https://maven.enginehub.org/repo/</url>
+        </repository>
+        <repository>
+            <id>papermc</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+        <repository>
+            <id>is-releases</id>
+            <url>https://repo.infernalsuite.com/repository/maven-releases/</url>
+        </repository>
+        <repository>
+            <id>is-snapshots</id>
+            <url>https://repo.infernalsuite.com/repository/maven-snapshots/</url>
+        </repository>
+        <repository>
+            <id>rapture-releases</id>
+            <url>https://repo.rapture.pw/repository/maven-releases/</url>
+        </repository>
+    </repositories>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.intellectualsites.bom</groupId>
+                <artifactId>bom-newest</artifactId> <!--  Ref: https://github.com/IntellectualSites/bom -->
+                <version>1.48</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>1.21-R0.1-SNAPSHOT</version>
+            <type>jar</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>cz.johnslovakia</groupId>
+            <artifactId>API</artifactId>
+            <version>API</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.infernalsuite.aswm</groupId>
+            <artifactId>api</artifactId>
+            <version>1.20.4-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fastasyncworldedit</groupId>
+            <artifactId>FastAsyncWorldEdit-Core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>

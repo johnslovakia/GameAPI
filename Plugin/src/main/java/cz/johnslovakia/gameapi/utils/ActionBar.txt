@@ -1,0 +1,41 @@
+package cz.johnslovakia.gameapi.utils;
+
+import cz.johnslovakia.gameapi.users.GamePlayer;
+import org.bukkit.scheduler.BukkitRunnable;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ActionBar {
+
+    public static void sendAction(GamePlayer gamePlayer, String message){
+
+    }
+
+
+    private static Map<String, Integer> priorities = new HashMap<>();
+    private static Map<GamePlayer, String> active = new HashMap<>();
+
+    public static void sendPersistentAction(GamePlayer gamePlayer, String message){
+        sendPersistentAction(gamePlayer, message, -1);
+    }
+
+    public static void sendPersistentAction(GamePlayer gamePlayer, String message, int priority){
+        String key = getUniqueKey();
+        priorities.put(key, priority);
+        active.put(gamePlayer, key);
+
+    }
+
+    private static String getUniqueKey(){
+        String key = null;
+        while (!list.contains(key)){
+            key = StringUtils.randomString(6, true, true, false);
+        }
+        return key;
+    }
+
+    private static get
+}

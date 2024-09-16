@@ -1,0 +1,18 @@
+\uE235 - Červený vykřičník
+\uE236 - Zelený info znak
+\u1E80 - Modrý info znak
+\u1E81 - Delay znak
+\u1E82 - Victory
+\u1E83 - Lebka
+\u1E84 - Friend
+\u1E85 - Party
+\u1E86 - více info po přejetí (https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.onlinewebfonts.com%2Ficon%2F566696&psig=AOvVaw3Y5Hrw4SEL2eaIcwKGfrdQ&ust=1725114146813000&source=images&cd=vfe&opi=89978449&ved=0CBQQjRxqFwoTCNCH2pT1nIgDFQAAAAAdAAAAABAJ)
+\u1E87 - countdown
+
+https://www.fileformat.info/info/unicode/char/1e82/index.htm
+
+
+//friends and parties
+https://www.spigotmc.org/resources/1-8-1-21-1-%E2%AD%90-friends-party-system-with-gui-%E2%AD%90-oraxen-itemsadder.108701/
+https://www.spigotmc.org/resources/parties-an-advanced-parties-manager.3709/
+https://www.spigotmc.org/resources/party-and-friends-for-bungeecord-supports-1-7-x-to-1-21-x.9531/
