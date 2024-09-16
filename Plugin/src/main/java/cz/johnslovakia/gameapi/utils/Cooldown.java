@@ -3,8 +3,6 @@ package cz.johnslovakia.gameapi.utils;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
-import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
@@ -51,7 +49,7 @@ public class Cooldown{
 
                         this.cancel();
                     }else {
-                        GameUtil.countdownTimerBar(gamePlayer, name, cooldown, getCountdown(gamePlayer));
+                        Utils.countdownTimerBar(gamePlayer, name, cooldown, getCountdown(gamePlayer));
                     }
                 }
             }

@@ -8,7 +8,7 @@ import cz.johnslovakia.gameapi.game.map.AreaSettings;
 import cz.johnslovakia.gameapi.game.map.AreaManager;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.utils.GameUtil;
+import cz.johnslovakia.gameapi.utils.Utils;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -494,9 +494,9 @@ public class MapSettingsListener implements Listener {
 
 
 
-        if(GameUtil.isPlayerDamager(e) && e.getEntity() instanceof Player){
+        if(Utils.isPlayerDamager(e) && e.getEntity() instanceof Player){
             GamePlayer damaged = PlayerManager.getGamePlayer((Player) e.getEntity());
-            GamePlayer damager = GameUtil.getDamager(e);
+            GamePlayer damager = Utils.getDamager(e);
             Game damagedGame = damaged.getPlayerData().getGame();
             Game damagerGame = damager.getPlayerData().getGame();;
 

@@ -8,7 +8,7 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.game.team.TeamManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.utils.GameUtil;
+import cz.johnslovakia.gameapi.utils.Utils;
 import cz.johnslovakia.gameapi.utils.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -61,7 +61,7 @@ public class GameManager {
 
         MessageManager.get(gamePlayer, "chat.no_arena_found").send();
         if (sendToLobbyIfNoArena){
-            GameUtil.sendToLobby(player);
+            Utils.sendToLobby(player);
         }
     }
 

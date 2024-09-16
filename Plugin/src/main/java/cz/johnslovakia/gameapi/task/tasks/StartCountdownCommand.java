@@ -6,7 +6,7 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.task.Task;
 import cz.johnslovakia.gameapi.task.TaskInterface;
 import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.utils.GameUtil;
+import cz.johnslovakia.gameapi.utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -28,7 +28,7 @@ public class StartCountdownCommand implements TaskInterface {
     public void onStart(Task task) {
         for (GamePlayer gamePlayer : task.getGame().getPlayers()){
             bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.game_starting_in")
-                    .replace("%time%", GameUtil.getDurationString(task.getCounter()))
+                    .replace("%time%", Utils.getDurationString(task.getCounter()))
                     .getTranslated());
             bossBar.setProgress(task.getCounter() / (double) task.getStartCounter());
             bossBar.setVisible(true);
@@ -60,7 +60,7 @@ public class StartCountdownCommand implements TaskInterface {
 
         for (GamePlayer gamePlayer : game.getPlayers()){
             bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.game_starting_in")
-                    .replace("%time%", GameUtil.getDurationString(task.getCounter()))
+                    .replace("%time%", Utils.getDurationString(task.getCounter()))
                     .getTranslated());
             bossBar.setProgress(task.getCounter() / (double) task.getStartCounter());
         }

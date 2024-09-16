@@ -15,7 +15,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionType;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -27,7 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class GameUtil {
+public class Utils {
 
     public ItemStack getPotionItemStack(PotionType type, int level, boolean extend, boolean upgraded, boolean splash, String displayName){
         ItemStack potion = new ItemStack((splash ? Material.SPLASH_POTION : Material.POTION), 1);

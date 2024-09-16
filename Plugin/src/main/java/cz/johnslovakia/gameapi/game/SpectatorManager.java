@@ -5,7 +5,7 @@ import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
-import cz.johnslovakia.gameapi.utils.GameUtil;
+import cz.johnslovakia.gameapi.utils.Utils;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.inventoryBuilder.InventoryManager;
 import cz.johnslovakia.gameapi.utils.inventoryBuilder.Item;
@@ -133,7 +133,7 @@ public class SpectatorManager {
         MessageManager.get(player, "inventory.player_inventory.effects")
                 .addToItemLore(inf);
         for(PotionEffect effect : target.getPlayer().getActivePotionEffects()){
-            inf.addLoreLine(" §7" + effect.getType().getName().toLowerCase() + " " + (effect.getAmplifier() + 1) + " (" + GameUtil.getDurationString(effect.getDuration() / 20) + "§7)");
+            inf.addLoreLine(" §7" + effect.getType().getName().toLowerCase() + " " + (effect.getAmplifier() + 1) + " (" + Utils.getDurationString(effect.getDuration() / 20) + "§7)");
         }
 
         inv.setItem(53, inf.toItemStack());

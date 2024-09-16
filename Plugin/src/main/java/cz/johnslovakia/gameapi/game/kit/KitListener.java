@@ -6,7 +6,7 @@ import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.users.PlayerManager;
-import cz.johnslovakia.gameapi.utils.GameUtil;
+import cz.johnslovakia.gameapi.utils.Utils;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -37,7 +37,7 @@ public class KitListener implements Listener {
         if (GameAPI.getInstance().getKitManager().isGiveAfterDeath()) {
             player.getInventory().setContents(data.getKitInventories().get(kit) != null ? data.getKitInventories().get(kit).getContents() : kit.getContent().getInventory().getContents());
             player.getInventory().setArmorContents(kit.getContent().getArmor().toArray(new ItemStack[0]));
-            GameUtil.colorizeArmor(gamePlayer);
+            Utils.colorizeArmor(gamePlayer);
         }
     }
 }

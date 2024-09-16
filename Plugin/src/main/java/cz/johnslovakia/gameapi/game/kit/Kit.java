@@ -9,10 +9,9 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.GamePlayerType;
 import cz.johnslovakia.gameapi.users.PlayerData;
-import cz.johnslovakia.gameapi.utils.GameUtil;
+import cz.johnslovakia.gameapi.utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -40,7 +39,7 @@ public interface Kit {
 
         player.getInventory().setContents(data.getKitInventories().get(this) != null ? data.getKitInventories().get(this).getContents() : getContent().getInventory().getContents());
         player.getInventory().setArmorContents(getContent().getArmor().toArray(new ItemStack[0]));
-        GameUtil.colorizeArmor(gamePlayer);
+        Utils.colorizeArmor(gamePlayer);
 
         if (kitManager.getDefaultKit() != this) {
             if (getPrice() != 0) {

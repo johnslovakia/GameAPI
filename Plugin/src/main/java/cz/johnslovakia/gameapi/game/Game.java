@@ -23,7 +23,7 @@ import cz.johnslovakia.gameapi.users.PlayerScore;
 import cz.johnslovakia.gameapi.users.friends.FriendsInterface;
 import cz.johnslovakia.gameapi.users.parties.PartyInterface;
 import cz.johnslovakia.gameapi.users.stats.StatsHolograms;
-import cz.johnslovakia.gameapi.utils.GameUtil;
+import cz.johnslovakia.gameapi.utils.Utils;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import cz.johnslovakia.gameapi.utils.inventoryBuilder.InventoryManager;
@@ -177,7 +177,7 @@ public class Game {
             Bukkit.getPluginManager().callEvent(ev);
         }else{
             //TODO: message
-            GameUtil.sendToLobby(player);
+            Utils.sendToLobby(player);
         }
     }
 
@@ -458,7 +458,7 @@ public class Game {
             player.sendMessage("");
 
             MessageManager.get(gamePlayer, "chat.top3players.title").send();
-            Map<GamePlayer, Integer> ranking =  GameUtil.getTopPlayers(this, rankingScore, 3);
+            Map<GamePlayer, Integer> ranking =  Utils.getTopPlayers(this, rankingScore, 3);
             for (GamePlayer pos : ranking.keySet()) {
                 int position = ranking.get(pos);
                 MessageManager.get(gamePlayer, "chat.top3players.position")
@@ -473,7 +473,7 @@ public class Game {
             player.sendMessage("");
 
 
-            Map<GamePlayer, Integer> fullRanking =  GameUtil.getTopPlayers(this, rankingScore, getSettings().getMaxPlayers());
+            Map<GamePlayer, Integer> fullRanking =  Utils.getTopPlayers(this, rankingScore, getSettings().getMaxPlayers());
 
             int position = fullRanking.get(gamePlayer);
             MessageManager.get(gamePlayer, "chat.top3players.your_position")

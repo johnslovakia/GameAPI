@@ -2,7 +2,6 @@ package cz.johnslovakia.gameapi.utils;
 
 import cz.johnslovakia.gameapi.WorldManagement.WorldManager;
 import cz.johnslovakia.gameapi.game.map.MapLocation;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -94,7 +93,7 @@ public class ConfigAPI {
             return null;
         }
 
-        return GameUtil.getLocationString(fileConfig.getString(path));
+        return Utils.getLocationString(fileConfig.getString(path));
     }
 
     public MapLocation getMapLocation(String id, String path){
@@ -105,7 +104,7 @@ public class ConfigAPI {
         if (fileConfig.get(path) == null) {
             return null;
         }
-        return GameUtil.getMapLocationFromString(id, fileConfig.getString(path), yaw_and_pitch);
+        return Utils.getMapLocationFromString(id, fileConfig.getString(path), yaw_and_pitch);
     }
 
     public MapLocation getLobbyPointGameLocation(String path, boolean load){
@@ -114,7 +113,7 @@ public class ConfigAPI {
             return null;
         }
 
-        MapLocation mapLocation = GameUtil.getMapLocationFromString("lobbyPoint", fileConfig.getString(path), true);
+        MapLocation mapLocation = Utils.getMapLocationFromString("lobbyPoint", fileConfig.getString(path), true);
 
         if (load){
             WorldManager.loadLobbyWorld(mapLocation.getWorldName());
