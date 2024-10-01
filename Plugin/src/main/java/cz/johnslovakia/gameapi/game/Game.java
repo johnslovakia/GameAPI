@@ -44,6 +44,7 @@ import java.util.*;
 public class Game {
 
     private String name, ID;
+    @Getter @Setter
     private MapManager mapManager;
     private GameState state = GameState.LOADING;
     @Getter @Setter
@@ -59,10 +60,10 @@ public class Game {
     private List<GamePlayer> participants = new ArrayList<>();
     private List<Block> placedBlocks = new ArrayList<>();
 
-    public Game(String name, MapManager mapManager, InventoryManager lobbyInventory) {
+    public Game(String name, InventoryManager lobbyInventory, Location lobbyPoint) {
         this.name = name;
-        this.mapManager = mapManager;
         this.lobbyInventory = lobbyInventory;
+        this.lobbyPoint = lobbyPoint;
 
         this.spectatorManager = new SpectatorManager();
         getSpectatorManager().loadItemManager();
@@ -131,6 +132,7 @@ public class Game {
             player.setDisplayName("§r" + player.getName());
             player.setPlayerListName("§r" + player.getName());
             player.setGameMode(GameMode.ADVENTURE);
+            player.teleport(lobbyPoint);
 
 
             if (getPlayers().size() == settings.getMinPlayers()){
@@ -656,8 +658,12 @@ public class Game {
             case STARTING:
                 Task task = new Task(this, "StartCountdown", getSettings().getStartingTime(), new StartCountdown(), GameAPI.getInstance());
                 task.setGame(this);
-
                 break;
+            /*case SETUP:
+                for (GamePlayer gamePlayer : getParticipants()) {
+                    Utils.sendToLobby(gamePlayer.getOnlinePlayer());
+                }
+                break;*/
         }
 
         return this;

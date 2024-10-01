@@ -29,7 +29,7 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
+import java.io.*;
 import java.util.*;
 
 public class GameAPI extends JavaPlugin {
@@ -156,7 +156,7 @@ public class GameAPI extends JavaPlugin {
 
         boolean somethingwrong = false;
         try{
-            minigame.setupMaps();
+            minigame.setupGames();
             Logger.log("Maps successfully loaded!", Logger.LogType.INFO);
         }catch (Exception e){
             Logger.log("Something went wrong when loading the maps! The following message is for Developers: " + e.getCause().getMessage(), Logger.LogType.ERROR);
@@ -281,9 +281,53 @@ public class GameAPI extends JavaPlugin {
             }
         }
 
+
+        File pluginLanguagesFolder = new File(getDataFolder(), "languages");
+
+        if (!pluginLanguagesFolder.exists()) {
+            pluginLanguagesFolder.mkdirs();
+        }
+
+        File languagesDir = new File(minigame.getPlugin().getClass().getResource("/").getPath(), "languages");
+        if (languagesDir.exists() && languagesDir.isDirectory()) {
+            if (languagesDir.listFiles() != null) {
+                for (File file : languagesDir.listFiles()) {
+
+                    String name = file.getName();
+                    File c = new File(pluginLanguagesFolder, name);
+                    if (c.exists()){
+                        continue;
+                    }
+
+                    InputStream gapiFile = getResource(name);
+                    if (gapiFile == null){
+                        File cFile = new File(minigame.getPlugin().getDataFolder(), name);
+                        if (!cFile.exists()) {
+                            minigame.getPlugin().saveResource("languages/" + name, false);
+                        }
+                        continue;
+                    }
+
+
+                    minigame.getPlugin().saveResource("languages/" + name, false);
+                    File createdFile = new File(pluginLanguagesFolder, name);
+                    try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            FileWriter writer = new FileWriter(createdFile, true);
+                            writer.append(line).append("\n");
+                            writer.close();
+                        }
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }
+
+
         if (somethingwrong) {
             Logger.log("I can't register the minigame due to previous problems!", Logger.LogType.ERROR);
-            return;
         }else{
 
             minigameTable.createTable();

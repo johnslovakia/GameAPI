@@ -17,6 +17,7 @@ import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,7 @@ public class InventoryManager implements Listener {
 
     private List<Item> items = new ArrayList<>();
     private List<Player> players = new ArrayList<>();
+    private ItemStack fillFreeSlots;
 
     public InventoryManager(String name) {
         this.name = name;
@@ -50,6 +52,10 @@ public class InventoryManager implements Listener {
         return this;
     }
 
+    public InventoryManager setFill(ItemStack itemStack) {
+        this.fillFreeSlots = itemStack;
+        return this;
+    }
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent e) {
@@ -163,15 +169,23 @@ public class InventoryManager implements Listener {
         if (!players.contains(player)) {
             players.add(player);
         }
-        player.getInventory().clear();
+        PlayerInventory inventory = player.getInventory();
+
+        inventory.clear();
+
+        if (fillFreeSlots != null){
+            for (int i = 0; i < inventory.getSize(); i++) {
+                inventory.setItem(i, fillFreeSlots);
+            }
+        }
 
         for (Item item : items){
             ItemStack translated = new ItemBuilder((item.isPlayerHead() ? GameAPI.getInstance().getVersionSupport().getPlayerHead(player) : item.getItem()))
                     .setName(MessageManager.get(player, item.getTranslateKey()).getTranslated()).toItemStack();
 
-            player.getInventory().setItem(item.getSlot(), translated);
+            inventory.setItem(item.getSlot(), translated);
         }
-        player.getInventory().setHeldItemSlot(holdItemSlot);
+        inventory.setHeldItemSlot(holdItemSlot);
         //player.updateInventory();
 
     }

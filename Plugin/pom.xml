@@ -74,12 +74,6 @@
             <version>LATEST</version>
         </dependency>
         <dependency>
-            <groupId>com.github.ZorTik</groupId>
-            <artifactId>ContainrGUI</artifactId>
-            <version>0.7-pre3</version>
-        </dependency>
-
-        <dependency>
             <groupId>de.simonsator</groupId>
             <artifactId>Party-and-Friends-MySQL-Edition-Spigot-API</artifactId>
             <version>1.6.2-RELEASE</version>

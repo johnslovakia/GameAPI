@@ -104,6 +104,12 @@ public class ItemBuilder {
         this.is = is;
         return this;
     }
+    public ItemBuilder setCustomModelData(int data){
+        ItemMeta im = is.getItemMeta();
+        im.setCustomModelData(data);
+        is.setItemMeta(im);
+        return this;
+    }
 
     /**
      * Add an unsafe enchantment.

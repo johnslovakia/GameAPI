@@ -17,10 +17,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Getter
 public class GameMap {
@@ -28,9 +25,13 @@ public class GameMap {
     @Setter
     private Game game;
     private String name, authors;
+    @Setter
     public MapLocation spectatorSpawn;
+    @Setter
     public Area mainArea;
+    @Setter
     private ItemStack icon;
+    @Setter
     private AreaSettings settings;
 
 
@@ -55,13 +56,21 @@ public class GameMap {
     private List<Area> areas = new ArrayList<>();
     private HashMap<String, Object> metadata = new HashMap<>();
 
-    public GameMap(Game game, String name, String authors, Area mainArea) {
+    public GameMap(Game game, String name, String authors) {
         this.game = game;
         this.name = name;
         this.authors = authors;
         this.mainArea = mainArea;
 
         mainArea.setBorder(true);
+    }
+
+    public void registerArea(Area... areas){
+        this.areas.addAll(Arrays.asList(areas));
+    }
+
+    public void addSpawn(MapLocation... spawns){
+        this.spawns.addAll(Arrays.asList(spawns));
     }
 
     public void voteForMap(Player player) {

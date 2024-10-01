@@ -94,6 +94,7 @@ public class StartCountdown implements TaskInterface {
                         Messages.send(player, "chat.game_starts");
                     }*/
             player.setLevel(task.getCounter());
+            player.playSound(player, "game_start", 20.0F, 20.0F);
         }
         if (game.getSettings().usePreperationTask()) {
             game.startPreparation();

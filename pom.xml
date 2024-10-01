@@ -23,6 +23,14 @@
             <id>dmulloy2-repo</id>
             <url>https://repo.dmulloy2.net/repository/public/</url>
         </repository>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+        <repository>
+            <id>CodeMC</id>
+            <url>https://repo.codemc.org/repository/maven-public/</url>
+        </repository>
     </repositories>
 
 
@@ -63,7 +71,11 @@
             <artifactId>flow-nbt</artifactId>
             <version>1.0.0</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.github.ZorTik</groupId>
+            <artifactId>ContainrGUI</artifactId>
+            <version>0.7-pre3</version>
+        </dependency>
     </dependencies>
 
 </project>

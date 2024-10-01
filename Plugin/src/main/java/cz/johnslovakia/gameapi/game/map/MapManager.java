@@ -16,6 +16,7 @@ public class MapManager {
 
     public MapManager(Game game) {
         this.game = game;
+        game.setMapManager(this);
     }
 
     public void addMap(GameMap map){

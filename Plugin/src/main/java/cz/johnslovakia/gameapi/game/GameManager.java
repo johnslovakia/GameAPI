@@ -107,7 +107,8 @@ public class GameManager {
         }
 
 
-        Game newGame = new Game(game.getName(), game.getMapManager(), game.getLobbyInventory());
+        Game newGame = new Game(game.getName(), game.getLobbyInventory(), game.getLobbyPoint());
+        newGame.setMapManager(game.getMapManager());
         TeamManager.resetTeamsAndRegisterForNewGame(game, newGame);
 
         newGame.getMapManager().getMaps().forEach(a -> a.setGame(newGame));

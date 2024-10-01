@@ -12,6 +12,7 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/github/ZorTik/AdvancedSQLClient/0.7-pre5/AdvancedSQLClient-0.7-pre5.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/zaxxer/HikariCP/5.1.0/HikariCP-5.1.0.jar" path-in-jar="/" />
+      <element id="library" level="project" name="Maven: com.github.ZorTik:ContainrGUI:0.7-pre3" />
     </root>
   </artifact>
 </component>

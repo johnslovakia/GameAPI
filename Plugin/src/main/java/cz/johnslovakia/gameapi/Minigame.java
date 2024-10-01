@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import me.zort.sqllib.SQLDatabaseConnection;
 import org.bukkit.plugin.Plugin;
 
+import java.io.File;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -17,6 +18,7 @@ public interface Minigame {
     Plugin getPlugin();
     String getMinigameName();
     String getDescriptionTranslateKey();
+    //List<File> getLanguageFiles();
     MinigameSettings getSettings();
     List<Economy> getEconomies();
     SQLDatabaseConnection getDatabase();
@@ -24,7 +26,7 @@ public interface Minigame {
     EndGame getEndGameFunction();
 
     void setupPlayerScores();
-    void setupMaps();
+    void setupGames();
     void setupOther();
 
     public record EndGame(Predicate<Game> validator, Consumer<Game> response) {}
