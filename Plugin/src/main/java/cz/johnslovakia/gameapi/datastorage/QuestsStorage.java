@@ -16,7 +16,7 @@ public class QuestsStorage {
 
 
     public static JSONObject toJSON(GamePlayer gamePlayer){
-        JSONArray quests = convertListToJsonArray(gamePlayer.getPlayerData().getQuests());
+        JSONArray quests = convertListToJsonArray(gamePlayer.getPlayerData().getQuestData());
 
         JSONObject cosmetics = new JSONObject();
         cosmetics.put("quests", quests);

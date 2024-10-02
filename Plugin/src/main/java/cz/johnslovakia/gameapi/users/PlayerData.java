@@ -57,7 +57,7 @@ public class PlayerData {
     private Map<Kit, Inventory> kitInventories = new HashMap<>();
     private Kit defaultKit;
 
-    private List<PlayerQuestData> quests = new ArrayList<>();
+    private List<PlayerQuestData> questData = new ArrayList<>();
 
     private Map<Perk, Integer> perksLevel = new HashMap<>();
 
@@ -96,7 +96,7 @@ public class PlayerData {
     }
 
     public void addQuestProgress(Quest quest){
-        for (PlayerQuestData questData : quests){
+        for (PlayerQuestData questData : getQuestData()){
             if (questData.getQuest().equals(quest)){
                 questData.increaseProgress();
                 break;
@@ -105,12 +105,32 @@ public class PlayerData {
     }
 
     public PlayerQuestData getQuestData(Quest quest){
-        for (PlayerQuestData questData : quests){
+        for (PlayerQuestData questData : getQuestData()){
             if (questData.getQuest().equals(quest)){
                 return questData;
             }
         }
         return null;
+    }
+
+    public List<Quest> getQuests(){
+        List<Quest> list = new ArrayList<>();
+        for (PlayerQuestData data : getQuestData()){
+            list.add(data.getQuest());
+        }
+        return list;
+    }
+
+    public List<Quest> getQuestsByStatus(PlayerQuestData.Status status){
+        List<Quest> list = new ArrayList<>();
+        for (PlayerQuestData data : getQuestData().stream().filter(data -> data.getStatus().equals(status)).toList()){
+            list.add(data.getQuest());
+        }
+        return list;
+    }
+
+    public List<PlayerQuestData> getQuestDataByStatus(PlayerQuestData.Status status){
+        return new ArrayList<>(getQuestData().stream().filter(data -> data.getStatus().equals(status)).toList());
     }
 
     private void loadQuests(){
@@ -152,7 +172,7 @@ public class PlayerData {
                         questData = new PlayerQuestData(quest, gamePlayer, progress);
                     }
 
-                    quests.add(questData);
+                    getQuestData().add(questData);
                 }
             } catch (Exception exception) {
                 Logger.log("I can't get quests data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2)", Logger.LogType.ERROR);

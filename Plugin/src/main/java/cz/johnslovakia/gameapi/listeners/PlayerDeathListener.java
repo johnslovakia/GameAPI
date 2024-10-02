@@ -47,7 +47,7 @@ public class PlayerDeathListener implements Listener {
 
     @EventHandler
     public void onGamePlayerDeath(GamePlayerDeathEvent e) {
-        GamePlayer gamePlayer = e.getPlayer();
+        GamePlayer gamePlayer = e.getGamePlayer();
         Game game = e.getGame();
 
         boolean useTeams = game.getSettings().useTeams();
@@ -220,7 +220,7 @@ public class PlayerDeathListener implements Listener {
 
             killer.getOnlinePlayer().playSound(killer.getOnlinePlayer().getLocation(), Sounds.LEVEL_UP.bukkitSound(), 20.0F, 20.0F);
 
-            e.getPlayer().getScoreByName("Death").increaseScore();
+            e.getGamePlayer().getScoreByName("Death").increaseScore();
         }else{
             if (e.getDmgCause() == EntityDamageEvent.DamageCause.VOID){
                 MessageManager.get(game.getParticipants(), "chat.void")
@@ -240,7 +240,7 @@ public class PlayerDeathListener implements Listener {
             }
 
 
-            e.getPlayer().getScoreByName("Death").increaseScore();
+            e.getGamePlayer().getScoreByName("Death").increaseScore();
         }
 
 

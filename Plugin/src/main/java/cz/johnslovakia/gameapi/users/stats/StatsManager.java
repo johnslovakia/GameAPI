@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.users.stats;
 
+import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.datastorage.StatsTable;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -9,6 +10,10 @@ import java.util.Arrays;
 import java.util.List;
 
 public class StatsManager {
+
+    public StatsManager(){
+        registerStat(new Stat(GameAPI.getInstance().getStatsManager(), "Winstreak"));
+    }
 
     private List<Stat> stats = new ArrayList<>();
     private StatsTable table = new StatsTable();

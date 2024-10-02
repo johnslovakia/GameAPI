@@ -2,9 +2,11 @@ package cz.johnslovakia.gameapi.events;
 
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.Winner;
+import lombok.Getter;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+@Getter
 public class GameEndEvent extends Event {
 
     private static final HandlerList handlers = new HandlerList();
@@ -15,14 +17,6 @@ public class GameEndEvent extends Event {
     public GameEndEvent(Game game, Winner winner){
         this.game = game;
         this.winner = winner;
-    }
-
-    public Game getGame() {
-        return game;
-    }
-
-    public Winner getWinner() {
-        return winner;
     }
 
     public HandlerList getHandlers() {

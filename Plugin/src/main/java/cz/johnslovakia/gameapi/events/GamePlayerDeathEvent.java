@@ -2,6 +2,8 @@ package cz.johnslovakia.gameapi.events;
 
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -9,6 +11,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 
 import java.util.List;
 
+@Getter
 public class GamePlayerDeathEvent extends Event implements Cancellable {
 
     private static final HandlerList handlers = new HandlerList();
@@ -20,6 +23,7 @@ public class GamePlayerDeathEvent extends Event implements Cancellable {
     private GamePlayer killer;
     private List<GamePlayer> assists;
     private EntityDamageEvent.DamageCause dmgCause;
+    @Setter
     private boolean firstGameKill = false;
 
     public GamePlayerDeathEvent(Game game, GamePlayer killer, GamePlayer gamePlayer, List<GamePlayer> assists, EntityDamageEvent.DamageCause dmgCause){
@@ -30,20 +34,9 @@ public class GamePlayerDeathEvent extends Event implements Cancellable {
         this.assists = assists;
     }
 
-    public boolean isFirstGameKill() {
-        return firstGameKill;
-    }
-
-    public void setFirstGameKill(boolean firstGameKill) {
-        this.firstGameKill = firstGameKill;
-    }
-
     public boolean isFinalKill(){
         if (gamePlayer.getPlayerData().getGame().getSettings().useTeams()){
-            if (gamePlayer.getPlayerData().getTeam().isDead()){
-                return true;
-            }
-            return false;
+            return gamePlayer.getPlayerData().getTeam().isDead();
         }else{
             return true;
         }
@@ -52,30 +45,8 @@ public class GamePlayerDeathEvent extends Event implements Cancellable {
     public boolean isCancelled() {
         return isCancelled;
     }
-
     public void setCancelled(boolean cancelled) {
         this.isCancelled = cancelled;
-    }
-
-    public Game getGame() {
-        return game;
-    }
-
-
-    public GamePlayer getPlayer() {
-        return gamePlayer;
-    }
-
-    public GamePlayer getKiller() {
-        return killer;
-    }
-
-    public EntityDamageEvent.DamageCause getDmgCause() {
-        return dmgCause;
-    }
-
-    public List<GamePlayer> getAssists() {
-        return assists;
     }
 
     public HandlerList getHandlers() {

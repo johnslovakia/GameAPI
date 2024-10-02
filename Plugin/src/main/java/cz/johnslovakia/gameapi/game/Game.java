@@ -437,19 +437,49 @@ public class Game {
             }.runTaskAsynchronously(GameAPI.getInstance());
         }
 
+
+
+        if (winner.getWinnerType().equals(Winner.WinnerType.TEAM)){
+            GameTeam wTeam = (GameTeam) winner;
+            for (GameTeam lTeam : TeamManager.getTeams(this).stream().filter(team -> team != wTeam).toList()){
+                lTeam.getMembers().forEach(loser -> loser.getPlayerData().getStat("Winstreak").setStat(0));
+            }
+            for (GamePlayer gamePlayer : wTeam.getMembers()){
+                gamePlayer.getPlayerData().getStat("Winstreak").increase();
+            }
+        }else{
+            ((GamePlayer) winner).getPlayerData().getStat("Winstreak").increase();
+            for (GamePlayer loser :  getParticipants().stream().filter(gp -> gp != winner).toList()){
+                loser.getPlayerData().getStat("Winstreak").setStat(0);
+            }
+        }
+
+
+        HashMap<GamePlayer, Integer> oldWinstreaks = new HashMap<>();
+        for (GamePlayer gp : getParticipants()){
+            oldWinstreaks.put(gp, gp.getPlayerData().getStat("Winstreak").getStatScore());
+        }
+
+
         new BukkitRunnable(){
             @Override
             public void run() {
                 sendTopPlayers();
             }
-        }.runTaskLater(GameAPI.getInstance(), 25L);
+        }.runTaskLater(GameAPI.getInstance(), 10L);
 
         new BukkitRunnable(){
             @Override
             public void run() {
                 sendRewardSummary();
+                for (GamePlayer gp : oldWinstreaks.keySet()) {
+                    MessageManager.get(gp, "chat.winstreak")
+                            .replace("%old_winstreak%", "" + oldWinstreaks.get(gp))
+                            .replace("%new_winstreak%", (gp.getPlayerData().getStat("Winstreak").getStatScore() == 0 ? "§c" : "§a") + gp.getPlayerData().getStat("Winstreak").getStatScore())
+                            .send();
+                }
             }
-        }.runTaskLater(GameAPI.getInstance(), 25L + 50L);
+        }.runTaskLater(GameAPI.getInstance(), 10L + 40L);
 
     }
 

@@ -17,6 +17,9 @@ public interface Quest {
 
     QuestType getType();
     String getName();
+    default String getDisplayName(){
+        return getName();
+    }
     Map<Economy, Integer> getRewards();
     int getCompletionGoal();
     Set<Trigger<?>> getTriggers();
