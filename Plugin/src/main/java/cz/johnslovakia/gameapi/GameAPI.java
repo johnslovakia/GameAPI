@@ -13,6 +13,7 @@ import cz.johnslovakia.gameapi.game.kit.KitManager;
 import cz.johnslovakia.gameapi.game.perk.PerkManager;
 import cz.johnslovakia.gameapi.listeners.*;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.users.quests.QuestManager;
 import cz.johnslovakia.gameapi.users.stats.StatsManager;
 import cz.johnslovakia.gameapi.utils.BukkitSerialization;
 import cz.johnslovakia.gameapi.utils.Logger;
@@ -47,6 +48,8 @@ public class GameAPI extends JavaPlugin {
     private PerkManager perkManager;
     @Getter @Setter
     private StatsManager statsManager;
+    @Getter @Setter
+    private QuestManager questManager;
 
 
     @Getter

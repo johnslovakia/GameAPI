@@ -8,6 +8,8 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -15,6 +17,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -242,5 +246,34 @@ public class Utils {
             }
         }
         return null;
+    }
+
+    private static double calculateDamageApplied(double damage, double points, double toughness, int resistance, int epf) {
+        double withArmorAndToughness = damage * (1 - Math.min(20, Math.max(points / 5, points - damage / (2 + toughness / 4))) / 25);
+        double withResistance = withArmorAndToughness * (1 - (resistance * 0.2));
+        double withEnchants = withResistance * (1 - (Math.min(20.0, epf) / 25));
+        return withEnchants;
+    }
+
+    private static int getEPF(PlayerInventory inv) {
+        ItemStack helm = inv.getHelmet();
+        ItemStack chest = inv.getChestplate();
+        ItemStack legs = inv.getLeggings();
+        ItemStack boot = inv.getBoots();
+
+        return (helm != null ? helm.getEnchantmentLevel(Enchantment.SHARPNESS) : 0) +
+                (chest != null ? chest.getEnchantmentLevel(Enchantment.SHARPNESS) : 0) +
+                (legs != null ? legs.getEnchantmentLevel(Enchantment.SHARPNESS) : 0) +
+                (boot != null ? boot.getEnchantmentLevel(Enchantment.SHARPNESS) : 0);
+    }
+
+    public static void damagePlayer(Player player, double damage) {
+        double points = player.getAttribute(Attribute.GENERIC_ARMOR).getValue();
+        double toughness = player.getAttribute(Attribute.GENERIC_ARMOR_TOUGHNESS).getValue();
+        PotionEffect effect = player.getPotionEffect(PotionEffectType.RESISTANCE);
+        int resistance = effect == null ? 0 : effect.getAmplifier();
+        int epf = getEPF(player.getInventory());
+
+        player.damage(calculateDamageApplied(damage, points, toughness, resistance, epf));
     }
 }

@@ -15,6 +15,9 @@ import cz.johnslovakia.gameapi.game.team.GameTeam;
 import cz.johnslovakia.gameapi.game.kit.Kit;
 import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.messages.Language;
+import cz.johnslovakia.gameapi.users.quests.PlayerQuestData;
+import cz.johnslovakia.gameapi.users.quests.Quest;
+import cz.johnslovakia.gameapi.users.quests.QuestType;
 import cz.johnslovakia.gameapi.users.stats.PlayerStat;
 import cz.johnslovakia.gameapi.users.stats.Stat;
 import cz.johnslovakia.gameapi.utils.BukkitSerialization;
@@ -29,6 +32,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Getter @Setter
@@ -44,12 +48,15 @@ public class PlayerData {
     private Language language;
 
     private List<GameMap> votesForMaps = new ArrayList<>();
+
     private Map<CosmeticsCategory, Cosmetic> selectedCosmetics = new HashMap<>();
     private List<Cosmetic> purchasedCosmetics = new ArrayList<>();
 
     private List<Kit> purchasedKitsThisGame = new ArrayList<>();
     private Map<Kit, Inventory> kitInventories = new HashMap<>();
     private Kit defaultKit;
+
+    private List<PlayerQuestData> quests = new ArrayList<>();
 
     private Map<Perk, Integer> perksLevel = new HashMap<>();
 
@@ -80,8 +87,58 @@ public class PlayerData {
                 loadKits();
                 loadCosmetics();
                 loadPerks();
+                loadQuests();
             }
         }.runTaskAsynchronously(GameAPI.getInstance());
+    }
+
+
+    private void loadQuests(){
+        Minigame minigame = GameAPI.getInstance().getMinigame();
+        SQLDatabaseConnection connection = minigame.getDatabase();
+
+        Optional<Row> result = connection.select()
+                .from(minigame.getMinigameTable().getTableName())
+                .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
+                .obtainOne();
+        if (!result.isPresent()) {
+            Logger.log("I can't get quests data for player " + gamePlayer.getOnlinePlayer().getName() + ". (1)", Logger.LogType.ERROR);
+            gamePlayer.getOnlinePlayer().sendMessage("Can't get your quests data. Sorry for the inconvenience. (1)");
+        }else {
+            try{
+                String jsonString = result.get().getString("Quests");
+                JSONObject jsonObject = new JSONObject(jsonString);
+
+                JSONArray questsArray = jsonObject.getJSONArray("quests");
+
+                for (int i = 0; i < questsArray.length(); i++) {
+                    JSONObject questObject = questsArray.getJSONObject(i);
+                    String name = questObject.getString("name");
+                    QuestType type = QuestType.valueOf(questObject.getString("type").toUpperCase());
+                    PlayerQuestData.Status status = PlayerQuestData.Status.valueOf(questObject.getString("status").toUpperCase());  // "NOT_STARTED", "IN_PROGRESS", "COMPLETED"
+                    int progress = questObject.getInt("progress");
+                    String completionDateString = questObject.optString("completion_date", null);
+                    LocalDate completionDate = null;
+                    if (completionDateString != null) {
+                        completionDate = LocalDate.parse(questObject.optString("completion_date", null));
+                    }
+
+                    Quest quest = GameAPI.getInstance().getQuestManager().getQuest(type, name);
+
+                    PlayerQuestData questData = new PlayerQuestData(quest, gamePlayer);
+                    if (status.equals(PlayerQuestData.Status.COMPLETED)) {
+                        questData = new PlayerQuestData(quest, gamePlayer, completionDate);
+                    }else if (status.equals(PlayerQuestData.Status.IN_PROGRESS)){
+                        questData = new PlayerQuestData(quest, gamePlayer, progress);
+                    }
+
+                    quests.add(questData);
+                }
+            } catch (Exception exception) {
+                Logger.log("I can't get quests data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2)", Logger.LogType.ERROR);
+                gamePlayer.getOnlinePlayer().sendMessage("Can't get your quests data. Sorry for the inconvenience. (2)");
+            }
+        }
     }
 
     public void setPerkLevel(Perk perk, int level){

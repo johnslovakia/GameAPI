@@ -1,6 +1,6 @@
 package cz.johnslovakia.gameapi.utils;
 
-import cz.johnslovakia.gameapi.WorldManagement.WorldManager;
+import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import cz.johnslovakia.gameapi.game.map.MapLocation;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
