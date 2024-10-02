@@ -426,6 +426,15 @@ public class Game {
                     }.runTaskAsynchronously(GameAPI.getInstance());
                 }
             }
+
+
+            //TODO: check
+            new BukkitRunnable(){
+                @Override
+                public void run() {
+                    gamePlayer.getPlayerData().saveAll();
+                }
+            }.runTaskAsynchronously(GameAPI.getInstance());
         }
 
         new BukkitRunnable(){

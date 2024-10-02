@@ -4,10 +4,12 @@ import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
 
@@ -43,7 +45,17 @@ public interface Quest {
             }
         }.runTaskLater(GameAPI.getInstance(), 15L);
 
-        gamePlayer.getPlayerData().setComplete(this);
+        gamePlayer.getPlayerData().getQuestData(this).setStatus(PlayerQuestData.Status.COMPLETED);
+        gamePlayer.getPlayerData().getQuestData(this).setCompletionDate(LocalDate.now());
+    }
+
+    default void addProgress(GamePlayer gamePlayer){
+        PlayerData playerData = gamePlayer.getPlayerData();
+        if (playerData.getQuestData(this).isCompleted()){
+            complete(gamePlayer);
+        }else{
+            playerData.addQuestProgress(this);
+        }
     }
 
     /*default <T extends Event> Trigger<T> getTrigger() {

@@ -5,6 +5,7 @@ import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.datastorage.CosmeticsStorage;
 import cz.johnslovakia.gameapi.datastorage.KitsStorage;
 import cz.johnslovakia.gameapi.datastorage.PlayerTable;
+import cz.johnslovakia.gameapi.datastorage.QuestsStorage;
 import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
@@ -88,10 +89,29 @@ public class PlayerData {
                 loadCosmetics();
                 loadPerks();
                 loadQuests();
+
+                GameAPI.getInstance().getQuestManager().check(gamePlayer);
             }
         }.runTaskAsynchronously(GameAPI.getInstance());
     }
 
+    public void addQuestProgress(Quest quest){
+        for (PlayerQuestData questData : quests){
+            if (questData.getQuest().equals(quest)){
+                questData.increaseProgress();
+                break;
+            }
+        }
+    }
+
+    public PlayerQuestData getQuestData(Quest quest){
+        for (PlayerQuestData questData : quests){
+            if (questData.getQuest().equals(quest)){
+                return questData;
+            }
+        }
+        return null;
+    }
 
     private void loadQuests(){
         Minigame minigame = GameAPI.getInstance().getMinigame();
@@ -258,6 +278,17 @@ public class PlayerData {
             Logger.log("Something went wrong when saving cosmetics data! The following message is for Developers: ", Logger.LogType.ERROR);
             Logger.log(cosmeticResult.getRejectMessage(), Logger.LogType.ERROR);
         }
+
+
+        QueryResult questsResult = connection.insert()
+                .into(minigame.getMinigameTable().getTableName(), "Quests")
+                .values(QuestsStorage.toJSON(getGamePlayer()))
+                .execute();
+        if (!questsResult.isSuccessful()) {
+            Logger.log("Something went wrong when saving quests data! The following message is for Developers: ", Logger.LogType.ERROR);
+            Logger.log(questsResult.getRejectMessage(), Logger.LogType.ERROR);
+        }
+
 
         QueryResult kitInventoriesResult = connection.insert()
                 .into(minigame.getMinigameTable().getTableName(), "KitInventories")

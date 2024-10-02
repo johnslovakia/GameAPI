@@ -55,6 +55,7 @@ public class MinigameTable {
         StringBuilder rows_s = new StringBuilder("id INT AUTO_INCREMENT PRIMARY KEY," +
                 "Nickname VARCHAR(24) UNIQUE NOT NULL," +
                 "Cosmetics JSON," +
+                "Quests JSON," +
                 "KitInventories JSON");
 
         if (rows != null) {

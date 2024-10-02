@@ -2,17 +2,20 @@ package cz.johnslovakia.gameapi.users.quests;
 
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
 @Getter
 public class PlayerQuestData {
 
-    private Quest quest;
+    private final Quest quest;
 
-    private GamePlayer gamePlayer;
+    private final GamePlayer gamePlayer;
+    @Setter
     private Status status;
     private int progress;
+    @Setter
     private LocalDate completionDate;
 
     public PlayerQuestData(Quest quest, GamePlayer gamePlayer, int progress) {
@@ -36,7 +39,13 @@ public class PlayerQuestData {
         this.status = Status.NOT_STARTED;
     }
 
-    private boolean isCompleted(){
+    public void increaseProgress(){
+        if (progress < quest.getCompletionGoal()) {
+            progress++;
+        }
+    }
+
+    public boolean isCompleted(){
         return quest.getCompletionGoal() >= progress;
     }
 
