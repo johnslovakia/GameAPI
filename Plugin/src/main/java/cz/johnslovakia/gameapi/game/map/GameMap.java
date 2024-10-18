@@ -27,7 +27,6 @@ public class GameMap {
     private String name, authors;
     @Setter
     public MapLocation spectatorSpawn;
-    @Setter
     public Area mainArea;
     @Setter
     private ItemStack icon;
@@ -60,9 +59,12 @@ public class GameMap {
         this.game = game;
         this.name = name;
         this.authors = authors;
-        this.mainArea = mainArea;
+    }
 
+    public GameMap setMainArea(Area mainArea) {
+        this.mainArea = mainArea;
         mainArea.setBorder(true);
+        return this;
     }
 
     public void registerArea(Area... areas){

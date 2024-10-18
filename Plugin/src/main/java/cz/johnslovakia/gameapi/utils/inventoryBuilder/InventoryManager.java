@@ -66,6 +66,10 @@ public class InventoryManager implements Listener {
         if (item == null){
             return;
         }
+        if (item.equals(fillFreeSlots)){
+            e.setCancelled(true);
+            return;
+        }
         if (!players.contains(player)) {
             return;
         }
@@ -98,6 +102,10 @@ public class InventoryManager implements Listener {
         Player player = e.getPlayer();
         org.bukkit.entity.Item item = e.getItemDrop();
 
+        if (item.getItemStack().equals(fillFreeSlots)){
+            e.setCancelled(true);
+            return;
+        }
         if (item.getItemStack().getItemMeta() == null){
             return;
         }
@@ -124,6 +132,10 @@ public class InventoryManager implements Listener {
             return;
         }
         if (item == null) {
+            return;
+        }
+        if (item.equals(fillFreeSlots)){
+            e.setCancelled(true);
             return;
         }
         if (item.getType() == Material.AIR) {

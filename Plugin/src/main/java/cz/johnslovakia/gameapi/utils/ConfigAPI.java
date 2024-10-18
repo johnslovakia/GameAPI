@@ -72,14 +72,15 @@ public class ConfigAPI {
 
     /** Set a location in the config */
     public void setLocation(String path, Location location, boolean PitchAndYaw) {
-        fileConfig.set(path + ".World", location.getWorld().getName());
+        /*fileConfig.set(path + ".World", location.getWorld().getName());
         fileConfig.set(path + ".X", location.getX());
         fileConfig.set(path + ".Y", location.getY());
         fileConfig.set(path + ".Z", location.getZ());
         if (PitchAndYaw) {
             fileConfig.set(path + ".Pitch", location.getPitch());
             fileConfig.set(path + ".Yaw", location.getYaw());
-        }
+        }*/
+        fileConfig.set(path, Utils.getStringLocation(location, true));
         saveConfig();
     }
 

@@ -33,7 +33,6 @@ public class GamePlayer extends Winner {
 
     private OfflinePlayer player;
     private GamePlayerType type = GamePlayerType.SPECTATOR;
-    private Language language;
 
     private boolean enabledPVP = true;
     private boolean enabledMovement = true;
@@ -52,8 +51,12 @@ public class GamePlayer extends Winner {
         super(WinnerType.PLAYER);
         this.player = offlinePlayer;
         this.type = GamePlayerType.PLAYER;
+        this.playerData = new PlayerData(this);
     }
 
+    public Language getLanguage() {
+        return getPlayerData().getLanguage();
+    }
 
     public void hookFriendsAndParty(){
         if (Bukkit.getServer().getPluginManager().getPlugin("Parties") != null) {
@@ -187,21 +190,6 @@ public class GamePlayer extends Winner {
             }
         }
         return null;
-    }
-
-    public void setLanguage(Language language) {
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
-                connection.update()
-                        .table(PlayerTable.TABLE_NAME)
-                        .set("Language", language.getName())
-                        .where().isEqual("Nickname", getOnlinePlayer().getName())
-                        .execute();
-            }
-        }.runTaskAsynchronously(GameAPI.getInstance());
-        this.language = language;
     }
 
     public GamePlayer getGamePlayer(){

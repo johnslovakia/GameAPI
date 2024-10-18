@@ -9,6 +9,7 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.stats.Stat;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
+import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
@@ -28,7 +29,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
 
     private final Map<Economy, Integer> earned = new HashMap<>();
     private Map<Economy, Integer> rewardTypes = new HashMap<>();
-    private Set<Trigger<?>> triggers;
+    private Set<Trigger<?>> triggers = new HashSet<>();;
 
     private boolean allowedMessage = true;
     private boolean scoreRanking = false;
@@ -302,7 +303,8 @@ public class PlayerScore implements Comparable<PlayerScore> {
 
         private boolean scoreRanking = false;
         private Stat stat;
-        private Set<Trigger<?>> triggers;
+        @Getter
+        private Set<Trigger<?>> triggers = new HashSet<>();
 
 
         private Builder() {}
@@ -356,12 +358,8 @@ public class PlayerScore implements Comparable<PlayerScore> {
             return this;
         }
 
-        public Set<Trigger<?>> getTriggers() {
-            return triggers;
-        }
-
         public Builder addTrigger(Trigger<?> trigger){
-            triggers.add(trigger);
+            this.triggers.add(trigger);
             return this;
         }
 

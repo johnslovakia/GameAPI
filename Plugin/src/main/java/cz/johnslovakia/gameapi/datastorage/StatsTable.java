@@ -34,6 +34,9 @@ public class StatsTable {
         }
 
         SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
+        if (connection == null){
+            return;
+        }
         String finalStats_s = stats_s.toString();
         QueryResult result = connection.exec(() ->
                 "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + "("

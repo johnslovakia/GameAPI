@@ -37,8 +37,6 @@ public class CosmeticsManager implements Listener{
         this.economy = economy;
 
         GameAPI.getInstance().getMinigame().getMinigameTable().addRow(Type.JSON, "Cosmetics");
-
-        Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
     }
 
     public CosmeticsCategory getCategoryByName(String name){

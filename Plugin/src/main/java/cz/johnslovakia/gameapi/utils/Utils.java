@@ -22,9 +22,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -69,7 +67,7 @@ public class Utils {
         if (l == null) {
             return "";
         }
-        return (world ? l.getWorld().getName() : "") + l.getBlockX() + ";" + l.getBlockY() + ";" + l.getBlockZ() + ";" + l.getYaw() + ";" + l.getPitch();
+        return (world ? l.getWorld().getName() + ";": "") + l.getBlockX() + ";" + l.getBlockY() + ";" + l.getBlockZ() + ";" + l.getYaw() + ";" + l.getPitch();
     }
 
     static public MapLocation getMapLocationFromString(String id, String s, boolean yaw_and_pitch) {
@@ -78,11 +76,11 @@ public class Utils {
         }
         final String[] parts = s.split(";");
         if (parts.length == 5) {
-            final int x = Integer.parseInt(parts[0]);
-            final int y = Integer.parseInt(parts[1]);
-            final int z = Integer.parseInt(parts[2]);
-            final int yaw = Integer.parseInt(parts[3]);
-            final int pitch = Integer.parseInt(parts[4]);
+            final double x = Double.parseDouble(parts[0]);
+            final double y = Double.parseDouble(parts[1]);
+            final double z = Double.parseDouble(parts[2]);
+            final float yaw =  Float.parseFloat(parts[3]);
+            final float pitch =  Float.parseFloat(parts[4]);
             if (yaw_and_pitch) {
                 return new MapLocation(id, x, y, z, yaw, pitch);
             }else{
@@ -90,11 +88,11 @@ public class Utils {
             }
         }else if (parts.length == 6) {
             final String world = parts[0];
-            final int x = Integer.parseInt(parts[1]);
-            final int y = Integer.parseInt(parts[2]);
-            final int z = Integer.parseInt(parts[3]);
-            final int yaw = Integer.parseInt(parts[4]);
-            final int pitch = Integer.parseInt(parts[5]);
+            final double x = Double.parseDouble(parts[1]);
+            final double y = Double.parseDouble(parts[2]);
+            final double z = Double.parseDouble(parts[3]);
+            final float yaw =  Float.parseFloat(parts[4]);
+            final float pitch =  Float.parseFloat(parts[5]);
             if (yaw_and_pitch) {
                 return new MapLocation(id, world, x, y, z, yaw, pitch);
             }else{
@@ -108,20 +106,20 @@ public class Utils {
         if (s == null || s.trim().isEmpty()) {
             return null;
         }
-        final String[] parts = s.split(":");
+        final String[] parts = s.split(";");
         if (parts.length == 4) {
             final World w = Bukkit.getServer().getWorld(parts[0]);
-            final int x = Integer.parseInt(parts[1]);
-            final int y = Integer.parseInt(parts[2]);
-            final int z = Integer.parseInt(parts[3]);
+            final double x = Double.parseDouble(parts[1]);
+            final double y = Double.parseDouble(parts[2]);
+            final double z = Double.parseDouble(parts[3]);
             return new Location(w, x, y, z);
         }else if (parts.length == 6) {
             final World w = Bukkit.getServer().getWorld(parts[0]);
-            final int x = Integer.parseInt(parts[1]);
-            final int y = Integer.parseInt(parts[2]);
-            final int z = Integer.parseInt(parts[3]);
-            final int yaw = Integer.parseInt(parts[4]);
-            final int pitch = Integer.parseInt(parts[5]);
+            final double x = Double.parseDouble(parts[1]);
+            final double y = Double.parseDouble(parts[2]);
+            final double z = Double.parseDouble(parts[3]);
+            final float yaw = Float.parseFloat(parts[4]);
+            final float pitch =  Float.parseFloat(parts[5]);
             return new Location(w, x, y, z, yaw, pitch);
         }
         return null;
@@ -275,5 +273,30 @@ public class Utils {
         int epf = getEPF(player.getInventory());
 
         player.damage(calculateDamageApplied(damage, points, toughness, resistance, epf));
+    }
+
+    public static File getResourceAsFile(String resourcePath) {
+        try {
+            InputStream in = ClassLoader.getSystemClassLoader().getResourceAsStream(resourcePath);
+            if (in == null) {
+                return null;
+            }
+
+            File tempFile = File.createTempFile(String.valueOf(in.hashCode()), ".tmp");
+            tempFile.deleteOnExit();
+
+            try (FileOutputStream out = new FileOutputStream(tempFile)) {
+                //copy stream
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                }
+            }
+            return tempFile;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

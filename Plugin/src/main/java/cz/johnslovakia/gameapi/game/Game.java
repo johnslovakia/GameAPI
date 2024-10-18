@@ -11,15 +11,12 @@ import cz.johnslovakia.gameapi.game.team.GameTeam;
 import cz.johnslovakia.gameapi.game.team.TeamJoinCause;
 import cz.johnslovakia.gameapi.game.map.MapManager;
 import cz.johnslovakia.gameapi.task.tasks.StartCountdown;
-import cz.johnslovakia.gameapi.users.PlayerManager;
+import cz.johnslovakia.gameapi.users.*;
 import cz.johnslovakia.gameapi.game.team.TeamManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.task.Task;
 import cz.johnslovakia.gameapi.task.tasks.GameCountdown;
 import cz.johnslovakia.gameapi.task.tasks.PreparationCountdown;
-import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.users.GamePlayerType;
-import cz.johnslovakia.gameapi.users.PlayerScore;
 import cz.johnslovakia.gameapi.users.friends.FriendsInterface;
 import cz.johnslovakia.gameapi.users.parties.PartyInterface;
 import cz.johnslovakia.gameapi.users.stats.StatsHolograms;
@@ -59,6 +56,7 @@ public class Game {
 
     private List<GamePlayer> participants = new ArrayList<>();
     private List<Block> placedBlocks = new ArrayList<>();
+    private HashMap<String, Object> metadata = new HashMap<>();
 
     public Game(String name, InventoryManager lobbyInventory, Location lobbyPoint) {
         this.name = name;
@@ -390,6 +388,8 @@ public class Game {
 
         GameStartEvent ev = new GameStartEvent(this);
         Bukkit.getPluginManager().callEvent(ev);
+
+        getMetadata().put("players_at_start", getPlayers().size());
     }
 
     public void endGame(Winner winner){
@@ -477,10 +477,23 @@ public class Game {
                             .replace("%old_winstreak%", "" + oldWinstreaks.get(gp))
                             .replace("%new_winstreak%", (gp.getPlayerData().getStat("Winstreak").getStatScore() == 0 ? "§c" : "§a") + gp.getPlayerData().getStat("Winstreak").getStatScore())
                             .send();
+
+                    gp.getOnlinePlayer().sendMessage("");
+
+
+
+                    TextComponent message = new TextComponent(MessageManager.get(gp, "chat.view_statistic").getTranslated());
+
+                    ComponentBuilder b = new ComponentBuilder("");
+                    for (PlayerScore score : PlayerManager.getScoresByPlayer(gp)){
+                        b.append( "§7" + score.getDisplayName() + ": §a" + score.getScore());
+                    }
+
+                    message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));
+                    gp.getOnlinePlayer().spigot().sendMessage(message);
                 }
             }
         }.runTaskLater(GameAPI.getInstance(), 10L + 40L);
-
     }
 
     public void sendTopPlayers(){

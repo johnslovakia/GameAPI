@@ -32,7 +32,6 @@ public class KitManager implements Listener {
         this.purchaseKitForever = buyingForever;
         this.giveAfterDeath = giveAfterDeath;
         GameAPI.getInstance().setKitManager(this);
-        Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
 
         GameAPI.getInstance().getMinigame().getMinigameTable().addRow(Type.JSON, "KitInventories");
         GameAPI.getInstance().getMinigame().getMinigameTable().addRow(Type.VARCHAR128, "DefaultKit");

@@ -10,7 +10,13 @@ import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
 import cz.johnslovakia.gameapi.game.cosmetics.KillMessage;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.users.PlayerManager;
+import cz.johnslovakia.gameapi.users.PlayerScore;
 import cz.johnslovakia.gameapi.utils.Sounds;
+import cz.johnslovakia.gameapi.utils.StringUtils;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -247,6 +253,24 @@ public class PlayerDeathListener implements Listener {
 
         if (!gamePlayer.isRespawning()){
             gamePlayer.setSpectator(true);
+
+
+            TextComponent message = new TextComponent(MessageManager.get(gamePlayer, "chat.view_statistic").getTranslated());
+
+            ComponentBuilder b = new ComponentBuilder("");
+            for (PlayerScore score : PlayerManager.getScoresByPlayer(gamePlayer)){
+                b.append(MessageManager.get(gamePlayer, "chat.view_statistic.survived_for")
+                        .replace("%time%", StringUtils.getDurationString(game.getRunningMainTask().getCounter()))
+                        .getTranslated());
+                b.append(MessageManager.get(gamePlayer, "chat.view_statistic.outlived")
+                        .replace("%outlived%", "" + ((int) game.getMetadata().get("players_at_start") - (game.getPlayers().size() + 1)))
+                        .getTranslated());
+                b.append("");
+                b.append( "§7" + score.getDisplayName() + ": §a" + score.getScore());
+            }
+
+            message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));
+            gamePlayer.getOnlinePlayer().spigot().sendMessage(message);
         }
 
 

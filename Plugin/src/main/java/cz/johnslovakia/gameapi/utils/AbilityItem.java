@@ -5,13 +5,19 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.inventory.InventoryPickupItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -37,19 +43,40 @@ public class AbilityItem implements Listener {
         Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
     }
 
-    private ItemStack getFinalItemStack(GamePlayer gamePlayer){
+    public ItemStack getFinalItemStack(GamePlayer gamePlayer){
         ItemBuilder finalItem = new ItemBuilder(itemStack);
         finalItem.setName("§a" + name);
         if (loreTranslationKey != null) {
             finalItem.setLore("");
-            finalItem.addLoreLine(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated());
+            MessageManager.get(gamePlayer, loreTranslationKey).addToItemLore(finalItem);
         }
         return finalItem.toItemStack();
     }
 
+    @EventHandler
+    public void onInventoryPickupItem(EntityPickupItemEvent e) {
+        if (!(e.getEntity() instanceof Player player)){
+            return;
+        }
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        ItemMeta meta = e.getItem().getItemStack().getItemMeta();
+
+        if (meta == null){
+            return;
+        }
+
+        if (meta.getDisplayName().contains(name)){
+            if (loreTranslationKey != null) {
+                meta.setLore(Collections.singletonList(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated()));
+                ItemBuilder item = new ItemBuilder(e.getItem().getItemStack());
+                MessageManager.get(gamePlayer, loreTranslationKey).addToItemLore(item);
+                e.getItem().setItemStack(item.toItemStack());
+            }
+        }
+    }
 
     @EventHandler
-    public void onInventoryInteract(PlayerInteractEvent e) {
+    private void onInventoryInteract(PlayerInteractEvent e) {
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
@@ -58,10 +85,18 @@ public class AbilityItem implements Listener {
             return;
         }
 
+
         for (Action action : actions.keySet()){
-            if (!e.getAction().equals(action)){
+
+            if (action.equals(Action.LEFT_CLICK) && !(e.getAction().equals(org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) || e.getAction().equals(org.bukkit.event.block.Action.LEFT_CLICK_AIR))){
+                continue;
+            }else if (action.equals(Action.RIGHT_CLICK) && !(e.getAction().equals(org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) || e.getAction().equals(org.bukkit.event.block.Action.RIGHT_CLICK_AIR))){
                 continue;
             }
+
+            /*if (!e.getAction().equals(action)){
+                continue;
+            }*/
             Cooldown cooldown = null;
             if (!cooldowns.isEmpty() && cooldowns.get(action) != null){
                 cooldown = cooldowns.get(action);
@@ -73,11 +108,14 @@ public class AbilityItem implements Listener {
             }
             actions.get(action).accept(gamePlayer);
         }
+    }
 
+    public enum Action{
+        LEFT_CLICK, RIGHT_CLICK, DEFAULT;
     }
 
 
-    public class Builder{
+    public static class Builder{
 
         private final String name;
         private final ItemStack itemStack;
@@ -104,6 +142,10 @@ public class AbilityItem implements Listener {
         public Builder setLoreTranslationKey(String loreTranslationKey) {
             this.loreTranslationKey = loreTranslationKey;
             return this;
+        }
+
+        public AbilityItem build(){
+            return new AbilityItem(this);
         }
     }
 }

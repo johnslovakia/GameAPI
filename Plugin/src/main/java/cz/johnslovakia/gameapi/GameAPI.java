@@ -1,5 +1,7 @@
 package cz.johnslovakia.gameapi;
 
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
 import cz.johnslovakia.gameapi.api.Schematic;
 import cz.johnslovakia.gameapi.api.SlimeWorldLoader;
 import cz.johnslovakia.gameapi.api.UserInterface;
@@ -12,10 +14,14 @@ import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
 import cz.johnslovakia.gameapi.game.kit.KitManager;
 import cz.johnslovakia.gameapi.game.perk.PerkManager;
 import cz.johnslovakia.gameapi.listeners.*;
+import cz.johnslovakia.gameapi.messages.Language;
+import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.quests.QuestManager;
 import cz.johnslovakia.gameapi.users.stats.StatsManager;
+import cz.johnslovakia.gameapi.utils.BetterInvisibility;
 import cz.johnslovakia.gameapi.utils.BukkitSerialization;
+import cz.johnslovakia.gameapi.utils.InputStreamWithName;
 import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,52 +31,49 @@ import me.zort.sqllib.api.data.Row;
 import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.permission.Permission;
+import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.util.FileUtil;
 
 import java.io.*;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.util.*;
+import java.util.jar.JarFile;
 
+@Getter
 public class GameAPI extends JavaPlugin {
 
     @Getter
-    private static GameAPI instance;
-    @Getter
+    public static GameAPI instance;
     private Minigame minigame;
 
-    @Getter @Setter
+    @Setter
     private KitManager kitManager;
-    @Getter @Setter
+    @Setter
     private CosmeticsManager cosmeticsManager;
-    @Getter @Setter
+    @Setter
     private PerkManager perkManager;
-    @Getter @Setter
+    @Setter
     private StatsManager statsManager;
-    @Getter @Setter
+    @Setter
     private QuestManager questManager;
 
 
-    @Getter
     private String version;
-    @Getter
     private VersionSupport versionSupport;
-    @Getter
     private UserInterface userInterface;
-    @Getter
     private SlimeWorldLoader slimeWorldLoader;
-    @Getter
     private Schematic schematicHandler;
-    @Getter
     public static boolean useDecentHolograms;
 
-    @Getter
     private Chat vaultChat;
-    @Getter
     private Permission vaultPerms;
-    @Getter
     private Economy vaultEconomy;
+    private ProtocolManager protocolManager;
 
     @Override
     public void onEnable() {
@@ -102,9 +105,9 @@ public class GameAPI extends JavaPlugin {
 
 
 
-        //VERSION SUPPORT
+        //VERSION SUPPORT //TODO: opravit pro další verze
         String packageName = this.getServer().getClass().getPackage().getName();
-        String version = packageName.substring(packageName.lastIndexOf('.') + 1);
+        String version = "v1_21_R1";//packageName.substring(packageName.lastIndexOf('.') + 1); //vrací craftbukkit
         this.version = version;
 
         try {
@@ -147,29 +150,34 @@ public class GameAPI extends JavaPlugin {
         pm.registerEvents(new PlayerDeathListener(), this);
         pm.registerEvents(new RespawnListener(), this);
         pm.registerEvents(new WorldListener(), this);
+
+        protocolManager = ProtocolLibrary.getProtocolManager();
     }
 
     @Override
     public void onDisable() {
-
+        getMinigame().getDatabase().disconnect();
     }
 
 
     public void registerMinigame(Minigame minigame){
+        this.minigame = minigame;
 
         boolean somethingwrong = false;
         try{
             minigame.setupGames();
-            Logger.log("Maps successfully loaded!", Logger.LogType.INFO);
+            Logger.log("Games successfully loaded!", Logger.LogType.INFO);
         }catch (Exception e){
-            Logger.log("Something went wrong when loading the maps! The following message is for Developers: " + e.getCause().getMessage(), Logger.LogType.ERROR);
+            Logger.log("Something went wrong when loading the maps! The following message is for Developers: ", Logger.LogType.ERROR);
+            e.printStackTrace();
             somethingwrong = true;
         }
         minigame.setupPlayerScores();
         try{
             minigame.setupOther();
         }catch (Exception e){
-            Logger.log("Something went wrong when setting up the other necessities for the minigame! The following message is for Developers: " + e.getCause().getMessage(), Logger.LogType.ERROR);
+            Logger.log("Something went wrong when setting up the other necessities for the minigame! The following message is for Developers: ", Logger.LogType.ERROR);
+            e.printStackTrace();
             somethingwrong = true;
         }
 
@@ -285,49 +293,55 @@ public class GameAPI extends JavaPlugin {
         }
 
 
-        File pluginLanguagesFolder = new File(getDataFolder(), "languages");
+        File pluginLanguagesFolder = new File(minigame.getPlugin().getDataFolder(), "languages");
 
         if (!pluginLanguagesFolder.exists()) {
             pluginLanguagesFolder.mkdirs();
         }
 
-        File languagesDir = new File(minigame.getPlugin().getClass().getResource("/").getPath(), "languages");
-        if (languagesDir.exists() && languagesDir.isDirectory()) {
-            if (languagesDir.listFiles() != null) {
-                for (File file : languagesDir.listFiles()) {
+        try {
+            for (InputStreamWithName is : minigame.getLanguageFiles()/*languagesDir.listFiles()*/) {
+                File file = Files.createTempFile("tempfiles", ".yml").toFile();
+                FileUtils.copyInputStreamToFile(is.getInputStream(), file);
 
-                    String name = file.getName();
-                    File c = new File(pluginLanguagesFolder, name);
-                    if (c.exists()){
-                        continue;
-                    }
-
-                    InputStream gapiFile = getResource(name);
-                    if (gapiFile == null){
-                        File cFile = new File(minigame.getPlugin().getDataFolder(), name);
-                        if (!cFile.exists()) {
-                            minigame.getPlugin().saveResource("languages/" + name, false);
-                        }
-                        continue;
-                    }
-
-
-                    minigame.getPlugin().saveResource("languages/" + name, false);
-                    File createdFile = new File(pluginLanguagesFolder, name);
-                    try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-                        String line;
-                        while ((line = br.readLine()) != null) {
-                            FileWriter writer = new FileWriter(createdFile, true);
-                            writer.append(line).append("\n");
-                            writer.close();
-                        }
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                String name = is.getFileName();
+                File c = new File(pluginLanguagesFolder, name);
+                if (c.exists()) {
+                    loadMessagesFromFile(c);
+                    continue;
                 }
-            }
-        }
 
+                InputStream gapiFile = getResource("languages/" + name);
+                if (gapiFile == null) {
+                    File cFile = new File(minigame.getPlugin().getDataFolder(), name);
+                    if (!cFile.exists()) {
+                        minigame.getPlugin().saveResource("languages/" + name, false);
+                    }
+                    continue;
+                }
+
+
+                minigame.getPlugin().saveResource("languages/" + name, false);
+                File createdFile = new File(pluginLanguagesFolder, name);
+
+                File gFile = Files.createTempFile("gFile", ".yml").toFile();
+                FileUtils.copyInputStreamToFile(gapiFile, gFile);
+                try (BufferedReader br = new BufferedReader(new FileReader(gFile))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        FileWriter writer = new FileWriter(createdFile, true);
+                        writer.append(line).append("\n");
+                        writer.close();
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+                loadMessagesFromFile(createdFile);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         if (somethingwrong) {
             Logger.log("I can't register the minigame due to previous problems!", Logger.LogType.ERROR);
@@ -337,7 +351,43 @@ public class GameAPI extends JavaPlugin {
             playerTable.createTable();
 
             Logger.log("Minigame successfully registered!", Logger.LogType.INFO);
-            this.minigame = minigame;
+        }
+
+
+        if (getKitManager() != null){
+            Bukkit.getPluginManager().registerEvents(getKitManager(), this);
+        }
+        if (getCosmeticsManager() != null){
+            Bukkit.getPluginManager().registerEvents(getCosmeticsManager(), this);
+        }
+    }
+
+    private void loadMessagesFromFile(File file) {
+        String nr = "\n";
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                int colonIndex = line.indexOf(':');
+                if (colonIndex != -1) {
+                    String key = line.substring(0, colonIndex).trim();
+                    String value = line.substring(colonIndex + 1).trim();
+
+                    if (file.getName().contains("scoreboard")){
+                        continue;
+                    }
+                    String languageName = file.getName().replace(".yml", "");
+                    Language language = Language.getLanguage(languageName);
+                    if (language == null){
+                        language = Language.addLanguage(new Language(languageName));
+                    }
+
+                    String message = value.replace("\"", "");
+                    MessageManager.addMessage(key, language, message);
+                }
+            }
+        } catch (IOException e) {
+            getLogger().warning("Nastala chyba při načítání souboru " + file.getName() + ": " + e.getMessage());
         }
     }
 

@@ -13,6 +13,12 @@
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/github/ZorTik/AdvancedSQLClient/0.7-pre5/AdvancedSQLClient-0.7-pre5.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/zaxxer/HikariCP/5.1.0/HikariCP-5.1.0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/github/ZorTik/ContainrGUI/0.7-pre3/ContainrGUI-0.7-pre3.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/github/ZorTik/AdvancedSQLClient/api/0.7-pre5/api-0.7-pre5.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/github/ZorTik/AdvancedSQLClient/core/0.7-pre5/core-0.7-pre5.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/github/ZorTik/AdvancedSQLClient/examples/0.7-pre5/examples-0.7-pre5.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/github/ZorTik/AdvancedSQLClient/shared/0.7-pre5/shared-0.7-pre5.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/github/ZorTik/ContainrGUI/core/0.7-pre3/core-0.7-pre3.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/github/ZorTik/ContainrGUI/examples/0.7-pre3/examples-0.7-pre3.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

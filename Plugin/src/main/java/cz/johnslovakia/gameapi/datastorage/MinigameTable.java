@@ -8,6 +8,7 @@ import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,7 +17,7 @@ public class MinigameTable {
     private String TABLE_NAME;
     private Minigame minigame;
 
-    private Map<Type, List<String>> rows = null;
+    private Map<Type, List<String>> rows = new HashMap<>();
 
     public MinigameTable(Minigame minigame, Map<Type, List<String>> rows) {
         this.minigame = minigame;
@@ -44,6 +45,9 @@ public class MinigameTable {
 
     public void newUser(GamePlayer gamePlayer){
         SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
+        if (connection == null){
+            return;
+        }
 
         QueryResult result = connection.insert()
                 .into(TABLE_NAME, "Nickname")
@@ -94,6 +98,9 @@ public class MinigameTable {
 
 
         SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
+        if (connection == null){
+            return;
+        }
         QueryResult result = connection.exec(() ->
                 "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + "("
                         + rows_s + ");");

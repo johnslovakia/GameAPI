@@ -95,6 +95,21 @@ public class PlayerData {
         }.runTaskAsynchronously(GameAPI.getInstance());
     }
 
+    public void setLanguage(Language language) {
+        new BukkitRunnable(){
+            @Override
+            public void run() {
+                SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
+                connection.update()
+                        .table(PlayerTable.TABLE_NAME)
+                        .set("Language", language.getName())
+                        .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
+                        .execute();
+            }
+        }.runTaskAsynchronously(GameAPI.getInstance());
+        setLanguage(language);
+    }
+
     public void addQuestProgress(Quest quest){
         for (PlayerQuestData questData : getQuestData()){
             if (questData.getQuest().equals(quest)){

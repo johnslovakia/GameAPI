@@ -43,6 +43,9 @@ public class PlayerTable {
 
     public void newUser(GamePlayer gamePlayer){
         SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
+        if (connection == null){
+            return;
+        }
 
         QueryResult result = connection.insert()
                 .into(TABLE_NAME, "Nickname", "Language")
@@ -92,6 +95,9 @@ public class PlayerTable {
 
 
         SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
+        if (connection == null){
+            return;
+        }
         QueryResult result = connection.exec(() ->
                 "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + "("
                         + rows_s + ");");

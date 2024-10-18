@@ -116,7 +116,7 @@ public class PlayerManager {
 
         private boolean scoreRanking = false;
         private Stat stat;
-        private Set<Trigger<?>> triggers;
+        private Set<Trigger<?>> triggers = new HashSet<>();
 
         public Score(String name){
             this.name = name;

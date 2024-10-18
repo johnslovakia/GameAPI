@@ -193,6 +193,9 @@ chat.top3players.your_party_members_position: " \u1E85 §7Positions of your part
 chat.top3players.friends_position: " \u1E84 §7Positions of your friends (hover over)"
 chat.winner: "§a%winner% §fwins the game!"
 chat.winstreak: "§fTvůj aktuální winstreak: §a%old_winstreak% §e-> %new_winstreak%"
+chat.view_statistic: "§7Hover over this message to view game statistics"
+chat.view_statistic.survived_for: " §fSurvived for §a%time%"
+chat.view_statistic.outlived: " §fOutlived §a%outlived% §fplayers"
 
 
 #Game countdowns
