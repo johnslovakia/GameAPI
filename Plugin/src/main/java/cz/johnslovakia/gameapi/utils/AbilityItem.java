@@ -11,6 +11,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryPickupItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -59,6 +60,9 @@ public class AbilityItem implements Listener {
             return;
         }
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (e.getItem().getItemStack().getItemMeta() == null){
+            return;
+        }
         ItemMeta meta = e.getItem().getItemStack().getItemMeta();
 
         if (meta == null){
@@ -69,8 +73,36 @@ public class AbilityItem implements Listener {
             if (loreTranslationKey != null) {
                 meta.setLore(Collections.singletonList(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated()));
                 ItemBuilder item = new ItemBuilder(e.getItem().getItemStack());
-                MessageManager.get(gamePlayer, loreTranslationKey).addToItemLore(item);
+                item.setLore(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated());
                 e.getItem().setItemStack(item.toItemStack());
+            }
+        }
+    }
+
+    @EventHandler
+    public void onInventoryPickupItem(InventoryClickEvent e) {
+        if (!(e.getWhoClicked() instanceof Player player)){
+            return;
+        }
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (e.getCurrentItem() == null){
+            return;
+        }
+        if (e.getCurrentItem().getItemMeta() == null){
+            return;
+        }
+        ItemMeta meta = e.getCurrentItem().getItemMeta();
+
+        if (meta == null){
+            return;
+        }
+
+        if (meta.getDisplayName().contains(name)){
+            if (loreTranslationKey != null) {
+                meta.setLore(Collections.singletonList(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated()));
+                ItemBuilder item = new ItemBuilder(e.getCurrentItem());
+                item.setLore(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated());
+                e.setCurrentItem(item.toItemStack());
             }
         }
     }
@@ -107,6 +139,9 @@ public class AbilityItem implements Listener {
                 return;
             }
             actions.get(action).accept(gamePlayer);
+            if (cooldown != null) {
+                cooldown.startCooldown(gamePlayer);
+            }
         }
     }
 

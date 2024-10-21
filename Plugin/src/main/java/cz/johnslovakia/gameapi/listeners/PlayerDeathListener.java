@@ -14,6 +14,7 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.PlayerScore;
 import cz.johnslovakia.gameapi.utils.Sounds;
 import cz.johnslovakia.gameapi.utils.StringUtils;
+import lombok.Getter;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -27,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Getter
 public class PlayerDeathListener implements Listener {
 
     private static Map<GamePlayer, Integer> spawnKillProtection = new HashMap<>();
@@ -44,13 +46,6 @@ public class PlayerDeathListener implements Listener {
         };
     }
 
-    public static Map<GamePlayer, Integer> getSpawnKillProtection() {
-        return spawnKillProtection;
-    }
-    public static Map<GamePlayer, Integer> getKillCounter() {
-        return killCounter;
-    }
-
     @EventHandler
     public void onGamePlayerDeath(GamePlayerDeathEvent e) {
         GamePlayer gamePlayer = e.getGamePlayer();
@@ -60,9 +55,9 @@ public class PlayerDeathListener implements Listener {
 
         //TODO: Nějaký nastavení?
         CosmeticsManager cosmeticsManager = GameAPI.getInstance().getCosmeticsManager();
-        CosmeticsCategory category = cosmeticsManager.getCategoryByName("Kill messages");
-        CosmeticsCategory killSoundsCategory = cosmeticsManager.getCategoryByName("Kill Sounds");
-        CosmeticsCategory killEffectCategory = cosmeticsManager.getCategoryByName("Kill Effects");
+        //CosmeticsCategory category = cosmeticsManager.getCategoryByName("Kill messages");
+        //CosmeticsCategory killSoundsCategory = cosmeticsManager.getCategoryByName("Kill Sounds");
+        //CosmeticsCategory killEffectCategory = cosmeticsManager.getCategoryByName("Kill Effects");
 
         if (e.getKiller() != null && e.getKiller() != gamePlayer){
             GamePlayer killer = e.getKiller();
@@ -99,7 +94,7 @@ public class PlayerDeathListener implements Listener {
             }
 
             if (e.getDmgCause().equals(EntityDamageEvent.DamageCause.PROJECTILE)){
-                if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
+                //if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
                     MessageManager.get(game.getParticipants(), "chat.kill")
                             .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                             .replace("%killer%", killer.getOnlinePlayer().getName())
@@ -107,8 +102,8 @@ public class PlayerDeathListener implements Listener {
                             .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
                             .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
                             .send();
-                }else{
-                    Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
+                //}else{
+                    //Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
                     /*KillMessage message = Cosmetics.getKillMessage(cosmetic);
                     if (message != null) {
                         MessageManager.get(game.getParticipants(), message.getMessageKey(KillMessage.DeadCause.RANGED))
@@ -119,9 +114,9 @@ public class PlayerDeathListener implements Listener {
                                 .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
                                 .send();
                     }*/
-                }
+                //}
             }else if (e.getDmgCause().equals(EntityDamageEvent.DamageCause.VOID)){
-                if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
+                //if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
                     MessageManager.get(game.getParticipants(), "chat.kill")
                             .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                             .replace("%killer%", killer.getOnlinePlayer().getName())
@@ -129,8 +124,8 @@ public class PlayerDeathListener implements Listener {
                             .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
                             .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
                             .send();
-                }else{
-                    Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
+                //}else{
+                    //Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
                     /*KillMessage message = Cosmetics.getKillMessage(cosmetic);
                     if (message != null) {
                         MessageManager.get(game.getParticipants(), message.getMessageKey(KillMessage.DeadCause.VOID))
@@ -141,9 +136,9 @@ public class PlayerDeathListener implements Listener {
                                 .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
                                 .send();
                     }*/
-                }
+                //}
             }else if (e.getDmgCause().equals(EntityDamageEvent.DamageCause.FALL)){
-                if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
+                //if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
                     MessageManager.get(game.getParticipants(), "chat.kill")
                             .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                             .replace("%killer%", killer.getOnlinePlayer().getName())
@@ -151,8 +146,8 @@ public class PlayerDeathListener implements Listener {
                             .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
                             .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
                             .send();
-                }else{
-                    Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
+                //}else{
+                //Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
                     /*KillMessage message = Cosmetics.getKillMessage(cosmetic);
                     if (message != null) {
                         MessageManager.get(game.getParticipants(), message.getMessageKey(KillMessage.DeadCause.FALL))
@@ -163,9 +158,9 @@ public class PlayerDeathListener implements Listener {
                                 .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
                                 .send();
                     }*/
-                }
+                //}
             }else{
-                if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
+                //if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
                     MessageManager.get(game.getParticipants(), "chat.kill")
                             .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                             .replace("%killer%", killer.getOnlinePlayer().getName())
@@ -173,8 +168,8 @@ public class PlayerDeathListener implements Listener {
                             .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
                             .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
                             .send();
-                }else{
-                    Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
+                //}else{
+                //Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
                     /*KillMessage message = Cosmetics.getKillMessage(cosmetic);
                     if (message != null) {
                         MessageManager.get(game.getParticipants(), message.getMessageKey(KillMessage.DeadCause.MELEE))
@@ -185,7 +180,7 @@ public class PlayerDeathListener implements Listener {
                                 .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
                                 .send();
                     }*/
-                }
+                //}
             }
 
 
@@ -258,15 +253,19 @@ public class PlayerDeathListener implements Listener {
             TextComponent message = new TextComponent(MessageManager.get(gamePlayer, "chat.view_statistic").getTranslated());
 
             ComponentBuilder b = new ComponentBuilder("");
+            b.append(MessageManager.get(gamePlayer, "chat.view_statistic.survived_for")
+                    .replace("%time%", StringUtils.getDurationString(game.getRunningMainTask().getCounter()))
+                    .getTranslated());
+            b.append("\n");
+            b.append(MessageManager.get(gamePlayer, "chat.view_statistic.outlived")
+                    .replace("%outlived%", "" + ((int) game.getMetadata().get("players_at_start") - (game.getPlayers().size() + 1)))
+                    .getTranslated());
+            b.append("\n");
             for (PlayerScore score : PlayerManager.getScoresByPlayer(gamePlayer)){
-                b.append(MessageManager.get(gamePlayer, "chat.view_statistic.survived_for")
-                        .replace("%time%", StringUtils.getDurationString(game.getRunningMainTask().getCounter()))
-                        .getTranslated());
-                b.append(MessageManager.get(gamePlayer, "chat.view_statistic.outlived")
-                        .replace("%outlived%", "" + ((int) game.getMetadata().get("players_at_start") - (game.getPlayers().size() + 1)))
-                        .getTranslated());
-                b.append("");
-                b.append( "§7" + score.getDisplayName() + ": §a" + score.getScore());
+                if (score.getScore() == 0) {
+                    continue;
+                }
+                b.append("\n").append("§7" + score.getDisplayName() + ": §a" + score.getScore());
             }
 
             message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));

@@ -68,7 +68,7 @@ public class WorldManager {
     }
 
     public static void loadArenaWorld(GameMap arena, Game game){
-        if (Bukkit.getPluginManager().getPlugin("SlimeWorldManager") != null) {
+        if (Bukkit.getPluginManager().getPlugin("SlimeWorldPlugin"/*"SlimeWorldManager"*/) != null) {
             if (GameAPI.getInstance().getSlimeWorldLoader().cloneSlimeArenaWorld(GameAPI.getInstance(), arena.getName(), game.getID())) {
                 return;
             }
@@ -81,7 +81,7 @@ public class WorldManager {
     }
 
     public static void loadWorld(String worldName, Player player){
-        if (Bukkit.getPluginManager().getPlugin("SlimeWorldManager") != null) {
+        if (Bukkit.getPluginManager().getPlugin("SlimeWorldPlugin"/*"SlimeWorldManager"*/) != null) {
             if (GameAPI.getInstance().getSlimeWorldLoader().loadSlimeWorld(GameAPI.getInstance(), worldName, player)) {
                 return;
             }

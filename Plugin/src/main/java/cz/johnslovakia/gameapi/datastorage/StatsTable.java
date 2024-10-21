@@ -33,7 +33,7 @@ public class StatsTable {
             stats_s.append(", `").append(s).append("` int NOT NULL");
         }
 
-        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
+        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
         if (connection == null){
             return;
         }
@@ -69,12 +69,12 @@ public class StatsTable {
         }
 
         String query = "INSERT IGNORE INTO `" + TABLE_NAME + "` (" + stats_s + ") VALUES (?, " + stats_s_1 + ")";
-        minigame.getDatabase().exec(query);
+        minigame.getDatabase().getConnection().exec(query);
     }
 
 
     public void setStat(String nick, String statName, int count) {
-        minigame.getDatabase().update()
+        minigame.getDatabase().getConnection().update()
                 .table(TABLE_NAME)
                 .set(statName, count)
                 .where().isEqual("Nickname", nick)
@@ -97,7 +97,7 @@ public class StatsTable {
     }
 
     public int getStat(String nick, String statName) {
-        Optional<Row> result = minigame.getDatabase().select()
+        Optional<Row> result = minigame.getDatabase().getConnection().select()
                 .from(TABLE_NAME)
                 .where().isEqual("Nickname", nick)
                 .obtainOne();
@@ -124,7 +124,7 @@ public class StatsTable {
         PreparedStatement p = null;
         ResultSet rs = null;
         try {
-            p = minigame.getDatabase().getConnection().prepareStatement(query);
+            p = minigame.getDatabase().getConnection().getConnection().prepareStatement(query);
 
             p.setString(1, nick);
             rs = p.executeQuery();
@@ -169,7 +169,7 @@ public class StatsTable {
         PreparedStatement p = null;
         ResultSet rs = null;
         try {
-            p = minigame.getDatabase().getConnection().prepareStatement(query);
+            p = minigame.getDatabase().getConnection().getConnection().prepareStatement(query);
             rs = p.executeQuery();
 
             HashMap<String, Integer> statsList = new HashMap<>();

@@ -1,21 +1,22 @@
 package cz.johnslovakia.gameapi.users.stats;
 
+import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.datastorage.StatsTable;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import lombok.Getter;
 
 import java.util.*;
 
+@Getter
 public class Stat{
 
     private String name;
     private Map<GamePlayer, PlayerStat> playerStats = new HashMap<>();
-    private StatsManager statsManager;
 
     private final String translate_key;
 
-    public Stat(StatsManager statsManager, String name) {
-        this.statsManager = statsManager;
+    public Stat(String name) {
         this.name = name;
 
         this.translate_key = "stat." + name.toLowerCase().replace(" ", "_");
@@ -32,15 +33,7 @@ public class Stat{
     }
 
     public StatsTable getStatsTable() {
-        return statsManager.getStatsTable();
-    }
-
-    public StatsManager getStatsManager() {
-        return statsManager;
-    }
-
-    public String getName() {
-        return name;
+        return GameAPI.getInstance().getStatsManager().getStatsTable();
     }
 
     public String getTranslated(GamePlayer gamePlayer){
@@ -50,10 +43,4 @@ public class Stat{
             return getName();
         }
     }
-
-    public Map<GamePlayer, PlayerStat> getPlayerStats() {
-        return playerStats;
-    }
-
-
 }

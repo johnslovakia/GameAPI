@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.task.tasks;
 
+import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.MinigameSettings;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.messages.MessageManager;
@@ -12,19 +13,18 @@ import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.List;
 
 public class StartCountdown implements TaskInterface {
 
-    private final BossBar bossBar;
-
-    public StartCountdown(){
-        this.bossBar = Bukkit.createBossBar("Game starting in:", BarColor.WHITE ,BarStyle.SOLID);
-    }
+    private BossBar bossBar;
 
     @Override
     public void onStart(Task task) {
+        this.bossBar = Bukkit.createBossBar("Game starting in:", BarColor.YELLOW ,BarStyle.SOLID);
+
         for (GamePlayer gamePlayer : task.getGame().getPlayers()){
             bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.game_starting_in")
                     .replace("%time%", Utils.getDurationString(task.getCounter()))
@@ -86,7 +86,12 @@ public class StartCountdown implements TaskInterface {
     public void onEnd(Task task) {
         Game game = task.getGame();
 
-        bossBar.removeAll();
+        new BukkitRunnable(){
+            @Override
+            public void run() {
+                bossBar.removeAll();
+            }
+        }.runTaskLater(GameAPI.getInstance(), 1L);
 
         for (GamePlayer players : game.getPlayers()) {
             Player player = players.getOnlinePlayer();
@@ -94,11 +99,14 @@ public class StartCountdown implements TaskInterface {
                         Messages.send(player, "chat.game_starts");
                     }*/
             player.setLevel(task.getCounter());
-            player.playSound(player, "game_start", 20.0F, 20.0F);
+            //player.playSound(player, "custom:gamestart", 20.0F, 20.0F); //v PreparationCountdown
         }
         if (game.getSettings().usePreperationTask()) {
             game.startPreparation();
         }else{
+            for (GamePlayer gamePlayer : game.getPlayers()) {
+                gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "custom:gamestart", 20.0F, 20.0F);
+            }
             game.startGame();
         }
     }

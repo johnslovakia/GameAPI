@@ -20,7 +20,7 @@ public class Area {
 
     private boolean isBorder = false;
 
-    private final AreaSettings settings = new AreaSettings();
+    private final AreaSettings settings;
 
     /**
      * Define an area to make checking for certain events easier.
@@ -37,6 +37,7 @@ public class Area {
         this.loc1 = loc1;
         this.loc2 = loc2;
         this.name = name;
+        this.settings = new AreaSettings();
     }
 
     public Location getCenter(){

@@ -44,7 +44,7 @@ public class MinigameTable {
     }
 
     public void newUser(GamePlayer gamePlayer){
-        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
+        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
         if (connection == null){
             return;
         }
@@ -97,7 +97,7 @@ public class MinigameTable {
         }
 
 
-        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
+        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
         if (connection == null){
             return;
         }

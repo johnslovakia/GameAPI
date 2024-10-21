@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Sounds;
+import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Location;
@@ -41,7 +42,6 @@ public class GameMap {
 
     @Setter
     private boolean playing = false;
-    @Setter
     private boolean winned = false;
     @Setter
     private boolean voting = true;
@@ -59,6 +59,7 @@ public class GameMap {
         this.game = game;
         this.name = name;
         this.authors = authors;
+        this.settings = new AreaSettings();
     }
 
     public GameMap setMainArea(Area mainArea) {
@@ -172,6 +173,25 @@ public class GameMap {
                     }
 
                     spawn++;
+                }
+            }
+        }
+    }
+
+    public void setWinned(boolean winned){
+        this.winned = winned;
+        if (winned){
+            setGame(game);
+
+            if (settings.isLoadWorldWithGameAPI()) {
+                WorldManager.loadArenaWorld(this, game);
+            }
+        }else{
+            if (getWorld() != null) {
+                try {
+                    WorldManager.unload(this, game);
+                }catch (Exception ignored){
+
                 }
             }
         }

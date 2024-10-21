@@ -12,7 +12,7 @@ public class MapManager {
     private Game game;
     private List<GameMap> maps = new ArrayList<>();
 
-    private boolean voting;
+    private boolean voting = true;
 
     public MapManager(Game game) {
         this.game = game;

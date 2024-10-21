@@ -183,6 +183,10 @@ public class Utils {
         for (int i = 0; i < gamePlayers.size() && count < maxResults; i++) {
             GamePlayer gamePlayer = gamePlayers.get(i);
 
+            if (gamePlayer.getScoreByName(scoreName).getScore() == 0){
+                continue;
+            }
+
             if (gamePlayer.getScoreByName(scoreName).getScore() != lastKills) {
                 rank = i + 1;
                 lastKills = gamePlayer.getScoreByName(scoreName).getScore();

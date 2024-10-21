@@ -66,7 +66,7 @@ public class PlayerData {
         this.playerTable = new PlayerTable(gamePlayer);
 
         try {
-            Optional<Row> result = GameAPI.getInstance().getMinigame().getDatabase().select()
+            Optional<Row> result = GameAPI.getInstance().getMinigame().getDatabase().getConnection().select()
                     .from(PlayerTable.TABLE_NAME)
                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                     .obtainOne();
@@ -99,7 +99,7 @@ public class PlayerData {
         new BukkitRunnable(){
             @Override
             public void run() {
-                SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
+                SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
                 connection.update()
                         .table(PlayerTable.TABLE_NAME)
                         .set("Language", language.getName())
@@ -150,7 +150,7 @@ public class PlayerData {
 
     private void loadQuests(){
         Minigame minigame = GameAPI.getInstance().getMinigame();
-        SQLDatabaseConnection connection = minigame.getDatabase();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
         Optional<Row> result = connection.select()
                 .from(minigame.getMinigameTable().getTableName())
@@ -213,7 +213,7 @@ public class PlayerData {
 
     private void loadPerks(){
         Minigame minigame = GameAPI.getInstance().getMinigame();
-        SQLDatabaseConnection connection = minigame.getDatabase();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
         Optional<Row> result = connection.select()
                 .from(minigame.getMinigameTable().getTableName())
@@ -252,7 +252,7 @@ public class PlayerData {
 
     private void loadKits(){
         Minigame minigame = GameAPI.getInstance().getMinigame();
-        SQLDatabaseConnection connection = minigame.getDatabase();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
         Optional<Row> result = connection.select()
                 .from(minigame.getMinigameTable().getTableName())
@@ -303,7 +303,7 @@ public class PlayerData {
 
     public void saveAll(){
         Minigame minigame = GameAPI.getInstance().getMinigame();
-        SQLDatabaseConnection connection = minigame.getDatabase();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
         QueryResult cosmeticResult = connection.insert()
                 .into(minigame.getMinigameTable().getTableName(), "Cosmetics")
@@ -337,7 +337,7 @@ public class PlayerData {
 
     private void loadCosmetics(){
         Minigame minigame = GameAPI.getInstance().getMinigame();
-        SQLDatabaseConnection connection = minigame.getDatabase();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
         Optional<Row> result = connection.select()
                 .from(minigame.getMinigameTable().getTableName())

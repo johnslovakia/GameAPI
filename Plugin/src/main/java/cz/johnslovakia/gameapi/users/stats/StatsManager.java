@@ -12,7 +12,7 @@ import java.util.List;
 public class StatsManager {
 
     public StatsManager(){
-        registerStat(new Stat(GameAPI.getInstance().getStatsManager(), "Winstreak"));
+        registerStat(new Stat("Winstreak"));
     }
 
     private List<Stat> stats = new ArrayList<>();

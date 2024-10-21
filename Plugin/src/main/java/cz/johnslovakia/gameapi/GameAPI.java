@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import com.infernalsuite.aswm.loaders.mysql.MysqlLoader;
 import cz.johnslovakia.gameapi.api.Schematic;
 import cz.johnslovakia.gameapi.api.SlimeWorldLoader;
 import cz.johnslovakia.gameapi.api.UserInterface;
@@ -23,6 +24,7 @@ import cz.johnslovakia.gameapi.utils.BetterInvisibility;
 import cz.johnslovakia.gameapi.utils.BukkitSerialization;
 import cz.johnslovakia.gameapi.utils.InputStreamWithName;
 import cz.johnslovakia.gameapi.utils.Logger;
+import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import lombok.Getter;
 import lombok.Setter;
 import me.zort.containr.Containr;
@@ -39,6 +41,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.FileUtil;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.*;
@@ -120,12 +123,13 @@ public class GameAPI extends JavaPlugin {
             if (UserInterface.class.isAssignableFrom(clazz2)) {
                 this.userInterface = (UserInterface) clazz2.getConstructor().newInstance();
             }
-            if (Bukkit.getPluginManager().getPlugin("SlimeWorldManager") != null) {
+            /*if (Bukkit.getPluginManager().getPlugin("SlimeWorldPlugin"/*"SlimeWorldManager"*) != null) {
                 final Class<?> clazz3 = Class.forName("cz.johnslovakia.gameapi.nms." + version + ".SlimeWorldLoaderHandler");
                 if (SlimeWorldLoader.class.isAssignableFrom(clazz3)) {
-                    this.slimeWorldLoader = (SlimeWorldLoader) clazz3.getConstructor().newInstance();
+                    //this.slimeWorldLoader = (SlimeWorldLoader) clazz3.getConstructor().newInstance();
+                    this.slimeWorldLoader = (SlimeWorldLoader) clazz3.getConstructor(MysqlLoader.class).newInstance();
                 }
-            }
+            }*/
 
             if (Bukkit.getPluginManager().getPlugin("WorldEdit") != null) {
                 final Class<?> clazz3 = Class.forName("cz.johnslovakia.gameapi.nms." + version + ".SchematicHandler");
@@ -148,20 +152,41 @@ public class GameAPI extends JavaPlugin {
         pm.registerEvents(new JoinQuitListener(), this);
         pm.registerEvents(new MapSettingsListener(), this);
         pm.registerEvents(new PlayerDeathListener(), this);
+        pm.registerEvents(new PVPListener(), this);
         pm.registerEvents(new RespawnListener(), this);
         pm.registerEvents(new WorldListener(), this);
 
         protocolManager = ProtocolLibrary.getProtocolManager();
+
+        ChatHeadAPI.initialize(this);
     }
 
     @Override
     public void onDisable() {
-        getMinigame().getDatabase().disconnect();
+        getMinigame().getDatabase().getConnection().disconnect();
     }
 
 
     public void registerMinigame(Minigame minigame){
         this.minigame = minigame;
+
+        if (Bukkit.getPluginManager().getPlugin("SlimeWorldPlugin"/*"SlimeWorldManager"*/) != null) {
+            final Class<?> clazz3;
+            try {
+                clazz3 = Class.forName("cz.johnslovakia.gameapi.nms." + version + ".SlimeWorldLoaderHandler");
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+            if (SlimeWorldLoader.class.isAssignableFrom(clazz3)) {
+                //this.slimeWorldLoader = (SlimeWorldLoader) clazz3.getConstructor().newInstance();
+                try {
+                    this.slimeWorldLoader = (SlimeWorldLoader) clazz3.getConstructor(MysqlLoader.class).newInstance(minigame.getDatabase().getAswmLoader());
+                } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                         NoSuchMethodException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
 
         boolean somethingwrong = false;
         try{
@@ -186,7 +211,7 @@ public class GameAPI extends JavaPlugin {
 
         for (cz.johnslovakia.gameapi.economy.Economy economy : minigame.getEconomies()){
             if (economy.isAutomatically()){
-                SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase();
+                SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
                 if (!economy.isForAllMinigames()){
 
                     minigameTable.addRow(Type.VARCHAR128 ,economy.getName());

@@ -12,6 +12,7 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.friends.FriendsInterface;
 import cz.johnslovakia.gameapi.users.parties.PartiesHook;
 import cz.johnslovakia.gameapi.users.parties.PartyInterface;
+import fr.mrmicky.fastboard.FastBoard;
 import lombok.Getter;
 import lombok.Setter;
 import me.zort.sqllib.SQLDatabaseConnection;
@@ -39,6 +40,7 @@ public class GamePlayer extends Winner {
     private boolean limited = false;
 
     private PlayerData playerData;
+    private FastBoard scoreboard;
 
     private FriendsInterface friends;
     private PartyInterface party;
@@ -52,6 +54,8 @@ public class GamePlayer extends Winner {
         this.player = offlinePlayer;
         this.type = GamePlayerType.PLAYER;
         this.playerData = new PlayerData(this);
+
+        hookFriendsAndParty();
     }
 
     public Language getLanguage() {

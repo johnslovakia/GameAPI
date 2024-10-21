@@ -347,7 +347,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
         }
 
         public Builder createStat(String name){
-            Stat stat = new Stat(GameAPI.getInstance().getStatsManager(), name);
+            Stat stat = new Stat(name);
             this.stat = stat;
             GameAPI.getInstance().getStatsManager().registerStat(stat);
             return this;

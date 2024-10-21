@@ -1,9 +1,11 @@
 package cz.johnslovakia.gameapi.messages;
 
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import lombok.Getter;
 
 import java.util.function.Predicate;
 
+@Getter
 public class AddToMessage {
 
     String message;

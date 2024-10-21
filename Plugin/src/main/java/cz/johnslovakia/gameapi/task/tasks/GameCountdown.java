@@ -17,14 +17,12 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 public class GameCountdown implements TaskInterface {
 
-    private final BossBar bossBar;
-
-    public GameCountdown(){
-        this.bossBar = Bukkit.createBossBar("", BarColor.WHITE , BarStyle.SOLID);
-    }
+    private BossBar bossBar;
 
     @Override
     public void onStart(Task task) {
+        this.bossBar = Bukkit.createBossBar("", BarColor.WHITE , BarStyle.SOLID);
+
         for (GamePlayer gamePlayer : task.getGame().getParticipants()){
             new BukkitRunnable(){
                 @Override
@@ -34,6 +32,7 @@ public class GameCountdown implements TaskInterface {
             }.runTaskAsynchronously(GameAPI.getInstance());
 
             bossBar.setTitle(StringUtils.getDurationString(task.getCounter()));
+            bossBar.setProgress(task.getCounter() / (double) task.getStartCounter());
             bossBar.setVisible(true);
             bossBar.addPlayer(gamePlayer.getOnlinePlayer());
         }
@@ -42,11 +41,19 @@ public class GameCountdown implements TaskInterface {
     @Override
     public void onCount(Task task) {
         bossBar.setTitle(StringUtils.getDurationString(task.getCounter()));
+        bossBar.setProgress(task.getCounter() / (double) task.getStartCounter());
     }
 
     @Override
     public void onEnd(Task task) {
         Game game = task.getGame();
+
+        new BukkitRunnable(){
+            @Override
+            public void run() {
+                bossBar.removeAll();
+            }
+        }.runTaskLater(GameAPI.getInstance(), 1L);
 
         for (GamePlayer gamePlayer : game.getPlayers()) {
             MessageManager.get(gamePlayer, "title.time_is_up.title")

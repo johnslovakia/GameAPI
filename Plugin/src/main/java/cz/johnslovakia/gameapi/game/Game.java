@@ -20,6 +20,7 @@ import cz.johnslovakia.gameapi.task.tasks.PreparationCountdown;
 import cz.johnslovakia.gameapi.users.friends.FriendsInterface;
 import cz.johnslovakia.gameapi.users.parties.PartyInterface;
 import cz.johnslovakia.gameapi.users.stats.StatsHolograms;
+import cz.johnslovakia.gameapi.utils.StringUtils;
 import cz.johnslovakia.gameapi.utils.Utils;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
@@ -51,6 +52,8 @@ public class Game {
     private InventoryManager lobbyInventory;
     @Getter @Setter
     private SpectatorManager spectatorManager;
+    @Getter @Setter
+    private boolean firstGameKill;
 
     private Winner winner;
 
@@ -65,6 +68,12 @@ public class Game {
 
         this.spectatorManager = new SpectatorManager();
         getSpectatorManager().loadItemManager();
+
+        while (this.ID == null || GameManager.isDuplicate(this.ID)){
+            this.ID = StringUtils.randomString(6, true, true, false);
+        }
+
+        state = GameState.WAITING;
     }
 
 
@@ -135,6 +144,8 @@ public class Game {
 
             if (getPlayers().size() == settings.getMinPlayers()){
                 setState(GameState.STARTING); //TODO: starting
+                Task task = new Task(this, "StartCountdown", getSettings().getStartingTime(), new StartCountdown(), GameAPI.getInstance());
+                task.setGame(this);
             }
 
             GameJoinEvent ev = new GameJoinEvent(this, gamePlayer, GameJoinEvent.JoinType.LOBBY);
@@ -219,9 +230,11 @@ public class Game {
         }else{
             PlayerManager.removeGamePlayer(player);
         }
+
+        checkArenaFullness();
     }
 
-    public void cancelStarting(){
+    public void checkArenaFullness(){
         if (!getState().equals(GameState.STARTING)) {
             return;
         }
@@ -274,7 +287,7 @@ public class Game {
     public void preparePlayer(GamePlayer gamePlayer, boolean rejoin){
         Player player = gamePlayer.getOnlinePlayer();
 
-        player.setGameMode(GameMode.ADVENTURE);
+        player.setGameMode(GameMode.SURVIVAL);
         player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue());
         player.setLevel(0);
         player.setExp(0);
@@ -396,22 +409,29 @@ public class Game {
         setState(GameState.ENDING);
 
 
-        MessageManager.get(getParticipants(), "chat.winner")
-                .replace("%winner%", gp -> (winner.getWinnerType().equals(Winner.WinnerType.PLAYER) ? MessageManager.get(gp, "winnerType.player") + " " : ((GameTeam) winner).getChatColor()) + winner.getWinnerType().getTranslatedName(gp) + (winner.getWinnerType().equals(Winner.WinnerType.TEAM) ? " " + MessageManager.get(gp, "winnerType.team") : ""))
-                .send();
+        if (winner != null) {
+            MessageManager.get(getParticipants(), "chat.winner")
+                    .replace("%winner%", gp -> (winner.getWinnerType().equals(Winner.WinnerType.PLAYER) ? MessageManager.get(gp, "winnerType.player") + " " : ((GameTeam) winner).getChatColor()) + winner.getWinnerType().getTranslatedName(gp) + (winner.getWinnerType().equals(Winner.WinnerType.TEAM) ? " " + MessageManager.get(gp, "winnerType.team") : ""))
+                    .send();
+        }else{
+            MessageManager.get(getParticipants(), "chat.nobody_won")
+                    .send();
+        }
 
         for (GamePlayer gamePlayer : getParticipants()) {
             if (getSettings().teleportPlayersAfterEnd()){
                 gamePlayer.getOnlinePlayer().teleport(getLobbyPoint());
             }
 
-            if ((winner.getWinnerType().equals(Winner.WinnerType.PLAYER) && (winner.equals(gamePlayer)) || (winner.getWinnerType().equals(Winner.WinnerType.TEAM) && gamePlayer.getPlayerData().getTeam().equals(winner)))){
-                MessageManager.get(gamePlayer, "title.victory")
-                        .send();
-            }else{
-                MessageManager.get(gamePlayer, "title.winner")
-                        .replace("%winner%", (winner.getWinnerType().equals(Winner.WinnerType.PLAYER) ? MessageManager.get(gamePlayer, "winnerType.player") + " " : ((GameTeam) winner).getChatColor()) + winner.getWinnerType().getTranslatedName(gamePlayer) + (winner.getWinnerType().equals(Winner.WinnerType.TEAM) ? " " + MessageManager.get(gamePlayer, "winnerType.team") : ""))
-                        .send();
+            if (winner != null) {
+                if ((winner.getWinnerType().equals(Winner.WinnerType.PLAYER) && (winner.equals(gamePlayer)) || (winner.getWinnerType().equals(Winner.WinnerType.TEAM) && gamePlayer.getPlayerData().getTeam().equals(winner)))) {
+                    MessageManager.get(gamePlayer, "title.victory")
+                            .send();
+                } else {
+                    MessageManager.get(gamePlayer, "title.winner")
+                            .replace("%winner%", (winner.getWinnerType().equals(Winner.WinnerType.PLAYER) ? MessageManager.get(gamePlayer, "winnerType.player") + " " : ((GameTeam) winner).getChatColor()) + winner.getWinnerType().getTranslatedName(gamePlayer) + (winner.getWinnerType().equals(Winner.WinnerType.TEAM) ? " " + MessageManager.get(gamePlayer, "winnerType.team") : ""))
+                            .send();
+                }
             }
 
 
@@ -432,25 +452,31 @@ public class Game {
             new BukkitRunnable(){
                 @Override
                 public void run() {
-                    gamePlayer.getPlayerData().saveAll();
+                    try{
+                        gamePlayer.getPlayerData().saveAll();
+                    } catch (Exception e){
+                        e.printStackTrace();
+                    }
                 }
             }.runTaskAsynchronously(GameAPI.getInstance());
         }
 
 
 
-        if (winner.getWinnerType().equals(Winner.WinnerType.TEAM)){
-            GameTeam wTeam = (GameTeam) winner;
-            for (GameTeam lTeam : TeamManager.getTeams(this).stream().filter(team -> team != wTeam).toList()){
-                lTeam.getMembers().forEach(loser -> loser.getPlayerData().getStat("Winstreak").setStat(0));
-            }
-            for (GamePlayer gamePlayer : wTeam.getMembers()){
-                gamePlayer.getPlayerData().getStat("Winstreak").increase();
-            }
-        }else{
-            ((GamePlayer) winner).getPlayerData().getStat("Winstreak").increase();
-            for (GamePlayer loser :  getParticipants().stream().filter(gp -> gp != winner).toList()){
-                loser.getPlayerData().getStat("Winstreak").setStat(0);
+        if (winner != null) {
+            if (winner.getWinnerType().equals(Winner.WinnerType.TEAM)) {
+                GameTeam wTeam = (GameTeam) winner;
+                for (GameTeam lTeam : TeamManager.getTeams(this).stream().filter(team -> team != wTeam).toList()) {
+                    lTeam.getMembers().forEach(loser -> loser.getPlayerData().getStat("Winstreak").setStat(0));
+                }
+                for (GamePlayer gamePlayer : wTeam.getMembers()) {
+                    gamePlayer.getPlayerData().getStat("Winstreak").increase();
+                }
+            } else {
+                ((GamePlayer) winner).getPlayerData().getStat("Winstreak").increase();
+                for (GamePlayer loser : getParticipants().stream().filter(gp -> gp != winner).toList()) {
+                    loser.getPlayerData().getStat("Winstreak").setStat(0);
+                }
             }
         }
 
@@ -458,6 +484,8 @@ public class Game {
         HashMap<GamePlayer, Integer> oldWinstreaks = new HashMap<>();
         for (GamePlayer gp : getParticipants()){
             oldWinstreaks.put(gp, gp.getPlayerData().getStat("Winstreak").getStatScore());
+
+            gp.getOnlinePlayer().sendMessage("");
         }
 
 
@@ -485,8 +513,16 @@ public class Game {
                     TextComponent message = new TextComponent(MessageManager.get(gp, "chat.view_statistic").getTranslated());
 
                     ComponentBuilder b = new ComponentBuilder("");
+                    int i = 0;
                     for (PlayerScore score : PlayerManager.getScoresByPlayer(gp)){
+                        if (score.getScore() == 0){
+                            continue;
+                        }
+                        if (i != 0){
+                            b.append("\n");
+                        }
                         b.append( "§7" + score.getDisplayName() + ": §a" + score.getScore());
+                        i++;
                     }
 
                     message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));
@@ -506,13 +542,19 @@ public class Game {
             }
         }
 
+        Map<GamePlayer, Integer> ranking =  Utils.getTopPlayers(this, rankingScore, 3);
+
+        if (ranking.isEmpty()){
+            return;
+        }
+
         for (GamePlayer gamePlayer : getParticipants()) {
             Player player = gamePlayer.getOnlinePlayer();
 
             player.sendMessage("");
 
             MessageManager.get(gamePlayer, "chat.top3players.title").send();
-            Map<GamePlayer, Integer> ranking =  Utils.getTopPlayers(this, rankingScore, 3);
+
             for (GamePlayer pos : ranking.keySet()) {
                 int position = ranking.get(pos);
                 MessageManager.get(gamePlayer, "chat.top3players.position")
@@ -591,6 +633,9 @@ public class Game {
         for (GamePlayer gamePlayer : getParticipants()){
             Player player = gamePlayer.getOnlinePlayer();
 
+            if (!RewardsManager.earnedSomething(gamePlayer)){
+                return;
+            }
             player.sendMessage("");
             MessageManager.get(gamePlayer, "chat.rewardsummary.title").send();
 
@@ -708,8 +753,6 @@ public class Game {
                 Bukkit.getPluginManager().callEvent(ev);
                 break;
             case STARTING:
-                Task task = new Task(this, "StartCountdown", getSettings().getStartingTime(), new StartCountdown(), GameAPI.getInstance());
-                task.setGame(this);
                 break;
             /*case SETUP:
                 for (GamePlayer gamePlayer : getParticipants()) {

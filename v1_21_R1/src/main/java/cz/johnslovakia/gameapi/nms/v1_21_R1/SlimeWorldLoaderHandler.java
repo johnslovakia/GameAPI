@@ -1,14 +1,15 @@
 package cz.johnslovakia.gameapi.nms.v1_21_R1;
 
-import com.infernalsuite.aswm.api.SlimePlugin;
+import com.infernalsuite.aswm.api.AdvancedSlimePaperAPI;
 import com.infernalsuite.aswm.api.exceptions.CorruptedWorldException;
 import com.infernalsuite.aswm.api.exceptions.NewerFormatException;
 import com.infernalsuite.aswm.api.exceptions.UnknownWorldException;
-import com.infernalsuite.aswm.api.exceptions.WorldLockedException;
 import com.infernalsuite.aswm.api.loaders.SlimeLoader;
 import com.infernalsuite.aswm.api.world.SlimeWorld;
 import com.infernalsuite.aswm.api.world.properties.SlimeProperties;
 import com.infernalsuite.aswm.api.world.properties.SlimePropertyMap;
+import com.infernalsuite.aswm.loaders.file.FileLoader;
+import com.infernalsuite.aswm.loaders.mysql.MysqlLoader;
 import cz.johnslovakia.gameapi.api.SlimeWorldLoader;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
@@ -18,33 +19,28 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
 
+    private final SlimeLoader loader;
+    private final AdvancedSlimePaperAPI asp = AdvancedSlimePaperAPI.instance();
+
+    public SlimeWorldLoaderHandler(MysqlLoader loader){
+        //loader = new FileLoader("slime_worlds");
+        this.loader = loader;
+    }
+
     @Override
     public boolean cloneSlimeArenaWorld(Plugin bukkitPlugin, String arenaID, String gameID) {
-
-        SlimePlugin plugin;
-        SlimeLoader loader;
+        AdvancedSlimePaperAPI asp = AdvancedSlimePaperAPI.instance();
 
         String worldName = arenaID;
         String newWorldName = arenaID + "_" + gameID;
 
-        if (Bukkit.getPluginManager().getPlugin("SlimeWorldManager") != null) {
-            plugin = (SlimePlugin) Bukkit.getPluginManager().getPlugin("SlimeWorldManager");
-            loader = plugin.getLoader("mysql");
-            try {
-                if (loader == null || !loader.worldExists(worldName)){
-                    plugin.getLoader("files");
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }else{
+        if (Bukkit.getPluginManager().getPlugin("SlimeWorldPlugin"/*"SlimeWorldManager"*/) == null) {
             return false;
         }
-
-
 
         try {
             if (!loader.worldExists(worldName)){
@@ -61,31 +57,28 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
         SlimePropertyMap properties = new SlimePropertyMap();
         properties.setValue(SlimeProperties.DIFFICULTY, "normal");
 
-
         Bukkit.getScheduler().runTaskAsynchronously(bukkitPlugin, () -> {
             try {
-                SlimeWorld world = plugin.loadWorld(loader, worldName, true, properties).clone(newWorldName);
+                SlimeWorld world = asp.readWorld(loader, worldName, false, properties);
 
                 Bukkit.getScheduler().runTask(bukkitPlugin, () -> {
-                    try {
-                        plugin.loadWorld(world, true);
+                    asp.getLoadedWorlds().forEach(w -> System.out.println("Loaded World: " + w.getName()));
+                    if (/*asp.worldLoaded(world)*/ Bukkit.getWorld(worldName) != null){
+                        asp.loadWorld(world.clone(newWorldName), true);
+                    }else{
+                        asp.loadWorld(world, true).clone(newWorldName);
+                    }
 
-                        World bukkitWorld = Bukkit.getWorld(newWorldName);
-                        if (bukkitWorld != null) {
-                            bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-                            bukkitWorld.setAutoSave(false);
-                            //TODO: arena.setWorld(bukkitWorld);
-                        }
-                    } catch(UnknownWorldException e){
-                        Bukkit.getLogger().warning("I can't upload a World: " + worldName + " using Slime World Manager because the world is not imported! I'll try to load the world in a different way.");
-                    }catch (WorldLockedException | IOException e) {
-                        throw new RuntimeException(e);
+                    World bukkitWorld = Bukkit.getWorld(newWorldName);
+                    if (bukkitWorld != null) {
+                        bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+                        bukkitWorld.setAutoSave(false);
                     }
                 });
             } catch(UnknownWorldException e){
                 Bukkit.getLogger().warning("I can't upload a World: " + worldName + " using Slime World Manager because the world is not imported! I'll try to load the world in a different way.");
                 throw new RuntimeException(e);
-            }catch (WorldLockedException | IOException | CorruptedWorldException | NewerFormatException e) {
+            }catch (IOException | CorruptedWorldException | NewerFormatException e) {
                 throw new RuntimeException(e);
             }
         });
@@ -100,20 +93,8 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
 
     @Override
     public boolean loadSlimeWorld(Plugin bukkitPlugin, String worldName, Player player) {
-        SlimePlugin plugin;
-        SlimeLoader loader;
 
-        if (Bukkit.getPluginManager().getPlugin("SlimeWorldManager") != null) {
-            plugin = (SlimePlugin) Bukkit.getPluginManager().getPlugin("SlimeWorldManager");
-            loader = plugin.getLoader("mysql");
-            try {
-                if (loader == null || !loader.worldExists(worldName)){
-                    plugin.getLoader("files");
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }else{
+        if (Bukkit.getPluginManager().getPlugin("SlimeWorldPlugin"/*"SlimeWorldManager"*/) == null) {
             return false;
         }
         
@@ -132,57 +113,40 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
         SlimePropertyMap properties = new SlimePropertyMap();
         properties.setValue(SlimeProperties.DIFFICULTY, "normal");
 
-
         Bukkit.getScheduler().runTaskAsynchronously(bukkitPlugin, () -> {
             try {
-                SlimeWorld world = plugin.loadWorld(loader, worldName, true, properties);
+                SlimeWorld world = asp.readWorld(loader, worldName, false, properties);
 
                 Bukkit.getScheduler().runTask(bukkitPlugin, () -> {
-                    try {
-                        plugin.loadWorld(world, true);
+                    if (!asp.worldLoaded(world)) {
+                        asp.loadWorld(world, true);
+                    }
 
-                        if (Bukkit.getWorld(worldName) != null) {
-                            World bukkitWorld = Bukkit.getWorld(worldName);
-                            bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-                            bukkitWorld.setAutoSave(false);
+                    if (Bukkit.getWorld(worldName) != null) {
+                        World bukkitWorld = Bukkit.getWorld(worldName);
+                        bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+                        bukkitWorld.setAutoSave(false);
 
-                            if (player != null){
-                                Location location = new Location(bukkitWorld, 0, 90, 0);
-                                player.teleport(location);
-                            }
+                        if (player != null) {
+                            Location location = new Location(bukkitWorld, 0, 90, 0);
+                            player.teleport(location);
                         }
-                    } catch(UnknownWorldException e){
-                        Bukkit.getLogger().warning("I can't upload a World: " + worldName + " using Slime World Manager because the world is not imported! I'll try to load the world in a different way.");
-                    }catch (WorldLockedException | IOException e) {
-                        throw new RuntimeException(e);
                     }
                 });
             } catch(UnknownWorldException e){
                 Bukkit.getLogger().warning("I can't upload a World: " + worldName + " using Slime World Manager because the world is not imported! I'll try to load the world in a different way.");
-            } catch (IOException | CorruptedWorldException | NewerFormatException |
-                     WorldLockedException exception) {
+                e.printStackTrace();
+            } catch (IOException | CorruptedWorldException | NewerFormatException exception) {
                 exception.printStackTrace();
             }
         });
+
         return true;
     }
 
     @Override
     public boolean loadSlimeLobbyWorld(Plugin bukkitPlugin, String worldName) {
-        SlimePlugin plugin;
-        SlimeLoader loader;
-
-        if (Bukkit.getPluginManager().getPlugin("SlimeWorldManager") != null) {
-            plugin = (SlimePlugin) Bukkit.getPluginManager().getPlugin("SlimeWorldManager");
-            loader = plugin.getLoader("mysql");
-            try {
-                if (loader == null || !loader.worldExists(worldName)){
-                    plugin.getLoader("files");
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }else{
+        if (Bukkit.getPluginManager().getPlugin("SlimeWorldPlugin"/*"SlimeWorldManager"*/) == null) {
             return false;
         }
         
@@ -201,34 +165,30 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
         SlimePropertyMap properties = new SlimePropertyMap();
         properties.setValue(SlimeProperties.DIFFICULTY, "normal");
 
-
         Bukkit.getScheduler().runTaskAsynchronously(bukkitPlugin, () -> {
             try {
-                SlimeWorld world = plugin.loadWorld(loader, worldName, true, properties);
+                SlimeWorld world = asp.readWorld(loader, worldName, true, properties);
 
                 Bukkit.getScheduler().runTask(bukkitPlugin, () -> {
-                    try {
-                        plugin.loadWorld(world, true);
-                        if (Bukkit.getWorld(worldName) != null) {
-                            World bukkitWorld = Bukkit.getWorld(worldName);
-                            bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-                            bukkitWorld.setGameRule(GameRule.DO_MOB_SPAWNING, false);
-                            bukkitWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
-                            bukkitWorld.setAutoSave(false);
-                        }
-                    } catch(UnknownWorldException e){
-                        Bukkit.getLogger().warning("I can't upload a World: " + worldName + " using Slime World Manager because the world is not imported! I'll try to load the world in a different way.");
-                    }catch (WorldLockedException | IOException e) {
-                        throw new RuntimeException(e);
+                    if (!asp.worldLoaded(world)) {
+                        asp.loadWorld(world, true);
+                    }
+                    if (Bukkit.getWorld(worldName) != null) {
+                        World bukkitWorld = Bukkit.getWorld(worldName);
+                        bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+                        bukkitWorld.setGameRule(GameRule.DO_MOB_SPAWNING, false);
+                        bukkitWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+                        bukkitWorld.setAutoSave(false);
                     }
                 });
             } catch(UnknownWorldException e){
                 Bukkit.getLogger().warning("I can't upload a World: " + worldName + " using Slime World Manager because the world is not imported! I'll try to load the world in a different way.");
-            } catch (IOException | CorruptedWorldException | NewerFormatException |
-                     WorldLockedException exception) {
+                e.printStackTrace();
+            } catch (IOException | CorruptedWorldException | NewerFormatException exception) {
                 exception.printStackTrace();
             }
         });
+
         return true;
     }
 }

@@ -22,14 +22,6 @@
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
         <repository>
-            <id>is-releases</id>
-            <url>https://repo.infernalsuite.com/repository/maven-releases/</url>
-        </repository>
-        <repository>
-            <id>is-snapshots</id>
-            <url>https://repo.infernalsuite.com/repository/maven-snapshots/</url>
-        </repository>
-        <repository>
             <id>rapture-releases</id>
             <url>https://repo.rapture.pw/repository/maven-releases/</url>
         </repository>
@@ -60,12 +52,6 @@
             <artifactId>API</artifactId>
             <version>API</version>
             <type>jar</type>
-        </dependency>
-        <dependency>
-            <groupId>com.infernalsuite.aswm</groupId>
-            <artifactId>api</artifactId>
-            <version>1.20.4-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fastasyncworldedit</groupId>

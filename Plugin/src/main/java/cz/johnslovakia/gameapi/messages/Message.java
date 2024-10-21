@@ -24,12 +24,12 @@ public class Message {
 
         for (GamePlayer recipient : audience){
             Language language = recipient.getLanguage();
-            String msg = MessageManager.getMessages(key).get(language);
-            if (msg != null){
-                messages.put(recipient, msg);
-            }else {
+            if (MessageManager.getMessages(key) == null){
                 messages.put(recipient, "§cNo translation found for message key: " + key + " (Language: " + language.getName() + ")");
+                return;
             }
+            String msg = MessageManager.getMessages(key).get(language);
+            messages.put(recipient, Objects.requireNonNullElseGet(msg, () -> "§cNo translation found for message key: " + key + " (Language: " + language.getName() + ")"));
         }
     }
 
@@ -105,7 +105,9 @@ public class Message {
             finalMessage = new StringBuilder(ChatColor.translateAlternateColorCodes('&', finalMessage.toString()));
             if (!addToMessage.isEmpty()){
                 for (AddToMessage add : addToMessage){
-                    finalMessage.append(" ").append(add.getMessage(recipient));
+                    if (add.getValidator().test(recipient)) {
+                        finalMessage.append(" ").append(add.getMessage(recipient));
+                    }
                 }
             }
 
