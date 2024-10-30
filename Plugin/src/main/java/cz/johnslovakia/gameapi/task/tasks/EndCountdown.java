@@ -1,6 +1,5 @@
 package cz.johnslovakia.gameapi.task.tasks;
 
-import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.game.GameManager;
@@ -11,10 +10,6 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import org.bukkit.entity.Player;
 
 public class EndCountdown implements TaskInterface {
-    @Override
-    public void onStart(Task task) {
-
-    }
 
     @Override
     public void onCount(Task task) {
