@@ -3,6 +3,8 @@ package cz.johnslovakia.gameapi.game.map;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -13,13 +15,29 @@ import java.util.List;
 
 public class Area {
 
+    /**
+     * -- GETTER --
+     *  Get the set name for this area.
+     *
+     * @return String name.
+     */
+    @Getter
     private final String name;
     private final GameMap map;
+    @Setter
     private MapLocation loc1;
+    @Setter
     private MapLocation loc2;
 
     private boolean isBorder = false;
 
+    /**
+     * -- GETTER --
+     *  Get the settings for this area.
+     *
+     * @return ArenaSettings for this area.
+     */
+    @Getter
     private final AreaSettings settings;
 
     /**
@@ -121,14 +139,6 @@ public class Area {
     }
 
     /**
-     * Get the settings for this area.
-     * @return ArenaSettings for this area.
-     */
-    public AreaSettings getSettings(){
-        return settings;
-    }
-
-    /**
      * Get the first (corner) location of this area.
      * @return ArenaLocation object.
      */
@@ -160,14 +170,6 @@ public class Area {
         return loc2.getLocation(loc2.getWorld(map));
     }
 
-    /**
-     * Get the set name for this area.
-     * @return String name.
-     */
-    public String getName(){
-        return name;
-    }
-
     public boolean isBorder() {
         return isBorder;
     }
@@ -176,11 +178,4 @@ public class Area {
         isBorder = border;
     }
 
-    public void setLoc1(MapLocation loc1) {
-        this.loc1 = loc1;
-    }
-
-    public void setLoc2(MapLocation loc2) {
-        this.loc2 = loc2;
-    }
 }

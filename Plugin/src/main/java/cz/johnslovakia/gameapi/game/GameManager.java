@@ -10,6 +10,7 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.Utils;
 import cz.johnslovakia.gameapi.utils.Logger;
+import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -19,9 +20,10 @@ import java.util.List;
 
 public class GameManager {
 
-    private static int added = 0;
-    private static List<Game> games = new ArrayList<>();
-    private static List<String> IDs = new ArrayList<>();
+    @Getter
+    private static final List<Game> games = new ArrayList<>();
+    @Getter
+    private static final List<String> ids = new ArrayList<>();
 
     public static void registerGame(Game game){
         if (games.contains(game)){
@@ -171,22 +173,13 @@ public class GameManager {
         return null;
     }
 
-    public static List<Game> getGames() {
-        return games;
-    }
-
-
-    public static List<String> getIDs() {
-        return IDs;
-    }
-
     public static void addID(String id){
-        if (!IDs.contains(id)){
-            IDs.add(id);
+        if (!ids.contains(id)){
+            ids.add(id);
         }
     }
 
     public static boolean isDuplicate(String id){
-        return IDs.contains(id);
+        return ids.contains(id);
     }
 }

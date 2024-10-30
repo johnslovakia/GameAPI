@@ -6,6 +6,7 @@ import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
+import lombok.Getter;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -15,12 +16,13 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class PerkManager {
 
-    private String name;
+    private final String name;
 
-    private List<Perk> perks = new ArrayList<>();
-    private Economy economy;
+    private final List<Perk> perks = new ArrayList<>();
+    private final Economy economy;
 
     public PerkManager(String name, Economy economy){
         this.name = name;
@@ -56,18 +58,6 @@ public class PerkManager {
             return perk.getLevels().get(currentLevel + 1);
         }
         return null;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public List<Perk> getPerks() {
-        return perks;
-    }
-
-    public Economy getEconomy() {
-        return economy;
     }
 
 

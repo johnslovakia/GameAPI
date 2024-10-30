@@ -1,5 +1,7 @@
 package cz.johnslovakia.gameapi.game.map;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Material;
 
 import java.util.ArrayList;
@@ -9,11 +11,15 @@ import java.util.Map;
 
 public class AreaSettings {
 
+    @Setter
+    @Getter
     private boolean canBreakOnlyPlacedBlocks = false;
     private boolean canPlaceAll = true;
     private boolean canBreakAll = true;
-    private List<Material> canPlace = new ArrayList<>();
-    private Map<Material, Boolean> canBreak = new HashMap<>();;
+    @Getter
+    private final List<Material> canPlace = new ArrayList<>();
+    @Getter
+    private final Map<Material, Boolean> canBreak = new HashMap<>();;
     private boolean canPvP = true;
     private boolean allowMobDamage = true;
     private boolean allowItemFrameDamage = true;
@@ -59,10 +65,27 @@ public class AreaSettings {
     private boolean allowInventoryChange = true;
     private boolean allowChat = true;
     private boolean allowEggHatching = false;
+    @Setter
+    @Getter
     private boolean allowFallDamage = true;
     private boolean allowItemPicking = true;
     private boolean loadWorldWithGameAPI = true;
 
+    /**
+     * -- SETTER --
+     *  Set the priority these settings take. Higher number = higher priority
+     *  Default: 0 for Areas, -1 for Arenas.
+     *
+     *
+     * -- GETTER --
+     *  Get the priority these settings take. Higher number = higher priority.
+     *  Default: 0 for Areas, -1 for Arenas.
+     *
+     @param priority The ArenaSettings' priority to be set.
+      * @return This ArenaSettings' priority.
+     */
+    @Getter
+    @Setter
     private int priority;
 
     public AreaSettings(){
@@ -71,26 +94,6 @@ public class AreaSettings {
     public AreaSettings(int priority){
         this.priority = priority;
     }
-
-    /**
-     * Get the priority these settings take. Higher number = higher priority.
-     * Default: 0 for Areas, -1 for Arenas.
-     * @return This ArenaSettings' priority.
-     */
-    public int getPriority(){
-        return priority;
-    }
-
-    /**
-     * Set the priority these settings take. Higher number = higher priority
-     * Default: 0 for Areas, -1 for Arenas.
-     * @param priority The ArenaSettings' priority to be set.
-     */
-    public void setPriority(int priority){
-        this.priority = priority;
-    }
-
-
 
 
     public void addCanPlaceBlock(Material material){
@@ -110,30 +113,6 @@ public class AreaSettings {
             }
             canBreak.put(material, always);
         }
-    }
-
-    public boolean isCanBreakOnlyPlacedBlocks() {
-        return canBreakOnlyPlacedBlocks;
-    }
-
-    public void setCanBreakOnlyPlacedBlocks(boolean canBreakOnlyPlacedBlocks) {
-        this.canBreakOnlyPlacedBlocks = canBreakOnlyPlacedBlocks;
-    }
-
-    public List<Material> getCanPlace() {
-        return canPlace;
-    }
-
-    public Map<Material, Boolean> getCanBreak() {
-        return canBreak;
-    }
-
-    public boolean isAllowFallDamage() {
-        return allowFallDamage;
-    }
-
-    public void setAllowFallDamage(boolean allowFallDamage) {
-        this.allowFallDamage = allowFallDamage;
     }
 
     public boolean allowChat(){

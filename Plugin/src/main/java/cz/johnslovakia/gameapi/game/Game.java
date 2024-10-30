@@ -41,13 +41,14 @@ import java.util.*;
 @Getter
 public class Game {
 
-    private String name, ID;
+    private final String name;
+    private String ID;
     @Getter @Setter
     private MapManager mapManager;
     private GameState state = GameState.LOADING;
     @Getter @Setter
     private Task runningMainTask;
-    private Location lobbyPoint;
+    private final Location lobbyPoint;
     @Getter @Setter
     private InventoryManager lobbyInventory;
     @Getter @Setter
@@ -57,9 +58,9 @@ public class Game {
 
     private Winner winner;
 
-    private List<GamePlayer> participants = new ArrayList<>();
-    private List<Block> placedBlocks = new ArrayList<>();
-    private HashMap<String, Object> metadata = new HashMap<>();
+    private final List<GamePlayer> participants = new ArrayList<>();
+    private final List<Block> placedBlocks = new ArrayList<>();
+    private final HashMap<String, Object> metadata = new HashMap<>();
 
     public Game(String name, InventoryManager lobbyInventory, Location lobbyPoint) {
         this.name = name;
@@ -695,7 +696,7 @@ public class Game {
         }
     }
 
-    public void winMap(){
+    public final void winMap(){
         getMapManager().setVoting(false);
 
         List<GameMap> arenas1 = new ArrayList<>(getMapManager().getMaps());
@@ -727,7 +728,6 @@ public class Game {
         arenas1.sort(new MapVotesComparator());
 
 
-        int i = 0;
         for (GameMap a : arenas1) {
             if (!a.isWinned()) continue;
             if (a.isPlayed()) continue;
@@ -736,10 +736,7 @@ public class Game {
                 a.setPlayed(true);
                 continue;
             }
-            i++;
-            if (i == 1) {
-                return a;
-            }
+            return a;
         }
         return null;
     }
@@ -776,21 +773,24 @@ public class Game {
     }
 
     public List<GamePlayer> getPlayers(){
-        return participants.stream().filter(gp -> gp.getType().equals(GamePlayerType.PLAYER)).toList();
+        return participants.stream()
+                .filter(gp -> gp.getType().equals(GamePlayerType.PLAYER))
+                .toList();
     }
 
     public List<GamePlayer> getSpectators(){
-        return participants.stream().filter(gp -> gp.getType().equals(GamePlayerType.SPECTATOR)).toList();
+        return participants.stream()
+                .filter(gp -> gp.getType().equals(GamePlayerType.SPECTATOR))
+                .toList();
     }
 
     public void addBlock(Block block) {
-        if (placedBlocks.contains(block)){
-            return;
+        if (!containsBlock(block)){
+            placedBlocks.add(block);
         }
-        placedBlocks.add(block);
     }
 
-    public void removeBlock(Block block){
+    public void removeBlock(Block block) {
         placedBlocks.remove(block);
     }
 

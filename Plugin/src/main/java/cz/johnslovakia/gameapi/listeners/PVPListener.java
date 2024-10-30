@@ -20,18 +20,15 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class PVPListener implements Listener {
 
     //public static Map<GamePlayer, List<GamePlayer>> damagers = new HashMap<>();
     //public static Map<GamePlayer, Map<GamePlayer, Long>> lastDamager = new HashMap<>();
 
-    private List<LastDamager> lastDamager = new ArrayList<>();
-    private List<Damager> damagers = new ArrayList<>();
+    private final List<LastDamager> lastDamager = new ArrayList<>();
+    private final List<Damager> damagers = new ArrayList<>();
 
     public LastDamager getLastDamager(GamePlayer killed){
         for (LastDamager damagerClass : lastDamager){
@@ -93,98 +90,88 @@ public class PVPListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent e) {
-        if (e.getEntity() instanceof Player && ((e.getDamager() instanceof Projectile || e.getDamager() instanceof Player))) {
-            GamePlayer damager = null;
+        if (e.getEntity() instanceof Player && ((e.getDamager() instanceof Projectile ||
+                e.getDamager() instanceof Player))) {
             GamePlayer player = PlayerManager.getGamePlayer((Player) e.getEntity());
-            Game game = player.getPlayerData().getGame();
 
-            if (game == null){
-                return;
-            }
+            Optional.ofNullable(player.getPlayerData().getGame()).ifPresent(game -> {
+                GamePlayer damager = null;
 
-            if (game.getState() == GameState.INGAME) {
-
-                if (e.getDamager() instanceof Player){
-                    damager = PlayerManager.getGamePlayer((Player) e.getDamager());
-                }else if (e.getDamager() instanceof Arrow) {
-                    Arrow projectile = (Arrow) e.getDamager();
-                    if (projectile.getShooter() instanceof Player) {
-                        damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
-                    }
-                }else if (e.getDamager() instanceof Fireball) {
-                    Fireball projectile = (Fireball) e.getDamager();
-                    if (projectile.getShooter() instanceof Player) {
-                        damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
-                    }
-                }else if (e.getDamager() instanceof Egg) {
-                    Egg projectile = (Egg) e.getDamager();
-                    if (projectile.getShooter() instanceof Player) {
-                        damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
-                    }
-                }else if (e.getDamager() instanceof Snowball) {
-                    Snowball projectile = (Snowball) e.getDamager();
-                    if (projectile.getShooter() instanceof Player) {
-                        damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
-                    }
-                }else if (e.getDamager() instanceof LightningStrike) {
-                    LightningStrike projectile = (LightningStrike) e.getDamager();
-                    if (projectile.getCausingPlayer() instanceof Player) {
-                        damager = PlayerManager.getGamePlayer(projectile.getCausingPlayer());
-                    }
-                }else if (e.getDamager() instanceof FishHook) {
-                    FishHook projectile = (FishHook) e.getDamager();
-                    if (projectile.getShooter() instanceof Player) {
-                        damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
-                    }
-                }else{
-                    return;
-                }
-
-                if (damager.isSpectator()){
-                    e.setCancelled(true);
-                    return;
-                }
-
-
-
-                addLastDamager(player, damager);
-
-
-                Damager damagerClass = getDamagers(player).setDamager(damager, System.currentTimeMillis());
-                if (!damagers.contains(damagerClass)) {
-                    damagers.add(damagerClass);
-                }
-
-
-                if (!e.isCancelled() && player.getPlayerData().getGame().equals(damager.getPlayerData().getGame())) {
-
-                    if (game.getSettings().isUseTeams()) {
-                        //Bylo !=
-                        if (player.getPlayerData().getTeam().equals(damager.getPlayerData().getTeam())) {
-                            e.setCancelled(true);
-                            return;
+                if (game.getState() == GameState.INGAME) {
+                    if (e.getDamager() instanceof Player){
+                        damager = PlayerManager.getGamePlayer((Player) e.getDamager());
+                    }else if (e.getDamager() instanceof Arrow projectile) {
+                        if (projectile.getShooter() instanceof Player) {
+                            damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
+                        }
+                    }else if (e.getDamager() instanceof Fireball projectile) {
+                        if (projectile.getShooter() instanceof Player) {
+                            damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
+                        }
+                    }else if (e.getDamager() instanceof Egg projectile) {
+                        if (projectile.getShooter() instanceof Player) {
+                            damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
+                        }
+                    }else if (e.getDamager() instanceof Snowball projectile) {
+                        if (projectile.getShooter() instanceof Player) {
+                            damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
+                        }
+                    }else if (e.getDamager() instanceof LightningStrike projectile) {
+                        if (projectile.getCausingPlayer() != null) {
+                            damager = PlayerManager.getGamePlayer(projectile.getCausingPlayer());
+                        }
+                    }else if (e.getDamager() instanceof FishHook) {
+                        FishHook projectile = (FishHook) e.getDamager();
+                        if (projectile.getShooter() instanceof Player) {
+                            damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
                         }
                     }
 
-                    if (player.equals(damager)) {
+                    if (damager == null)return;
+
+                    if (damager.isSpectator()){
                         e.setCancelled(true);
                         return;
                     }
 
-                    if (!player.isEnabledPVP()) {
-                        e.setCancelled(true);
-                        return;
+                    addLastDamager(player, damager);
+
+                    Damager damagerClass = getDamagers(player).setDamager(damager, System.currentTimeMillis());
+                    if (!damagers.contains(damagerClass)) {
+                        damagers.add(damagerClass);
                     }
 
-                    PlayerDamageByPlayerEvent ev = new PlayerDamageByPlayerEvent(damager.getPlayerData().getGame(), damager, player, e.getCause());
-                    Bukkit.getPluginManager().callEvent(ev);
-                    e.setCancelled(ev.isCancelled());
 
+                    if (!e.isCancelled() && player.getPlayerData().getGame().equals(damager.getPlayerData().getGame())) {
+
+                        if (game.getSettings().isUseTeams()) {
+                            //Bylo !=
+                            if (player.getPlayerData().getTeam().equals(damager.getPlayerData().getTeam())) {
+                                e.setCancelled(true);
+                                return;
+                            }
+                        }
+
+                        if (player.equals(damager)) {
+                            e.setCancelled(true);
+                            return;
+                        }
+
+                        if (!player.isEnabledPVP()) {
+                            e.setCancelled(true);
+                            return;
+                        }
+
+                        PlayerDamageByPlayerEvent ev = new PlayerDamageByPlayerEvent(damager.getPlayerData().getGame(), damager, player, e.getCause());
+                        Bukkit.getPluginManager().callEvent(ev);
+                        e.setCancelled(ev.isCancelled());
+
+                    }
+
+                } else {
+                    e.setCancelled(true);
                 }
-
-            } else {
-                e.setCancelled(true);
-            }
+            });
         }
     }
 
@@ -243,13 +230,11 @@ public class PVPListener implements Listener {
 
 
     @EventHandler
-    public void forceRespawn(PlayerDeathEvent e){
+    public void onForceRespawn(PlayerDeathEvent e){
         GameAPI.getInstance().getVersionSupport().forceRespawn(GameAPI.getInstance(), e.getEntity());
-        Bukkit.getServer().getScheduler().scheduleSyncDelayedTask((GameAPI.getInstance()), new Runnable() {
-            public void run() {
-                e.getEntity().spigot().respawn();
-                e.getEntity().setFireTicks(0);
-            }
+        Bukkit.getServer().getScheduler().scheduleSyncDelayedTask((GameAPI.getInstance()), () -> {
+            e.getEntity().spigot().respawn();
+            e.getEntity().setFireTicks(0);
         }, 2L);
     }
 
@@ -324,9 +309,9 @@ public class PVPListener implements Listener {
 
 
     @Getter
-    public class Damager {
+    public static class Damager {
         private final GamePlayer damaged;
-        private Map<GamePlayer, Long> damagers = new HashMap<>();
+        private final Map<GamePlayer, Long> damagers = new HashMap<>();
 
         public Damager(GamePlayer damaged) {
             this.damaged = damaged;
@@ -356,10 +341,10 @@ public class PVPListener implements Listener {
     }
 
     @Getter
-    public class LastDamager {
+    public static class LastDamager {
 
         private long ms;
-        private GamePlayer damaged;
+        private final GamePlayer damaged;
         private GamePlayer lastDamager;
 
         public LastDamager(GamePlayer damaged) {

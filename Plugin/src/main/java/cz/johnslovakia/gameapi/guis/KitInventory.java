@@ -1,4 +1,4 @@
-package cz.johnslovakia.gameapi.GUIs;
+package cz.johnslovakia.gameapi.guis;
 
 import com.cryptomorin.xseries.XEnchantment;
 import cz.johnslovakia.gameapi.GameAPI;

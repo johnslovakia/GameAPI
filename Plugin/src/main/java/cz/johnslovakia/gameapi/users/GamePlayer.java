@@ -33,7 +33,7 @@ import java.util.List;
 public class GamePlayer extends Winner {
 
     private OfflinePlayer player;
-    private GamePlayerType type = GamePlayerType.SPECTATOR;
+    private GamePlayerType type;
 
     private boolean enabledPVP = true;
     private boolean enabledMovement = true;

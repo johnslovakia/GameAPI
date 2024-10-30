@@ -16,6 +16,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.Optional;
+
 public class JoinQuitListener implements Listener {
 
 
@@ -53,10 +55,12 @@ public class JoinQuitListener implements Listener {
 
 
         if (GameAPI.getInstance().getMinigame().getSettings().isAutoBestGameJoin()) {
-            Game game = gamePlayer.getPlayerData().getGame();
-            //TODO: vyřešit lépe
-            if (game != null) {
-                game.joinPlayer(player);
+            Optional<Game> game = Optional.ofNullable(
+                    gamePlayer.getPlayerData().getGame()
+            );
+
+            if (game.isPresent()) {
+                game.get().joinPlayer(player);
             } else {
                 //TODO: možná PlayerManager.removeGamePlayer(...)?
                 GameManager.newArena(player, true);
@@ -71,10 +75,8 @@ public class JoinQuitListener implements Listener {
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
-        Game game = gamePlayer.getPlayerData().getGame();
-        if (game != null){
-            game.quitPlayer(player);
-        }
+        Optional.ofNullable(gamePlayer.getPlayerData().getGame())
+                .ifPresent(game -> game.quitPlayer(player));
     }
 
 

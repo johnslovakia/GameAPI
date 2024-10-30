@@ -8,6 +8,7 @@ import org.bukkit.Location;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class AreaManager {
 
@@ -101,7 +102,7 @@ public class AreaManager {
             if (game.getPlayingMap() == null) {
                 continue;
             }
-            if (game.getPlayingMap().getWorld().getName().equals(location.getWorld().getName())) {
+            if (game.getPlayingMap().getWorld().getName().equals(Objects.requireNonNull(location.getWorld()).getName())) {
                 settings.add(game.getPlayingMap().getSettings());
             }
             for (Area area : game.getPlayingMap().getAreas()) {
