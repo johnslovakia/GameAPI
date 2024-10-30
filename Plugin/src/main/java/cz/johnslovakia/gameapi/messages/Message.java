@@ -4,6 +4,10 @@ import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
+import cz.johnslovakia.gameapi.utils.StringUtils;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
@@ -68,7 +72,7 @@ public class Message {
 
     public Message add(String message, Predicate<GamePlayer> validator){
         if (!message.isEmpty()){
-            addToMessage.add(new AddToMessage(message, validator, true));
+            addToMessage.add(new AddToMessage(message, validator, false));
         }
         return this;
     }
@@ -102,28 +106,54 @@ public class Message {
             Player player = recipient.getOnlinePlayer();
 
             StringBuilder finalMessage = new StringBuilder(messages.get(recipient).replace(msgType.getKey(), ""));
-            finalMessage = new StringBuilder(ChatColor.translateAlternateColorCodes('&', finalMessage.toString()));
+            finalMessage = new StringBuilder(StringUtils.colorizer(finalMessage.toString()));
             if (!addToMessage.isEmpty()){
                 for (AddToMessage add : addToMessage){
-                    if (add.getValidator().test(recipient)) {
+                    if (add.getValidator() == null || add.getValidator().test(recipient)) {
                         finalMessage.append(" ").append(add.getMessage(recipient));
                     }
                 }
             }
 
+
             if (msgType.equals(MessageType.ACTIONBAR)){
                 GameAPI.getInstance().getUserInterface().sendAction(player, finalMessage.toString());
             }else if(msgType.equals(MessageType.CHAT)){
+                List<String> lines = new ArrayList<>();
+
                 if (finalMessage.toString().contains("\n")){
-                    String[] arrSplit = finalMessage.toString().split("\n");
-                    player.sendMessage(arrSplit);
-                    return;
+                    lines.addAll(List.of(finalMessage.toString().split("\n")));
                 }else if (finalMessage.toString().contains("/newline/")){
-                    String[] arrSplit = finalMessage.toString().split("/newline/");
-                    player.sendMessage(arrSplit);
-                    return;
+                    lines.addAll(List.of(finalMessage.toString().split("/newline/")));
+                }else{
+                    lines.add(finalMessage.toString());
                 }
-                player.sendMessage(finalMessage.toString());
+
+                for (String line : lines){
+                    /*String messageWithHover = line.toString();
+                    TextComponent textComponent;
+
+                    String[] parts = messageWithHover.split("\\*\\*");
+                    for (String part : parts) {
+                        if (part.contains("/")) {
+                            String[] hoverParts = part.split("/");
+                            if (hoverParts.length == 2) {
+                                String title = hoverParts[0].trim();
+                                String hoverText = hoverParts[1].trim();
+
+                                textComponent = new TextComponent(title);
+                                textComponent.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(hoverText).create()));
+
+                                player.spigot().sendMessage(textComponent);
+                            }
+                        } else {
+                            player.sendMessage(line);
+                        }
+                    }*/
+                    player.sendMessage(line);
+                }
+
+
             }else if(msgType.equals(MessageType.KICK)){
                 player.kickPlayer(finalMessage.toString());
             }else if (msgType.equals(MessageType.SUBTITLE)){

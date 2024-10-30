@@ -7,6 +7,7 @@ import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
+import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -91,7 +92,7 @@ public class PVPListener implements Listener {
     }
 
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent e) {
         if (e.getEntity() instanceof Player && ((e.getDamager() instanceof Projectile || e.getDamager() instanceof Player))) {
             GamePlayer damager = null;
@@ -209,38 +210,6 @@ public class PVPListener implements Listener {
         }
     }
 
-    @EventHandler
-    public void onPlayerRespawn(PlayerRespawnEvent e) {
-        Player player = e.getPlayer();
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        Game game = PlayerManager.getGamePlayer(player).getPlayerData().getGame();
-
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                player.setFireTicks(0);
-            }
-        }.runTaskLater(GameAPI.getInstance(), 1L);
-
-        if (game != null) {
-            if (game.getState() == GameState.INGAME) {
-                Location loc = game.getPlayingMap().getPlayerToLocation(gamePlayer);
-                if (game.getSettings().isUseTeams()) {
-                    if (loc != null) {
-                        e.setRespawnLocation(loc);
-                    }
-                } else {
-                    if (loc != null) {
-                        e.setRespawnLocation(loc);
-                    }
-                }
-            } else if (game.getState() == GameState.WAITING || game.getState() == GameState.STARTING){
-                e.setRespawnLocation(game.getLobbyPoint());
-            }
-        }
-    }
-
-
 
     @EventHandler
     public void forceRespawn(PlayerDeathEvent e){
@@ -259,6 +228,8 @@ public class PVPListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent e) {
         Player player = e.getEntity();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+
+        gamePlayer.getMetadata().put("death_location", player.getLocation());
 
         boolean killer = false;
         if (containsLastDamager(gamePlayer)){

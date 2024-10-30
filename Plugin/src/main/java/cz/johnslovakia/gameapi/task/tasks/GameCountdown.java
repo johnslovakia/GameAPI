@@ -48,12 +48,7 @@ public class GameCountdown implements TaskInterface {
     public void onEnd(Task task) {
         Game game = task.getGame();
 
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                bossBar.removeAll();
-            }
-        }.runTaskLater(GameAPI.getInstance(), 1L);
+        bossBar.removeAll();
 
         for (GamePlayer gamePlayer : game.getPlayers()) {
             MessageManager.get(gamePlayer, "title.time_is_up.title")

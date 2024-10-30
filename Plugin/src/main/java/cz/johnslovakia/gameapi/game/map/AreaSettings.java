@@ -62,6 +62,7 @@ public class AreaSettings {
     private boolean allowFallDamage = true;
     private boolean allowItemPicking = true;
     private boolean loadWorldWithGameAPI = true;
+    private boolean allowInstantVoidKill = true;
 
     private int priority;
 
@@ -91,7 +92,14 @@ public class AreaSettings {
     }
 
 
+    public boolean isAllowedInstantVoidKill() {
+        return allowInstantVoidKill;
+    }
 
+    public AreaSettings setAllowInstantVoidKill(boolean allowInstantVoidKill) {
+        this.allowInstantVoidKill = allowInstantVoidKill;
+        return this;
+    }
 
     public void addCanPlaceBlock(Material material){
         if (canPlace.contains(material)){

@@ -4,6 +4,7 @@ import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.users.stats.Stat;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
@@ -43,7 +44,7 @@ public class PlayerManager {
             }
             if (!isAdded) {
                 for (Score key : playerScores.keySet()) {
-                    playerScores.get(key).add(new PlayerScore(key.getName(), pl, key.getRewardTypes()).setDisplayName(key.displayName).setAllowedMessage(key.isMessage()).setScoreRanking(key.scoreRanking).setStat(key.getStat()).setTriggers(key.getTriggers()));
+                    playerScores.get(key).add(new PlayerScore(pl, key));
                 }
             }
         }else{
@@ -59,7 +60,7 @@ public class PlayerManager {
             }
             if (!isAdded) {
                 for (Score key : playerScores.keySet()) {
-                    playerScores.get(key).add(new PlayerScore(key.getName(), gpl, key.getRewardTypes()).setDisplayName(key.displayName).setAllowedMessage(key.isMessage()).setScoreRanking(key.scoreRanking).setStat(key.getStat()).setTriggers(key.getTriggers()));
+                    playerScores.get(key).add(new PlayerScore(gpl, key));
                 }
             }
             playerMap.put(player.getUniqueId(), gpl);
@@ -91,7 +92,7 @@ public class PlayerManager {
 
         List<PlayerScore> sc = new ArrayList<>();
         for (GamePlayer gp : playerMap.values()) {
-            PlayerScore ps = new PlayerScore(score.getName(), gp, score.getRewardTypes()).setDisplayName(score.getDisplayName()).setAllowedMessage(score.isMessage()).setScoreRanking(score.scoreRanking);
+            PlayerScore ps = new PlayerScore(gp, score);
 
             if (score.getStat() != null){
                 ps.setStat(score.getStat());
@@ -107,14 +108,15 @@ public class PlayerManager {
 
 
 
+    @Getter @Setter
     public static class Score{
 
-        private String name;
-        private String displayName;
+        private String name, pluralName, displayName;
         private Map<Economy, Integer> rewardTypes = new HashMap<>();
         private boolean message = true;
 
         private boolean scoreRanking = false;
+        private int limit = -1;
         private Stat stat;
         private Set<Trigger<?>> triggers = new HashSet<>();
 
@@ -122,42 +124,11 @@ public class PlayerManager {
             this.name = name;
         }
 
-        public String getName() {
-            return name;
-        }
-
         public String getDisplayName() {
             if (displayName == null){
                 return name;
             }
             return displayName;
-        }
-
-        public Map<Economy, Integer> getRewardTypes() {
-            return rewardTypes;
-        }
-
-        public boolean isMessage() {
-            return message;
-        }
-
-        public boolean isScoreRanking() {
-            return scoreRanking;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-
-        }
-
-        public void setDisplayName(String displayName) {
-            this.displayName = displayName;
-
-        }
-
-        public void setRewardTypes(Map<Economy, Integer> rewardTypes) {
-            this.rewardTypes = rewardTypes;
-
         }
 
         public void setEconomyReward(Economy economy, Integer reward){
@@ -171,25 +142,9 @@ public class PlayerManager {
             this.message = message;
         }
 
-        public Set<Trigger<?>> getTriggers() {
-            return triggers;
-        }
-
         public Score setTriggers(Set<Trigger<?>> triggers) {
             this.triggers = triggers;
             return this;
-        }
-
-        public void setScoreRanking(boolean scoreRanking) {
-            this.scoreRanking = scoreRanking;
-        }
-
-        public void setStat(Stat stat) {
-            this.stat = stat;
-        }
-
-        public Stat getStat() {
-            return stat;
         }
     }
 }

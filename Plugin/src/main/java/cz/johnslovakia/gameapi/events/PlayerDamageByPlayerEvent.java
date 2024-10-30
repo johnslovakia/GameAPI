@@ -11,7 +11,7 @@ public class PlayerDamageByPlayerEvent extends Event implements Cancellable {
 
     private static final HandlerList handlers = new HandlerList();
 
-    private boolean isCancelled;
+    private boolean isCancelled = false;
 
     private Game game;
     private GamePlayer damager;

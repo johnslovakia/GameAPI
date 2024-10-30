@@ -64,7 +64,7 @@ public class KitInventory extends GUI {
 
 
         for (Kit kit : kitManager.getKits()) {
-            if (kitManager.getDefaultKit().equals(kit)) {
+            if (kitManager.getDefaultKit() != null && kitManager.getDefaultKit().equals(kit)) {
                 continue;
             }
             String translateKey = "kit." + kit.getName().replace(" ", "_");
@@ -104,7 +104,7 @@ public class KitInventory extends GUI {
             item.addLoreLine("");
 
 
-            if (playerData.getKit().equals(kit)) {
+            if (playerData.getKit() != null && playerData.getKit().equals(kit)) {
                 item.addEnchant(XEnchantment.ARROW_INFINITE.getEnchant(), 1);
                 MessageManager.get(player, "inventory.kit.selected")
                         .addToItemLore(item);
@@ -157,6 +157,8 @@ public class KitInventory extends GUI {
                         container.fillElement(spacerElement);
                     }).build());
 
+
+            this.build(player);
         }
     }
 }

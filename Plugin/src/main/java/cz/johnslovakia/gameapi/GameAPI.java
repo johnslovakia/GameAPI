@@ -107,6 +107,21 @@ public class GameAPI extends JavaPlugin {
         }
 
 
+        PluginManager pm = Bukkit.getPluginManager();
+        pm.registerEvents(new AreaListener(), this);
+        pm.registerEvents(new ChatListener(), this);
+        pm.registerEvents(new JoinQuitListener(), this);
+        pm.registerEvents(new MapSettingsListener(), this);
+        pm.registerEvents(new PlayerDeathListener(), this);
+        pm.registerEvents(new PVPListener(), this);
+        pm.registerEvents(new RespawnListener(), this);
+        pm.registerEvents(new WorldListener(), this);
+
+        protocolManager = ProtocolLibrary.getProtocolManager();
+
+        ChatHeadAPI.initialize(this);
+
+
 
         //VERSION SUPPORT //TODO: opravit pro další verze
         String packageName = this.getServer().getClass().getPackage().getName();
@@ -144,21 +159,6 @@ public class GameAPI extends JavaPlugin {
             return;
         }
         this.getLogger().info("Loading support for " + version);
-
-
-        PluginManager pm = Bukkit.getPluginManager();
-        pm.registerEvents(new AreaListener(), this);
-        pm.registerEvents(new ChatListener(), this);
-        pm.registerEvents(new JoinQuitListener(), this);
-        pm.registerEvents(new MapSettingsListener(), this);
-        pm.registerEvents(new PlayerDeathListener(), this);
-        pm.registerEvents(new PVPListener(), this);
-        pm.registerEvents(new RespawnListener(), this);
-        pm.registerEvents(new WorldListener(), this);
-
-        protocolManager = ProtocolLibrary.getProtocolManager();
-
-        ChatHeadAPI.initialize(this);
     }
 
     @Override
@@ -214,7 +214,7 @@ public class GameAPI extends JavaPlugin {
                 SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
                 if (!economy.isForAllMinigames()){
 
-                    minigameTable.addRow(Type.VARCHAR128 ,economy.getName());
+                    minigameTable.addColumn(Type.INT ,economy.getName());
 
                     economy.setEconomyInterface(new EconomyInterface() {
                         @Override
@@ -260,11 +260,11 @@ public class GameAPI extends JavaPlugin {
                                     .from(minigameTable.getTableName())
                                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                                     .obtainOne();
-                            return result.get().getInt(economy.getName());
+                            return result.map(row -> row.getInt(economy.getName())).orElse(0);
                         }
                     });
                 }else{
-                    playerTable.addRow(Type.INT, economy.getName());
+                    playerTable.addColumn(Type.INT, economy.getName());
 
                     economy.setEconomyInterface(new EconomyInterface() {
                         @Override
@@ -310,7 +310,7 @@ public class GameAPI extends JavaPlugin {
                                     .from(PlayerTable.TABLE_NAME)
                                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                                     .obtainOne();
-                            return result.get().getInt(economy.getName());
+                            return result.map(row -> row.getInt(economy.getName())).orElse(0);
                         }
                     });
                 }
@@ -325,44 +325,36 @@ public class GameAPI extends JavaPlugin {
         }
 
         try {
-            for (InputStreamWithName is : minigame.getLanguageFiles()/*languagesDir.listFiles()*/) {
-                File file = Files.createTempFile("tempfiles", ".yml").toFile();
-                FileUtils.copyInputStreamToFile(is.getInputStream(), file);
-
+            for (InputStreamWithName is : minigame.getLanguageFiles()) {
                 String name = is.getFileName();
-                File c = new File(pluginLanguagesFolder, name);
-                if (c.exists()) {
-                    loadMessagesFromFile(c);
-                    continue;
+
+                File mainFile = new File(pluginLanguagesFolder, name);
+                boolean created = mainFile.exists();
+
+                if (!created){
+                    minigame.getPlugin().saveResource("languages/" + name, false);
                 }
-
-                InputStream gapiFile = getResource("languages/" + name);
-                if (gapiFile == null) {
-                    File cFile = new File(minigame.getPlugin().getDataFolder(), name);
-                    if (!cFile.exists()) {
-                        minigame.getPlugin().saveResource("languages/" + name, false);
-                    }
-                    continue;
-                }
-
-
-                minigame.getPlugin().saveResource("languages/" + name, false);
-                File createdFile = new File(pluginLanguagesFolder, name);
 
                 File gFile = Files.createTempFile("gFile", ".yml").toFile();
-                FileUtils.copyInputStreamToFile(gapiFile, gFile);
+                FileUtils.copyInputStreamToFile(getResource("languages/" + name), gFile);
+
                 try (BufferedReader br = new BufferedReader(new FileReader(gFile))) {
                     String line;
                     while ((line = br.readLine()) != null) {
-                        FileWriter writer = new FileWriter(createdFile, true);
-                        writer.append(line).append("\n");
-                        writer.close();
+                        String key = line.split(":")[0];
+                        if (created && containsKey(mainFile, key)){
+                            continue;
+                        }
+
+                        try (FileWriter writer = new FileWriter(mainFile, true)) {
+                            writer.append(line).append("\n");
+                        }
                     }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
 
-                loadMessagesFromFile(createdFile);
+                loadMessagesFromFile(mainFile);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -385,6 +377,21 @@ public class GameAPI extends JavaPlugin {
         if (getCosmeticsManager() != null){
             Bukkit.getPluginManager().registerEvents(getCosmeticsManager(), this);
         }
+    }
+
+    public static boolean containsKey(File file, String toCheck) {
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String key = line.split(":")[0];
+                if (key.equals(toCheck)) {
+                    return true;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     private void loadMessagesFromFile(File file) {

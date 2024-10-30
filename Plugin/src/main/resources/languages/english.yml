@@ -167,6 +167,7 @@ chat.kit.default_kit.select: " §fYou have saved kit §a%kit% §fas your defa
 chat.kit.default_kit.unselect: " §cYou have reset your default kit."
 chat.team.join: " §fYou joined to team %team%§f."
 chat.quests.completed: " §a%type% Quest Completed! §7(%description%)"
+chat.economy.reward.limit: " §7You have reached the reward limit for §a%score%, so you will not receive any additional rewards."
 
 chat.team_chat: "Ẁ §aTeam chat §fis enabled by default in this game. To send a message to everyone, start your message with §a'!'§f."
 chat.restarting: "Ẁ §fThe server is restarting!"
@@ -177,7 +178,7 @@ chat.map_won: "Ẁ §fVoting won map: §a%map%!"
 chat.party.team_join: "Ẁ §fYou've been assigned to the team joined by a member of your party."
 chat.party.other_team_join: "Ẁ §fThe team joined by your party member was full, so you've been assigned to the next available team."
 
-chat.delay: "ẁ §cWait %countdown% seconds to use again."
+chat.delay: "§cWait %countdown% seconds to use again."
 
 chat.join: "§fPlayer §a%player% §fjoined the game! §a(%players%)"
 chat.quit: "§fPlayer §a%player% §fhas quit! §a(%players%)"
@@ -185,15 +186,16 @@ chat.assisted: "§fYou have assisted killing §a%player%"
 
 chat.economy.reward: "§6%reward% §7(%gameplayerscore%)"
 chat.rewardsummary.title: "§2§lReward Summary:"
-chat.rewardsummary.bonus: "  %economy_color%+ %reward% %economy_name% §7from your §aVIP rank bonus §7(%bonus%%)"
+chat.rewardsummary.bonus: "     %economy_color%+ %reward% %economy_name% §7from your §aVIP rank bonus §7(%bonus%%)"
 chat.top3players.title: "§2§lTop Players:"
 chat.top3players.position: " §7%position%. %player_head% §a%player% §8- §a%score% %ranking_score_name%"
 chat.top3players.your_position: " §fYour position: §7%position%. §8(%score% %ranking_score_name%)"
 chat.top3players.your_party_members_position: " \u1E85 §7Positions of your party members (hover over)"
 chat.top3players.friends_position: " Ẅ §7Positions of your friends (hover over)"
-chat.winner: "§a%winner% §fwins the game!"
+chat.winner: " Ẃ §a%winner% §fwon the game!"
+chat.you_won: "Ẃ §aYou §fwon the game!"
 chat.nobody_won: "§cNobody won this game."
-chat.winstreak: "§fTvůj aktuální winstreak: §a%old_winstreak% §e-> %new_winstreak%"
+chat.winstreak: "§fYour current winstreak: §a%old_winstreak% §e-> %new_winstreak%"
 chat.view_statistic: "§7Hover over this message to view game statistics"
 chat.view_statistic.survived_for: "§fSurvived for §a%time%"
 chat.view_statistic.outlived: "§fOutlived §a%outlived% §fplayers"
@@ -210,19 +212,20 @@ chat.end.thanks: "§aThanks for playing."
 
 
 #Titles
-title.battle_started.subtitle: "/subtitle/§fGood luck!"
+title.battle_started.subtitle: "§fGood luck!"
 title.battle_begings_in.subtitle: "§fBattle begins in"
 title.time_is_up.title: "/title/§c§lTime is up!"
 title.game_started.title: "§aGame started!"
 title.winner: "/subtitle/§a%winner% §fwins the game!"
 title.victory: "/title/Ẃ/subtitle/§6§lVICTORY"
-title.respawn: "/title/ẃ §c§lYou died! ẃ/subtitle/§7You will respawn in §a%time% §7second(s)."
+title.respawn: "/title/ẃ §c§lYou died! §r4ẃ/subtitle/§7You will respawn in §a%time% §7second(s)."
 title.spectator: "/title/ẃ §c§lYou died! ẃ/subtitle/§cYou are now a spectator!"
 
 
 #Boss Bar
 bossbar.game_starting_in: "§fGame starting in: §a%time%"
 bossbar.battle_begings_in: "§fBattle begins in: §a%time%"
+bossbar.finding_new_game_in: "§fFinding a new game in: §a%time%"
 
 
 #Holograms
@@ -233,6 +236,10 @@ hologram.top_stats: "§2§lTOP Statics in %stat%"
 hologram.next_page: "§aClick to go to next page"
 
 
+chat.format.spectator: "§8[§7Spectator Chat§8] %prefix% §r§7%name%§r: %message%"
+chat.format.all: "§8[%team_color%All§8] %prefix% §r%team_color%%name%§r: %message%"
+chat.format.team: "§8[%team_color%%team%§8] %prefix% §r%team_color%%name%§r: %message%"
+chat.format.default: "%prefix% §r§7%name%§r: §f%message%"
 word.team_chat: "Team"
 word.all_chat: "All"
 word.double_kill: "§aDOUBLE KILL!"

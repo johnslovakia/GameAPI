@@ -79,12 +79,7 @@ public class StartCountdownCommand implements TaskInterface {
     public void onEnd(Task task) {
         Game game = task.getGame();
 
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                bossBar.removeAll();
-            }
-        }.runTaskLater(GameAPI.getInstance(), 1L);
+        bossBar.removeAll();
 
         for (GamePlayer players : game.getPlayers()) {
             Player player = players.getOnlinePlayer();

@@ -106,6 +106,11 @@ public class QuestManager {
 
     public static boolean hasTimeElapsedSinceCompletion(PlayerQuestData questData){
         LocalDate now = LocalDate.now();
+
+        if (questData.getCompletionDate() == null){
+            return false; //TODO: check
+        }
+
         if (questData.getQuest().getType().equals(QuestType.DAILY)){
             LocalDate oneDayAfterCompletion = questData.getCompletionDate().plusDays(1);
             return now.isEqual(oneDayAfterCompletion) || now.isAfter(oneDayAfterCompletion);
@@ -153,10 +158,12 @@ public class QuestManager {
             Class<? extends Event> clazz = trigger.getEventClass();
             if (clazz.equals(event.getClass())) {
                 if (!trigger.validate(clazz.cast(event))) continue;
-                GamePlayer gamePlayer = trigger.compute(clazz.cast(event));
-                if (checkConditions(quest, gamePlayer)) {
-                    trigger.getResponse().accept(gamePlayer);
-                    return;
+                //GamePlayer gamePlayer = trigger.compute(clazz.cast(event));
+                for (GamePlayer gamePlayer : trigger.compute(clazz.cast(event))) {
+                    if (checkConditions(quest, gamePlayer)) {
+                        trigger.getResponse().accept(gamePlayer);
+                        return;
+                    }
                 }
             }
         }

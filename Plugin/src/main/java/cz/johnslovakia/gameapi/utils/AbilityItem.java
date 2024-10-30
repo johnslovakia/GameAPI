@@ -31,6 +31,7 @@ public class AbilityItem implements Listener {
     private Map<Action, Consumer<GamePlayer>> actions = new HashMap<>();
     private Map<Action, Cooldown> cooldowns = new HashMap<>();
     private final String loreTranslationKey;
+    private final boolean consumable;
 
 
     private AbilityItem(Builder builder){
@@ -40,6 +41,7 @@ public class AbilityItem implements Listener {
         this.actions = builder.actions;
         this.cooldowns = builder.cooldowns;
         this.loreTranslationKey = builder.loreTranslationKey;
+        this.consumable = builder.consumable;
 
         Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
     }
@@ -48,8 +50,7 @@ public class AbilityItem implements Listener {
         ItemBuilder finalItem = new ItemBuilder(itemStack);
         finalItem.setName("§a" + name);
         if (loreTranslationKey != null) {
-            finalItem.setLore("");
-            MessageManager.get(gamePlayer, loreTranslationKey).addToItemLore(finalItem);
+            finalItem.setLore(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated());
         }
         return finalItem.toItemStack();
     }
@@ -80,7 +81,7 @@ public class AbilityItem implements Listener {
     }
 
     @EventHandler
-    public void onInventoryPickupItem(InventoryClickEvent e) {
+    public void onInventoryClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player player)){
             return;
         }
@@ -99,7 +100,6 @@ public class AbilityItem implements Listener {
 
         if (meta.getDisplayName().contains(name)){
             if (loreTranslationKey != null) {
-                meta.setLore(Collections.singletonList(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated()));
                 ItemBuilder item = new ItemBuilder(e.getCurrentItem());
                 item.setLore(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated());
                 e.setCurrentItem(item.toItemStack());
@@ -111,9 +111,15 @@ public class AbilityItem implements Listener {
     private void onInventoryInteract(PlayerInteractEvent e) {
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        ItemStack item = e.getItem();
 
 
-        if (e.getItem() == null || !e.getItem().equals(getFinalItemStack(gamePlayer))){
+        if (item == null || item.getItemMeta() == null){
+            return;
+        }
+
+        if (!item.getItemMeta().getDisplayName().equals(getFinalItemStack(gamePlayer).getItemMeta().getDisplayName())
+        || !item.getItemMeta().getLore().equals(getFinalItemStack(gamePlayer).getItemMeta().getLore())){
             return;
         }
 
@@ -139,6 +145,13 @@ public class AbilityItem implements Listener {
                 return;
             }
             actions.get(action).accept(gamePlayer);
+            if (consumable){
+                if (item.getAmount() > 1) {
+                    item.setAmount(item.getAmount() - 1);
+                } else {
+                    player.getInventory().remove(item);
+                }
+            }
             if (cooldown != null) {
                 cooldown.startCooldown(gamePlayer);
             }
@@ -158,6 +171,7 @@ public class AbilityItem implements Listener {
         private Map<Action, Consumer<GamePlayer>> actions = new HashMap<>();
         private Map<Action, Cooldown> cooldowns = new HashMap<>();
         private String loreTranslationKey;
+        private boolean consumable = false;
 
         public Builder(String name, ItemStack itemStack) {
             this.name = name;
@@ -176,6 +190,11 @@ public class AbilityItem implements Listener {
 
         public Builder setLoreTranslationKey(String loreTranslationKey) {
             this.loreTranslationKey = loreTranslationKey;
+            return this;
+        }
+
+        public Builder setConsumable(boolean consumable) {
+            this.consumable = consumable;
             return this;
         }
 

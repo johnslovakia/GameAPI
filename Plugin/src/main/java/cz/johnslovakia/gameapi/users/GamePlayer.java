@@ -33,7 +33,7 @@ import java.util.List;
 public class GamePlayer extends Winner {
 
     private OfflinePlayer player;
-    private GamePlayerType type = GamePlayerType.SPECTATOR;
+    private GamePlayerType type;
 
     private boolean enabledPVP = true;
     private boolean enabledMovement = true;
@@ -118,13 +118,10 @@ public class GamePlayer extends Winner {
         if (getPlayerData().getGame().getSettings().useTeams() && getPlayerData().getGame().getSettings().isEnabledRespawning()){
             GameTeam team = getPlayerData().getTeam();
 
-            if (team.isDead()){
-                return false;
-            }
+            return !team.isDead();
         }else{
             return getPlayerData().getGame().getSettings().isEnabledRespawning();
         }
-        return false;
     }
 
     public void setSpectator(boolean spectator){

@@ -4,6 +4,7 @@ import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.GamePlayerDeathEvent;
 import cz.johnslovakia.gameapi.game.Game;
+import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsCategory;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
@@ -52,6 +53,7 @@ public class PlayerDeathListener implements Listener {
         Game game = e.getGame();
 
         boolean useTeams = game.getSettings().useTeams();
+
 
         //TODO: Nějaký nastavení?
         CosmeticsManager cosmeticsManager = GameAPI.getInstance().getCosmeticsManager();
@@ -185,11 +187,11 @@ public class PlayerDeathListener implements Listener {
 
 
             for (GamePlayer gp : e.getGame().getPlayers()) {
-                if (e.getAssists() != null && e.getAssists().isEmpty() && e.getAssists().contains(gp)) {
+                if (e.getAssists() != null && !e.getAssists().isEmpty() && e.getAssists().contains(gp)) {
                     MessageManager.get(gp, "chat.assisted")
                             .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                             .send();
-                    gp.getScoreByName("Assist").increaseScore();
+                    //gp.getScoreByName("Assist").increaseScore();
                 }
             }
 
@@ -208,20 +210,20 @@ public class PlayerDeathListener implements Listener {
 
             if (e.isFirstGameKill()){
                 e.getGame().getPlayers().forEach(gp -> gp.getOnlinePlayer().sendMessage(MessageManager.get(gp, "chat.first_blood").replace("%dead%", gamePlayer.getOnlinePlayer().getName()).replace("%killer%", killer.getOnlinePlayer().getName()).getTranslated()));
-                killer.getScoreByName("FirstBlood").increaseScore();
+                //killer.getScoreByName("FirstBlood").increaseScore();
             }
 
 
             if (killCounter.get(killer) >= 6){
-                killer.getScoreByName("Kill").increaseScore(false);
-                MessageManager.get(killer, "chat.kill_fast").send();
-            }else{
-                killer.getScoreByName("Kill").increaseScore();
-            }
+                //killer.getScoreByName("Kill").increaseScore(false);
+                MessageManager.get(killer, "chat.kill_fast").send(); //TODO: dořešit
+            }//else{
+                //killer.getScoreByName("Kill").increaseScore();
+            //}
 
             killer.getOnlinePlayer().playSound(killer.getOnlinePlayer().getLocation(), Sounds.LEVEL_UP.bukkitSound(), 20.0F, 20.0F);
 
-            e.getGamePlayer().getScoreByName("Death").increaseScore();
+            //e.getGamePlayer().getScoreByName("Death").increaseScore();
         }else{
             if (e.getDmgCause() == EntityDamageEvent.DamageCause.VOID){
                 MessageManager.get(game.getParticipants(), "chat.void")
@@ -241,42 +243,55 @@ public class PlayerDeathListener implements Listener {
             }
 
 
-            e.getGamePlayer().getScoreByName("Death").increaseScore();
+            //e.getGamePlayer().getScoreByName("Death").increaseScore();
         }
 
 
 
-        if (!gamePlayer.isRespawning()){
+        if (!gamePlayer.isRespawning()) {
             gamePlayer.setSpectator(true);
 
+            new BukkitRunnable(){
+                @Override
+                public void run() {
+                    List<PlayerScore> stats = PlayerManager.getScoresByPlayer(gamePlayer).stream().filter(s -> s.getScore() != 0 && s.getStat() != null).toList();
 
-            TextComponent message = new TextComponent(MessageManager.get(gamePlayer, "chat.view_statistic").getTranslated());
+                    if (game.getState().equals(GameState.INGAME) && !stats.isEmpty()) {
+                        TextComponent message = new TextComponent(MessageManager.get(gamePlayer, "chat.view_statistic").getTranslated());
 
-            ComponentBuilder b = new ComponentBuilder("");
-            b.append(MessageManager.get(gamePlayer, "chat.view_statistic.survived_for")
-                    .replace("%time%", StringUtils.getDurationString(game.getRunningMainTask().getCounter()))
-                    .getTranslated());
-            b.append("\n");
-            b.append(MessageManager.get(gamePlayer, "chat.view_statistic.outlived")
-                    .replace("%outlived%", "" + ((int) game.getMetadata().get("players_at_start") - (game.getPlayers().size() + 1)))
-                    .getTranslated());
-            b.append("\n");
-            for (PlayerScore score : PlayerManager.getScoresByPlayer(gamePlayer)){
-                if (score.getScore() == 0) {
-                    continue;
+                        ComponentBuilder b = new ComponentBuilder("");
+                        b.append(MessageManager.get(gamePlayer, "chat.view_statistic.survived_for")
+                                .replace("%time%", StringUtils.getDurationString(game.getRunningMainTask().getStartCounter() - game.getRunningMainTask().getCounter()))
+                                .getTranslated());
+                        b.append("\n");
+                        b.append(MessageManager.get(gamePlayer, "chat.view_statistic.outlived")
+                                .replace("%outlived%", "" + ((int) game.getMetadata().get("players_at_start") - (game.getPlayers().size() + 1)))
+                                .getTranslated());
+                        b.append("\n");
+                        for (PlayerScore score : stats) {
+                            if (score.getScore() == 0) {
+                                continue;
+                            }
+                            b.append("\n").append("§7" + score.getDisplayName(true) + ": §a" + score.getScore());
+                        }
+
+                        message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));
+                        gamePlayer.getOnlinePlayer().spigot().sendMessage(message);
+                    }
                 }
-                b.append("\n").append("§7" + score.getDisplayName() + ": §a" + score.getScore());
-            }
-
-            message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));
-            gamePlayer.getOnlinePlayer().spigot().sendMessage(message);
+            }.runTaskLater(GameAPI.getInstance(), 5L);
         }
 
 
         Minigame.EndGame endGame = GameAPI.getInstance().getMinigame().getEndGameFunction();
         if (endGame != null) {
             if (endGame.validator().test(game)) {
-                endGame.response().accept(game);
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        endGame.response().accept(game);
+                    }
+                }.runTaskLater(GameAPI.getInstance(), 1L);
             }
         }
     }

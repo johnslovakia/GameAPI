@@ -56,6 +56,7 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
 
         SlimePropertyMap properties = new SlimePropertyMap();
         properties.setValue(SlimeProperties.DIFFICULTY, "normal");
+        properties.setValue(SlimeProperties.PVP, true);
 
         Bukkit.getScheduler().runTaskAsynchronously(bukkitPlugin, () -> {
             try {

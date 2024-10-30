@@ -125,6 +125,21 @@ public class Utils {
         return null;
     }
 
+    public static void hideAndShowPlayers(GamePlayer gamePlayer){
+        Player player = gamePlayer.getOnlinePlayer();
+
+        for (Player serverPlayer : Bukkit.getOnlinePlayers()){
+            GameAPI.getInstance().getVersionSupport().hidePlayer(GameAPI.getInstance(), serverPlayer, player);
+            GameAPI.getInstance().getVersionSupport().hidePlayer(GameAPI.getInstance(), player, serverPlayer);
+
+            for (GamePlayer gp : gamePlayer.getPlayerData().getGame().getParticipants()){
+                Player p = gp.getOnlinePlayer();
+                GameAPI.getInstance().getVersionSupport().showPlayer(GameAPI.getInstance(), p, player);
+                GameAPI.getInstance().getVersionSupport().showPlayer(GameAPI.getInstance(), player, p);
+            }
+        }
+    }
+
     public static void sendToLobby(Player player){
         ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", GameAPI.getInstance());
         List<String> lobbies = config.getConfig().getStringList("lobby_servers");

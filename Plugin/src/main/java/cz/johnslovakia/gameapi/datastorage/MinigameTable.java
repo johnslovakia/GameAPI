@@ -2,15 +2,14 @@ package cz.johnslovakia.gameapi.datastorage;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
+import cz.johnslovakia.gameapi.messages.Language;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.Logger;
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
+import me.zort.sqllib.api.data.Row;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MinigameTable {
 
@@ -30,7 +29,7 @@ public class MinigameTable {
         this.TABLE_NAME = minigame.getMinigameName();
     }
 
-    public MinigameTable addRow(Type type, String name){
+    public MinigameTable addColumn(Type type, String name){
         List<String> rs = new ArrayList<>();
         if (rows.get(type) != null){
             rs.addAll(rows.get(type));
@@ -43,16 +42,38 @@ public class MinigameTable {
         return this;
     }
 
+    public MinigameTable createNewColumn(Type type, String name) {
+        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
+        if (connection != null) {
+            QueryResult result = connection.exec(() ->
+                    "ALTER TABLE " + TABLE_NAME +
+                            "ADD IF NOT EXISTS " + name + " " + type.getB());
+
+            if (!result.isSuccessful()) {
+                Logger.log("Failed to add new column " + TABLE_NAME + " table!", Logger.LogType.ERROR);
+                Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+            }
+        }
+        return this;
+    }
+
     public void newUser(GamePlayer gamePlayer){
         SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
         if (connection == null){
             return;
         }
 
-        QueryResult result = connection.insert()
-                .into(TABLE_NAME, "Nickname")
-                .values(gamePlayer.getOnlinePlayer().getName())
-                .execute();
+        Optional<Row> result = connection.select()
+                .from(TABLE_NAME)
+                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                .obtainOne();
+
+        if (result.isEmpty()) {
+            connection.insert()
+                    .into(TABLE_NAME, "Nickname")
+                    .values(gamePlayer.getOnlinePlayer().getName())
+                    .execute();
+        }
     }
 
     public void createTable() {
@@ -66,7 +87,7 @@ public class MinigameTable {
             for (Type type : rows.keySet()) {
                 if (type == Type.INT) {
                     for (String s : rows.get(type)) {
-                        rows_s.append(", ").append(s).append(" int NOT NULL");
+                        rows_s.append(", ").append(s).append(" int DEFAULT 0");
                     }
                 } else if (type == Type.JSON) {
                     for (String s : rows.get(type)) {
@@ -74,23 +95,23 @@ public class MinigameTable {
                     }
                 } else if (type == Type.VARCHAR128) {
                     for (String s : rows.get(type)) {
-                        rows_s.append(", ").append(s).append(" VARCHAR(128) NOT NULL");
+                        rows_s.append(", ").append(s).append(" VARCHAR(128)");
                     }
                 } else if (type == Type.VARCHAR256) {
                     for (String s : rows.get(type)) {
-                        rows_s.append(", ").append(s).append(" VARCHAR(256) NOT NULL");
+                        rows_s.append(", ").append(s).append(" VARCHAR(256)");
                     }
                 } else if (type == Type.VARCHAR512) {
                     for (String s : rows.get(type)) {
-                        rows_s.append(", ").append(s).append(" VARCHAR(512) NOT NULL");
+                        rows_s.append(", ").append(s).append(" VARCHAR(512)");
                     }
                 } else if (type == Type.VARCHAR1024) {
                     for (String s : rows.get(type)) {
-                        rows_s.append(", ").append(s).append(" VARCHAR(1024) NOT NULL");
+                        rows_s.append(", ").append(s).append(" VARCHAR(1024)");
                     }
                 } else if (type == Type.VARCHAR2048) {
                     for (String s : rows.get(type)) {
-                        rows_s.append(", ").append(s).append(" VARCHAR(2048) NOT NULL");
+                        rows_s.append(", ").append(s).append(" VARCHAR(2048)");
                     }
                 }
             }

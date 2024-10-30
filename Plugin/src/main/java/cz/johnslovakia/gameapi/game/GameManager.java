@@ -19,7 +19,6 @@ import java.util.List;
 
 public class GameManager {
 
-    private static int added = 0;
     private static List<Game> games = new ArrayList<>();
     private static List<String> IDs = new ArrayList<>();
 
@@ -93,7 +92,7 @@ public class GameManager {
 
     public static void resetGame(Game game){
         if (game.getSettings().restartServerAfterEnd()){
-            game.getPlayers().forEach(gp -> GameManager.newArena(gp.getOnlinePlayer(), true));
+            game.getParticipants().forEach(gp -> GameManager.newArena(gp.getOnlinePlayer(), true));
             new BukkitRunnable(){
                 @Override
                 public void run() {
@@ -115,9 +114,9 @@ public class GameManager {
 
 
         List<Player> players = new ArrayList<>();
-        if (!game.getPlayers().isEmpty()) {
-            for (int i = 0; i < game.getPlayers().size(); i++) {
-                GamePlayer gamePlayer = game.getPlayers().get(i);
+        if (!game.getParticipants().isEmpty()) {
+            for (int i = 0; i < game.getParticipants().size(); i++) {
+                GamePlayer gamePlayer = game.getParticipants().get(i);
                 Player player = gamePlayer.getOnlinePlayer();
 
                 //gamePlayer.getGame().leavePlayer(player);

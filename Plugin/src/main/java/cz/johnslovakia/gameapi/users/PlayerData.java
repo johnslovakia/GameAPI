@@ -71,11 +71,11 @@ public class PlayerData {
                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                     .obtainOne();
 
-            String lang = result.get().getString("Language");
-            if (lang == null || Language.getLanguage(lang) == null) {
-                language = Language.getDefaultLanguage();
-            } else {
+            if (result.isPresent()){
+                String lang = result.get().getString("Language");
                 language = Language.getLanguage(lang);
+            }else{
+                language = Language.getDefaultLanguage();
             }
         } catch (Exception e) {
             language = Language.getDefaultLanguage();
@@ -162,35 +162,37 @@ public class PlayerData {
         }else {
             try{
                 String jsonString = result.get().getString("Quests");
-                JSONObject jsonObject = new JSONObject(jsonString);
+                if (jsonString != null) {
+                    JSONObject jsonObject = new JSONObject(jsonString);
 
-                JSONArray questsArray = jsonObject.getJSONArray("quests");
+                    JSONArray questsArray = jsonObject.getJSONArray("quests");
 
-                for (int i = 0; i < questsArray.length(); i++) {
-                    JSONObject questObject = questsArray.getJSONObject(i);
-                    String name = questObject.getString("name");
-                    QuestType type = QuestType.valueOf(questObject.getString("type").toUpperCase());
-                    PlayerQuestData.Status status = PlayerQuestData.Status.valueOf(questObject.getString("status").toUpperCase());  // "NOT_STARTED", "IN_PROGRESS", "COMPLETED"
-                    int progress = questObject.getInt("progress");
-                    String completionDateString = questObject.optString("completion_date", null);
-                    LocalDate completionDate = null;
-                    if (completionDateString != null) {
-                        completionDate = LocalDate.parse(questObject.optString("completion_date", null));
+                    for (int i = 0; i < questsArray.length(); i++) {
+                        JSONObject questObject = questsArray.getJSONObject(i);
+                        String name = questObject.getString("name");
+                        QuestType type = QuestType.valueOf(questObject.getString("type").toUpperCase());
+                        PlayerQuestData.Status status = PlayerQuestData.Status.valueOf(questObject.getString("status").toUpperCase());  // "NOT_STARTED", "IN_PROGRESS", "COMPLETED"
+                        int progress = questObject.getInt("progress");
+                        String completionDateString = questObject.optString("completion_date", null);
+                        LocalDate completionDate = null;
+                        if (completionDateString != null) {
+                            completionDate = LocalDate.parse(questObject.optString("completion_date", null));
+                        }
+
+                        Quest quest = GameAPI.getInstance().getQuestManager().getQuest(type, name);
+
+                        PlayerQuestData questData = new PlayerQuestData(quest, gamePlayer);
+                        if (status.equals(PlayerQuestData.Status.COMPLETED)) {
+                            questData = new PlayerQuestData(quest, gamePlayer, completionDate);
+                        } else if (status.equals(PlayerQuestData.Status.IN_PROGRESS)) {
+                            questData = new PlayerQuestData(quest, gamePlayer, progress);
+                        }
+
+                        getQuestData().add(questData);
                     }
-
-                    Quest quest = GameAPI.getInstance().getQuestManager().getQuest(type, name);
-
-                    PlayerQuestData questData = new PlayerQuestData(quest, gamePlayer);
-                    if (status.equals(PlayerQuestData.Status.COMPLETED)) {
-                        questData = new PlayerQuestData(quest, gamePlayer, completionDate);
-                    }else if (status.equals(PlayerQuestData.Status.IN_PROGRESS)){
-                        questData = new PlayerQuestData(quest, gamePlayer, progress);
-                    }
-
-                    getQuestData().add(questData);
                 }
             } catch (Exception exception) {
-                Logger.log("I can't get quests data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2)", Logger.LogType.ERROR);
+                Logger.log("I can't get quests data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
                 gamePlayer.getOnlinePlayer().sendMessage("Can't get your quests data. Sorry for the inconvenience. (2)");
             }
         }
@@ -219,28 +221,30 @@ public class PlayerData {
                 .from(minigame.getMinigameTable().getTableName())
                 .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
                 .obtainOne();
-        if (!result.isPresent()) {
+        if (result.isEmpty()) {
             Logger.log("I can't get perks data for player " + gamePlayer.getOnlinePlayer().getName() + ". (1)", Logger.LogType.ERROR);
             gamePlayer.getOnlinePlayer().sendMessage("Can't get your perks data. Sorry for the inconvenience. (1)");
         }else {
             try{
                 String jsonString = result.get().getString("Perks");
-                JSONObject jsonObject = new JSONObject(jsonString);
+                if (jsonString != null) {
+                    JSONObject jsonObject = new JSONObject(jsonString);
 
-                JSONArray perksArray = jsonObject.getJSONArray("levels");
+                    JSONArray perksArray = jsonObject.getJSONArray("levels");
 
-                for (int i = 0; i < perksArray.length(); i++) {
-                    JSONObject perkObject = perksArray.getJSONObject(i);
-                    String name = perkObject.getString("name");
-                    int level = perkObject.getInt("level");
-                    Perk perk = GameAPI.getInstance().getPerkManager().getPerk(name);
+                    for (int i = 0; i < perksArray.length(); i++) {
+                        JSONObject perkObject = perksArray.getJSONObject(i);
+                        String name = perkObject.getString("name");
+                        int level = perkObject.getInt("level");
+                        Perk perk = GameAPI.getInstance().getPerkManager().getPerk(name);
 
-                    if (perk != null) {
-                        perksLevel.put(perk, level);
+                        if (perk != null) {
+                            perksLevel.put(perk, level);
+                        }
                     }
                 }
             } catch (Exception exception) {
-                Logger.log("I can't get perks data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2)", Logger.LogType.ERROR);
+                Logger.log("I can't get perks data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
                 gamePlayer.getOnlinePlayer().sendMessage("Can't get your perks data. Sorry for the inconvenience. (2)");
             }
         }
@@ -258,7 +262,7 @@ public class PlayerData {
                 .from(minigame.getMinigameTable().getTableName())
                 .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
                 .obtainOne();
-        if (!result.isPresent()) {
+        if (result.isEmpty()) {
             Logger.log("I can't get kits data for player " + gamePlayer.getOnlinePlayer().getName() + ". (1)", Logger.LogType.ERROR);
             gamePlayer.getOnlinePlayer().sendMessage("Can't get your kits data. Sorry for the inconvenience. (1)");
         }else {
@@ -273,22 +277,24 @@ public class PlayerData {
 
 
                 String jsonString = result.get().getString("KitInventories");
-                JSONObject jsonObject = new JSONObject(jsonString);
+                if (jsonString != null) {
+                    JSONObject jsonObject = new JSONObject(jsonString);
 
-                JSONArray inventoriesArray = jsonObject.getJSONArray("inventories");
+                    JSONArray inventoriesArray = jsonObject.getJSONArray("inventories");
 
-                for (int i = 0; i < inventoriesArray.length(); i++) {
-                    JSONObject kitObject = inventoriesArray.getJSONObject(i);
-                    String name = kitObject.getString("name");
-                    String inventory = kitObject.getString("inventory");
-                    Kit k = GameAPI.getInstance().getKitManager().getKit(name);
+                    for (int i = 0; i < inventoriesArray.length(); i++) {
+                        JSONObject kitObject = inventoriesArray.getJSONObject(i);
+                        String name = kitObject.getString("name");
+                        String inventory = kitObject.getString("inventory");
+                        Kit k = GameAPI.getInstance().getKitManager().getKit(name);
 
-                    if (k != null) {
-                        kitInventories.put(k, BukkitSerialization.fromBase64(inventory));
+                        if (k != null) {
+                            kitInventories.put(k, BukkitSerialization.fromBase64(inventory));
+                        }
                     }
                 }
             } catch (Exception exception) {
-                Logger.log("I can't get kits data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2)", Logger.LogType.ERROR);
+                Logger.log("I can't get kits data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
                 gamePlayer.getOnlinePlayer().sendMessage("Can't get your kits data. Sorry for the inconvenience. (2)");
             }
         }
@@ -305,9 +311,10 @@ public class PlayerData {
         Minigame minigame = GameAPI.getInstance().getMinigame();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
-        QueryResult cosmeticResult = connection.insert()
-                .into(minigame.getMinigameTable().getTableName(), "Cosmetics")
-                .values(CosmeticsStorage.toJSON(getGamePlayer()))
+        QueryResult cosmeticResult = connection.update()
+                .table(minigame.getMinigameTable().getTableName())
+                .set("Cosmetics", CosmeticsStorage.toJSON(getGamePlayer()).toString())
+                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                 .execute();
         if (!cosmeticResult.isSuccessful()) {
             Logger.log("Something went wrong when saving cosmetics data! The following message is for Developers: ", Logger.LogType.ERROR);
@@ -315,9 +322,10 @@ public class PlayerData {
         }
 
 
-        QueryResult questsResult = connection.insert()
-                .into(minigame.getMinigameTable().getTableName(), "Quests")
-                .values(QuestsStorage.toJSON(getGamePlayer()))
+        QueryResult questsResult = connection.update()
+                .table(minigame.getMinigameTable().getTableName())
+                .set("Quests", QuestsStorage.toJSON(getGamePlayer()).toString())
+                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                 .execute();
         if (!questsResult.isSuccessful()) {
             Logger.log("Something went wrong when saving quests data! The following message is for Developers: ", Logger.LogType.ERROR);
@@ -325,19 +333,31 @@ public class PlayerData {
         }
 
 
-        QueryResult kitInventoriesResult = connection.insert()
-                .into(minigame.getMinigameTable().getTableName(), "KitInventories")
-                .values(KitsStorage.inventoriesToJSON(getGamePlayer()))
+        QueryResult kitInventoriesResult = connection.update()
+                .table(minigame.getMinigameTable().getTableName())
+                .set("KitInventories", KitsStorage.inventoriesToJSON(getGamePlayer()).toString())
+                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                 .execute();
         if (!kitInventoriesResult.isSuccessful()) {
             Logger.log("Something went wrong when saving kits data! The following message is for Developers: ", Logger.LogType.ERROR);
             Logger.log(cosmeticResult.getRejectMessage(), Logger.LogType.ERROR);
+        }
+
+        for (Stat stat : GameAPI.getInstance().getStatsManager().getStats()){
+            PlayerStat playerStat = stat.getPlayerStat(gamePlayer);
+            if (playerStat != null && playerStat.wasUpdated()){
+                playerStat.saveDataToDatabase();
+            }
         }
     }
 
     private void loadCosmetics(){
         Minigame minigame = GameAPI.getInstance().getMinigame();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
+
+        if (GameAPI.getInstance().getCosmeticsManager() == null){
+            return;
+        }
 
         Optional<Row> result = connection.select()
                 .from(minigame.getMinigameTable().getTableName())
@@ -349,17 +369,19 @@ public class PlayerData {
         }else {
             try{
                 String jsonString = result.get().getString("Cosmetics");
-                JSONObject jsonObject = new JSONObject(jsonString);
+                if (jsonString != null) {
+                    JSONObject jsonObject = new JSONObject(jsonString);
 
-                for (CosmeticsCategory category : GameAPI.getInstance().getCosmeticsManager().getCategories()){
-                    Cosmetic cosmetic = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("selected")).stream().filter(c -> GameAPI.getInstance().getCosmeticsManager().getCategory(c).equals(category)).toList().get(0);
-                    if (cosmetic != null) {
-                        selectedCosmetics.put(category, cosmetic);
+                    for (CosmeticsCategory category : GameAPI.getInstance().getCosmeticsManager().getCategories()) {
+                        Cosmetic cosmetic = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("selected")).stream().filter(c -> GameAPI.getInstance().getCosmeticsManager().getCategory(c).equals(category)).toList().get(0);
+                        if (cosmetic != null) {
+                            selectedCosmetics.put(category, cosmetic);
+                        }
                     }
+                    purchasedCosmetics = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("purchased"));
                 }
-                purchasedCosmetics = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("purchased"));
             } catch (Exception exception) {
-                Logger.log("I can't get cosmetics data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2)", Logger.LogType.ERROR);
+                Logger.log("I can't get cosmetics data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
                 gamePlayer.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (2)");
             }
         }

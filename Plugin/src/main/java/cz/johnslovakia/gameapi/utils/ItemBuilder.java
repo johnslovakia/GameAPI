@@ -180,7 +180,22 @@ public class ItemBuilder {
      */
     public ItemBuilder setLore(String... lore){
         ItemMeta im = is.getItemMeta();
-        im.setLore(Arrays.asList(lore));
+
+        List<String> finalLore = new ArrayList<>();
+
+        for (String line : lore){
+            if (line.contains("\n")){
+                String[] arrSplit = line.split("\n");
+                finalLore.addAll(Arrays.asList(arrSplit));
+            }else if (line.contains("/newline/")){
+                String[] arrSplit = line.split("/newline/");
+                finalLore.addAll(Arrays.asList(arrSplit));
+            }else{
+                finalLore.add(line);
+            }
+        }
+
+        im.setLore(finalLore);
         is.setItemMeta(im);
         return this;
     }
@@ -189,9 +204,25 @@ public class ItemBuilder {
      * @param lore The lore to set it to.
      */
     public ItemBuilder setLore(List<String> lore) {
+        List<String> finalLore = new ArrayList<>();
+
+        for (String line : lore){
+            line = StringUtils.colorizer(line);
+            if (line.contains("\n")){
+                String[] arrSplit = line.split("\n");
+                finalLore.addAll(Arrays.asList(arrSplit));
+            }else if (line.contains("/newline/")){
+                String[] arrSplit = line.split("/newline/");
+                finalLore.addAll(Arrays.asList(arrSplit));
+            }else{
+                finalLore.add(line);
+            }
+        }
+
         ItemMeta im = is.getItemMeta();
-        im.setLore(lore);
+        im.setLore(finalLore);
         is.setItemMeta(im);
+
         return this;
     }
     /*
@@ -245,6 +276,8 @@ public class ItemBuilder {
      * @param line The lore line to add.
      */
     public ItemBuilder addLoreLine(String line){
+        line = StringUtils.colorizer(line);
+
         ItemMeta im = is.getItemMeta();
         List<String> lore = new ArrayList<>();
         if(im.hasLore())lore = new ArrayList<>(im.getLore());

@@ -5,6 +5,8 @@ import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -12,12 +14,15 @@ import org.bukkit.event.Listener;
 import java.util.ArrayList;
 import java.util.List;
 
+
+@Getter
 public class KitManager implements Listener {
 
     private String name;
     private Economy economy;
 
     private List<Kit> kits = new ArrayList<>();
+    @Setter
     private Kit defaultKit;
 
     private final boolean purchaseKitForever;
@@ -33,8 +38,8 @@ public class KitManager implements Listener {
         this.giveAfterDeath = giveAfterDeath;
         GameAPI.getInstance().setKitManager(this);
 
-        GameAPI.getInstance().getMinigame().getMinigameTable().addRow(Type.JSON, "KitInventories");
-        GameAPI.getInstance().getMinigame().getMinigameTable().addRow(Type.VARCHAR128, "DefaultKit");
+        GameAPI.getInstance().getMinigame().getMinigameTable().addColumn(Type.JSON, "KitInventories");
+        GameAPI.getInstance().getMinigame().getMinigameTable().addColumn(Type.VARCHAR128, "DefaultKit");
     }
 
     public boolean hasKitPermission(GamePlayer gamePlayer, Kit kit){
@@ -78,31 +83,4 @@ public class KitManager implements Listener {
         return null;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public Economy getEconomy() {
-        return economy;
-    }
-
-    public Kit getDefaultKit() {
-        return defaultKit;
-    }
-
-    public void setDefaultKit(Kit defaultKit) {
-        this.defaultKit = defaultKit;
-    }
-
-    public List<Kit> getKits() {
-        return kits;
-    }
-
-    public boolean isPurchaseKitForever() {
-        return purchaseKitForever;
-    }
-
-    public boolean isGiveAfterDeath() {
-        return giveAfterDeath;
-    }
 }

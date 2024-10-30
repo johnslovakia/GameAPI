@@ -74,17 +74,12 @@ public class PreparationCountdown implements TaskInterface {
     public void onEnd(Task task) {
         Game game = task.getGame();
 
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                bossBar.removeAll();
-            }
-        }.runTaskLater(GameAPI.getInstance(), 1L);
+        bossBar.removeAll();
 
         for (GamePlayer gamePlayer : game.getPlayers()) {
             Player player = gamePlayer.getOnlinePlayer();
             player.playSound(player, "custom:gamestart", 20.0F, 20.0F);
-            GameAPI.getInstance().getUserInterface().sendTitle(player, MessageManager.get(player, "title.battle_started.title").getTranslated(), "");
+            GameAPI.getInstance().getUserInterface().sendTitle(player, MessageManager.get(player, "title.battle_started.subtitle").getTranslated(), "");
             gamePlayer.setEnabledMovement(true);
         }
         game.startGame();

@@ -30,7 +30,7 @@ public interface Quest {
         new BukkitRunnable(){
             @Override
             public void run() {
-                player.playSound(player.getLocation(), "Completed", 20.0F, 20.0F); //TODO: funguje?
+                gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "custom:completed", 20.0F, 20.0F);
                 player.sendMessage("");
                 player.sendMessage(MessageManager.get(player, "chat.quests.completed")
                         .replace("%type%", MessageManager.get(player, "quest_type." + getType().toString().toLowerCase()).getTranslated())

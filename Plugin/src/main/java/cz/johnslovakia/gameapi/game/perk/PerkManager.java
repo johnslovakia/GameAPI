@@ -6,6 +6,7 @@ import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
+import lombok.Getter;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -15,6 +16,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class PerkManager {
 
     private String name;
@@ -26,7 +28,7 @@ public class PerkManager {
         this.name = name;
         this.economy = economy;
 
-        GameAPI.getInstance().getMinigame().getMinigameTable().addRow(Type.JSON, "Perks");
+        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "Perks");
     }
 
     public void registerPerk(Perk... perks){
@@ -56,18 +58,6 @@ public class PerkManager {
             return perk.getLevels().get(currentLevel + 1);
         }
         return null;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public List<Perk> getPerks() {
-        return perks;
-    }
-
-    public Economy getEconomy() {
-        return economy;
     }
 
 
@@ -108,10 +98,12 @@ public class PerkManager {
             Class<? extends Event> clazz = trigger.getEventClass();
             if (clazz.equals(event.getClass())) {
                 if (!trigger.validate(clazz.cast(event))) continue;
-                GamePlayer gamePlayer = trigger.compute(clazz.cast(event));
-                if (checkConditions(perk, gamePlayer)) {
-                    trigger.getResponse().accept(gamePlayer);
-                    return;
+                //GamePlayer gamePlayer = trigger.compute(clazz.cast(event));
+                for (GamePlayer gamePlayer : trigger.compute(clazz.cast(event))){
+                    if (checkConditions(perk, gamePlayer)) {
+                        trigger.getResponse().accept(gamePlayer);
+                        return;
+                    }
                 }
             }
         }

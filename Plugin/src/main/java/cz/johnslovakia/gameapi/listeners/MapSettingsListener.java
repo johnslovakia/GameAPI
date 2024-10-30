@@ -2,12 +2,14 @@ package cz.johnslovakia.gameapi.listeners;
 
 
 import com.cryptomorin.xseries.XMaterial;
+import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.game.map.AreaSettings;
 import cz.johnslovakia.gameapi.game.map.AreaManager;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Utils;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
@@ -23,6 +25,7 @@ import org.bukkit.event.player.*;
 import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -196,23 +199,11 @@ public class MapSettingsListener implements Listener {
 
         AreaSettings settings = AreaManager.getActiveSettings(e.getEntity().getLocation());
         if(settings != null){
-            if (!settings.isAllowFallDamage()) {
-                if (e.getCause() == EntityDamageEvent.DamageCause.FALL) {
-                    e.setCancelled(true);
-                }
-            }
 
             if(e.getEntity().getType().equals(EntityType.ITEM_FRAME)){
                 if(!settings.canItemFrameDamage()) e.setCancelled(true);
             }else if(e.getEntity().getType().equals(EntityType.PAINTING)){
                 if(!settings.canPaintingDamage()) e.setCancelled(true);
-            }else if(e.getEntity().getType().equals(EntityType.PLAYER)){
-                AreaSettings pSettings = AreaManager.getActiveSettings(gamePlayer);
-                if(pSettings != null){
-                    if(pSettings.canPlayerInvincibility()) {
-                        e.setCancelled(true);
-                    }
-                }
             }
         }
     }
@@ -543,15 +534,24 @@ public class MapSettingsListener implements Listener {
 
     @EventHandler
     public void onEntityDamage(EntityDamageEvent e) {
-        if (e.getEntity() instanceof Player) {
-            Player player = (Player) e.getEntity();
-            GamePlayer gp = PlayerManager.getGamePlayer(player);
+        if (e.getEntity() instanceof Player player) {
+            GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
             Game game = PlayerManager.getGamePlayer(player).getPlayerData().getGame();
 
-            if (game != null && game.getState() != GameState.INGAME) {
+            if ((game != null && game.getState() != GameState.INGAME) || gamePlayer.isSpectator()) {
                 e.setCancelled(true);
-            }else if (game != null){
-                if (gp.isSpectator()){
+            }
+
+            AreaSettings settings = AreaManager.getActiveSettings(gamePlayer);
+            if(settings != null){
+                if (!settings.isAllowFallDamage() && e.getCause().equals(EntityDamageEvent.DamageCause.FALL)) {
+                    e.setCancelled(true);
+                }
+                if (settings.isAllowedInstantVoidKill() && e.getCause().equals(EntityDamageEvent.DamageCause.VOID)){
+                    e.setCancelled(true);
+                    player.damage(player.getHealth());
+                }
+                if(settings.canPlayerInvincibility()) {
                     e.setCancelled(true);
                 }
             }
@@ -606,6 +606,9 @@ public class MapSettingsListener implements Listener {
             if (e.getCause() == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
                 if (!settings.isAllowEnderpearlFallDamage()) {
                     player.setNoDamageTicks(2);
+                }
+                if (noFallDamage.contains(player)){
+                    noFallDamage.remove(player);
                 }
             }
         }

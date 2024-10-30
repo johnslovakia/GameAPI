@@ -2,6 +2,8 @@ package cz.johnslovakia.gameapi.datastorage;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
+import cz.johnslovakia.gameapi.messages.Language;
+import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.stats.Stat;
 import cz.johnslovakia.gameapi.utils.Logger;
 import me.zort.sqllib.SQLDatabaseConnection;
@@ -30,7 +32,7 @@ public class StatsTable {
         }
 
         for (String s : stats) {
-            stats_s.append(", `").append(s).append("` int NOT NULL");
+            stats_s.append(", `").append(s).append("` int DEFAULT 0");
         }
 
         SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
@@ -48,9 +50,8 @@ public class StatsTable {
         }
     }
 
-    public void createMySQLUser(String nick) {
-
-        List<String> stats = new ArrayList<>();
+    public void newUser(GamePlayer gamePlayer) {
+        /*List<String> stats = new ArrayList<>();
         for (Stat stat : GameAPI.getInstance().getStatsManager().getStats()){
             stats.add(stat.getName());
         }
@@ -69,7 +70,24 @@ public class StatsTable {
         }
 
         String query = "INSERT IGNORE INTO `" + TABLE_NAME + "` (" + stats_s + ") VALUES (?, " + stats_s_1 + ")";
-        minigame.getDatabase().getConnection().exec(query);
+        minigame.getDatabase().getConnection().exec(query);*/
+
+        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
+        if (connection == null){
+            return;
+        }
+
+        Optional<Row> result = connection.select()
+                .from(TABLE_NAME)
+                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                .obtainOne();
+
+        if (result.isEmpty()) {
+            connection.insert()
+                    .into(TABLE_NAME, "Nickname")
+                    .values(gamePlayer.getOnlinePlayer().getName())
+                    .execute();
+        }
     }
 
 

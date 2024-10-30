@@ -5,11 +5,14 @@ import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.economy.RewardTypeComparator;
 import cz.johnslovakia.gameapi.events.PlayerScoreEvent;
 import cz.johnslovakia.gameapi.game.Game;
+import cz.johnslovakia.gameapi.messages.Message;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.stats.Stat;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
@@ -20,36 +23,41 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 
+@Getter
 public class PlayerScore implements Comparable<PlayerScore> {
 
-    private String name, displayName;
+    private String name, pluralName, displayName;
     private GamePlayer gamePlayer;
+    @Setter
     private int score = 0;
+    private final int rewardLimit;
     private Stat stat;
 
     private final Map<Economy, Integer> earned = new HashMap<>();
     private Map<Economy, Integer> rewardTypes = new HashMap<>();
     private Set<Trigger<?>> triggers = new HashSet<>();;
 
-    private boolean allowedMessage = true;
-    private boolean scoreRanking = false;
+    private boolean allowedMessage;
+    private boolean scoreRanking;
 
-    public PlayerScore(String name, GamePlayer gamePlayer, Map<Economy, Integer> rewardTypes) {
-        this.setGamePlayer(gamePlayer);
-        this.name = name;
-        this.setDisplayName(name);
-        this.setRewardTypes(rewardTypes);
-    }
+    public PlayerScore(GamePlayer gamePlayer, PlayerManager.Score builder) {
+        this.gamePlayer = gamePlayer;
+        this.name = builder.getName();
+        this.displayName = builder.getDisplayName();
+        this.pluralName = builder.getPluralName();
+        this.rewardTypes = builder.getRewardTypes();
+        this.allowedMessage = builder.isMessage();
+        this.scoreRanking = builder.isScoreRanking();
+        this.stat = builder.getStat();
+        this.rewardLimit = builder.getLimit();
 
-    public PlayerScore(String name, GamePlayer gamePlayer, Map<Economy, Integer> rewardTypes, Set<Trigger<?>> triggers) {
-        this.setGamePlayer(gamePlayer);
-        this.name = name;
-        this.setDisplayName(name);
-        this.setRewardTypes(rewardTypes);
-        this.triggers = triggers;
 
-        for(Trigger<?> t : getTriggers()){
-            GameAPI.getInstance().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() { }, EventPriority.NORMAL, (listener, event) -> onEventCall(event), GameAPI.getInstance());
+        if (builder.getTriggers() != null){
+            this.triggers = builder.getTriggers();
+
+            for(Trigger<?> t : getTriggers()){
+                GameAPI.getInstance().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() { }, EventPriority.NORMAL, (listener, event) -> onEventCall(event), GameAPI.getInstance());
+            }
         }
     }
 
@@ -65,7 +73,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
 
         StringBuilder text = new StringBuilder();
 
-        if (!getRewardTypes().isEmpty()) {
+        if (!getRewardTypes().isEmpty() && (score == -1 || score < rewardLimit)) {
             int i = 0;
             for (Economy economy : list) {
                 int reward = getRewardTypes().get(economy);
@@ -94,7 +102,16 @@ public class PlayerScore implements Comparable<PlayerScore> {
             }
 
             if (isAllowedMessage()) {
-                getGamePlayer().getOnlinePlayer().sendMessage(MessageManager.get(getGamePlayer(), "economy.reward").replace("%reward%", text.toString()).replace("%gameplayerscore%", getDisplayName()).getTranslated() /*(!(getDisplayName().endsWith("s")) ? getDisplayName() : getDisplayName().substring(0, getDisplayName().length() - 1))*/);
+                MessageManager.get(getGamePlayer(), "chat.economy.reward")
+                        .replace("%reward%", text.toString())
+                        .replace("%gameplayerscore%", getDisplayName())
+                        .send();
+
+                if ((score + 1) == rewardLimit){
+                    MessageManager.get(gamePlayer, "chat.economy.reward.limit")
+                            .replace("%score%", getDisplayName(true))
+                            .send();
+                }
             }
         }
     }
@@ -159,55 +176,26 @@ public class PlayerScore implements Comparable<PlayerScore> {
         return getEarned().get(rewardType);
     }
 
-    public Map<Economy, Integer> getRewardTypes() {
-        return rewardTypes;
+    public String getDisplayName(boolean plural){
+        if (plural && score > 1){
+            return pluralName;
+        }
+        return displayName;
     }
+
 
     @Override
     public int compareTo(PlayerScore o) {
         return o.getScore() - this.getScore();
     }
 
-    public Set<Trigger<?>> getTriggers() {
-        return triggers;
-    }
-
     public PlayerScore setTriggers(Set<Trigger<?>> triggers) {
         this.triggers = triggers;
         return this;
     }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
     public PlayerScore setDisplayName(String displayName) {
         this.displayName = displayName;
         return this;
-    }
-
-    public GamePlayer getGamePlayer() {
-        return gamePlayer;
-    }
-
-    public void setGamePlayer(GamePlayer gamePlayer) {
-        this.gamePlayer = gamePlayer;
-    }
-
-    public int getScore() {
-        return score;
-    }
-
-    public void setScore(int score) {
-        this.score = score;
-    }
-
-    public Map<Economy, Integer> getEarned() {
-        return earned;
     }
 
     public PlayerScore setRewardTypes(Map<Economy, Integer> rewardTypes) {
@@ -215,17 +203,9 @@ public class PlayerScore implements Comparable<PlayerScore> {
         return this;
     }
 
-    public boolean isAllowedMessage() {
-        return allowedMessage;
-    }
-
     public PlayerScore setAllowedMessage(boolean allowedMessage) {
         this.allowedMessage = allowedMessage;
         return this;
-    }
-
-    public boolean isScoreRanking() {
-        return scoreRanking;
     }
 
     public PlayerScore setScoreRanking(boolean scoreRanking) {
@@ -233,16 +213,10 @@ public class PlayerScore implements Comparable<PlayerScore> {
         return this;
     }
 
-    public Stat getStat() {
-        return stat;
-    }
-
     public PlayerScore setStat(Stat stat) {
         this.stat = stat;
         return this;
     }
-
-
 
     private boolean checkConditions(GamePlayer target) {
         boolean result = true;
@@ -281,10 +255,16 @@ public class PlayerScore implements Comparable<PlayerScore> {
             Class<? extends Event> clazz = trigger.getEventClass();
             if(clazz.equals(event.getClass())){
                 if(!trigger.validate(clazz.cast(event))) continue;
-                GamePlayer gamePlayer = trigger.compute(clazz.cast(event));
-                if(checkConditions(gamePlayer)) {
-                    trigger.getResponse().accept(gamePlayer);
-                    return;
+                GamePlayer gamePlayer = trigger.compute(clazz.cast(event)).stream().filter(g -> g.equals(getGamePlayer())).findFirst().orElse(null);
+                if (gamePlayer != null) {
+                    if (checkConditions(gamePlayer)) {
+                        if (trigger.getResponse() != null) {
+                            trigger.getResponse().accept(gamePlayer);
+                        } else {
+                            increaseScore();
+                        }
+                        return;
+                    }
                 }
             }
         }
@@ -296,12 +276,11 @@ public class PlayerScore implements Comparable<PlayerScore> {
 
     public static final class Builder {
 
-        private String name;
-        private String displayName;
+        private String name, pluralName, displayName;
         private Map<Economy, Integer> rewardTypes = new HashMap<>();
         private boolean message = true;
-
         private boolean scoreRanking = false;
+        private int limit = -1;
         private Stat stat;
         @Getter
         private Set<Trigger<?>> triggers = new HashSet<>();
@@ -311,11 +290,23 @@ public class PlayerScore implements Comparable<PlayerScore> {
 
         public Builder setName(String name) {
             this.name = name;
+            this.pluralName = name;
+            return this;
+        }
+        public Builder setName(String name, String pluralName) {
+            this.name = name;
+            this.pluralName = pluralName;
             return this;
         }
 
         public Builder setDisplayName(String displayName) {
             this.displayName = displayName;
+            return this;
+        }
+
+        public Builder setDisplayName(String displayName, String pluralName) {
+            this.displayName = displayName;
+            this.pluralName = pluralName;
             return this;
         }
 
@@ -353,6 +344,11 @@ public class PlayerScore implements Comparable<PlayerScore> {
             return this;
         }
 
+        public Builder setRewardLimit(int limit) {
+            this.limit = limit;
+            return this;
+        }
+
         public Builder setScoreRanking(boolean scoreRanking) {
             this.scoreRanking = scoreRanking;
             return this;
@@ -377,6 +373,8 @@ public class PlayerScore implements Comparable<PlayerScore> {
             score.setScoreRanking(this.scoreRanking);
             score.setStat(this.stat);
             score.setTriggers(this.triggers);
+            score.setPluralName(this.pluralName);
+            score.setLimit(limit);
 
             return score;
         }

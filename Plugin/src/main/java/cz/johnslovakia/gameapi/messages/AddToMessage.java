@@ -20,11 +20,10 @@ public class AddToMessage {
 
     public String getMessage(GamePlayer gamePlayer){
         if (validator == null || validator.test(gamePlayer)) {
-            String finalMessage = message;
             if (translate) {
-                return finalMessage = MessageManager.get(gamePlayer, message).getTranslated();
+                return MessageManager.get(gamePlayer, message).getTranslated();
             }else{
-                return finalMessage;
+                return message;
             }
         }
         return "not_valid";

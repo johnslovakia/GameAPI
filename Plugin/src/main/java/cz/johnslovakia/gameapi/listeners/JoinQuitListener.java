@@ -30,12 +30,14 @@ public class JoinQuitListener implements Listener {
         if (!e.getPlayer().hasPlayedBefore()){
             gamePlayer.getPlayerData().getPlayerTable().newUser(gamePlayer);
             GameAPI.getInstance().getMinigame().getMinigameTable().newUser(gamePlayer);
+            GameAPI.getInstance().getStatsManager().getStatsTable().newUser(gamePlayer);
         }else{
             new BukkitRunnable(){
                 @Override
                 public void run() {
                     gamePlayer.getPlayerData().getPlayerTable().newUser(gamePlayer);
                     GameAPI.getInstance().getMinigame().getMinigameTable().newUser(gamePlayer);
+                    GameAPI.getInstance().getStatsManager().getStatsTable().newUser(gamePlayer);
                 }
             }.runTaskAsynchronously(GameAPI.getInstance());
         }

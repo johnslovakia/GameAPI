@@ -7,6 +7,7 @@ import cz.johnslovakia.gameapi.game.team.GameTeam;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.utils.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
@@ -46,7 +47,7 @@ public class ChatListener implements Listener {
             if (gamePlayer.isSpectator() && game.getState() == GameState.INGAME) {
                 e.setCancelled(true);
                 if (!MessageManager.existMessage("chat.format.spectator")) {
-                    String msg = "§8[§7Spectator Chat§8] " +ChatColor.translateAlternateColorCodes('&', prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null ? "" : " ") + player.getDisplayName() + "§r: " + e.getMessage();
+                    String msg = "§8[§7Spectator Chat§8] " + StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null ? "" : " ") + player.getDisplayName() + "§r: " + e.getMessage();
                     e.setMessage(msg);
                     for (GamePlayer t : game.getSpectators()) {
                         t.getOnlinePlayer().sendMessage(e.getMessage());
@@ -54,7 +55,7 @@ public class ChatListener implements Listener {
                 }else {
                     for (GamePlayer t : game.getSpectators()) {
                         MessageManager.get(t, "chat.format.spectator")
-                                .replace("%prefix%", ChatColor.translateAlternateColorCodes('&', prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " "))
+                                .replace("%prefix%", StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " "))
                                 .replace("%name%", player.getDisplayName())
                                 .replace("%message%", e.getMessage())
                                 .send();
@@ -71,7 +72,7 @@ public class ChatListener implements Listener {
                             e.setCancelled(true);
                             e.setMessage(e.getMessage().substring(1));
                             if (!MessageManager.existMessage("chat.format.all")) {
-                                String all = "§8[" + team.getChatColor() + word_all + "§8] " + ChatColor.translateAlternateColorCodes('&', prefix) + "§r" + team.getChatColor() + player.getName() + "§r: " + e.getMessage();
+                                String all = "§8[" + team.getChatColor() + word_all + "§8] " + StringUtils.colorizer(prefix) + "§r" + team.getChatColor() + player.getName() + "§r: " + e.getMessage();
                                 e.setMessage(all);
                                 for (GamePlayer allGPs : game.getParticipants()) {
                                     allGPs.getOnlinePlayer().sendMessage(e.getMessage());
@@ -79,7 +80,7 @@ public class ChatListener implements Listener {
                             }else {
                                 for (GamePlayer allGPs : game.getParticipants()) {
                                     MessageManager.get(allGPs, "chat.format.all")
-                                            .replace("%prefix%", ChatColor.translateAlternateColorCodes('&', prefix))
+                                            .replace("%prefix%", StringUtils.colorizer(prefix))
                                             .replace("%name%", player.getDisplayName())
                                             .replace("%team_color%", "" + team.getChatColor())
                                             .replace("%team%", team.getName())
@@ -90,7 +91,7 @@ public class ChatListener implements Listener {
                         } else {
                             e.setCancelled(true);
                             if (!MessageManager.existMessage("chat.format.team")) {
-                                String teamMSG = "§8[" + team.getChatColor() + word_team + "§8] " +ChatColor.translateAlternateColorCodes('&', prefix) + "§r" + team.getChatColor() + player.getName() + "§r: " + e.getMessage();
+                                String teamMSG = "§8[" + team.getChatColor() + word_team + "§8] " +StringUtils.colorizer(prefix) + "§r" + team.getChatColor() + player.getName() + "§r: " + e.getMessage();
                                 e.setMessage(teamMSG);
                                 for (GamePlayer t : team.getAllMembers()) {
                                     t.getOnlinePlayer().sendMessage(teamMSG);
@@ -98,7 +99,7 @@ public class ChatListener implements Listener {
                             }else {
                                 for (GamePlayer t : team.getAllMembers()) {
                                     MessageManager.get(t, "chat.format.team")
-                                            .replace("%prefix%", ChatColor.translateAlternateColorCodes('&', prefix))
+                                            .replace("%prefix%", StringUtils.colorizer(prefix))
                                             .replace("%name%", player.getDisplayName())
                                             .replace("%team_color%", "" + team.getChatColor())
                                             .replace("%team%", team.getName())
@@ -109,7 +110,7 @@ public class ChatListener implements Listener {
                         }
                     } else {
                         e.setCancelled(true);
-                        String msg = ChatColor.translateAlternateColorCodes('&', prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " ") + "§7" + player.getName() + "§r: " + e.getMessage();
+                        String msg = StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " ") + "§7" + player.getName() + "§r: " + e.getMessage();
                         e.setMessage(msg);
                         for (GamePlayer allGPs : game.getParticipants()){
                             allGPs.getOnlinePlayer().sendMessage(e.getMessage());
@@ -119,7 +120,7 @@ public class ChatListener implements Listener {
                 } else {
                     e.setCancelled(true);
                     if (!MessageManager.existMessage("chat.format.all")){
-                        String solo = "§8[§a" + word_all + "§8] " + ChatColor.translateAlternateColorCodes('&', prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " ") + "§r" + player.getName() +  "§r: " + e.getMessage();
+                        String solo = "§8[§a" + word_all + "§8] " + StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " ") + "§r" + player.getName() +  "§r: " + e.getMessage();
                         e.setMessage(solo);
                         for (GamePlayer allGPs : game.getParticipants()) {
                             allGPs.getOnlinePlayer().sendMessage(e.getMessage());
@@ -127,7 +128,7 @@ public class ChatListener implements Listener {
                     }else {
                         for (GamePlayer allGPs : game.getParticipants()) {
                             MessageManager.get(allGPs, "chat.format.all")
-                                    .replace("%prefix%", ChatColor.translateAlternateColorCodes('&', prefix))
+                                    .replace("%prefix%", StringUtils.colorizer(prefix))
                                     .replace("%name%", player.getDisplayName())
                                     .replace("%message%", e.getMessage())
                                     .replace("%team_color%", "§a")
@@ -139,7 +140,7 @@ public class ChatListener implements Listener {
             }else{
                 e.setCancelled(true);
                 if (!MessageManager.existMessage("chat.format.default")) {
-                    String lobby = ChatColor.translateAlternateColorCodes('&', prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " ") + "§r" + player.getName() + "§r: " + e.getMessage();
+                    String lobby = StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " ") + "§r" + player.getName() + "§r: " + e.getMessage();
                     e.setMessage(lobby);
                     for (GamePlayer allGPs : game.getParticipants()) {
                         allGPs.getOnlinePlayer().sendMessage(e.getMessage());
@@ -147,7 +148,7 @@ public class ChatListener implements Listener {
                 }else {
                     for (GamePlayer allGPs : game.getParticipants()) {
                         MessageManager.get(allGPs, "chat.format.default")
-                                .replace("%prefix%", ChatColor.translateAlternateColorCodes('&', prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " "))
+                                .replace("%prefix%", StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " "))
                                 .replace("%name%", player.getDisplayName())
                                 .replace("%message%", e.getMessage())
                                 .send();

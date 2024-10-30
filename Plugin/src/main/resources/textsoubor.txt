@@ -9,6 +9,16 @@
 \u1E86 - více info po přejetí (https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.onlinewebfonts.com%2Ficon%2F566696&psig=AOvVaw3Y5Hrw4SEL2eaIcwKGfrdQ&ust=1725114146813000&source=images&cd=vfe&opi=89978449&ved=0CBQQjRxqFwoTCNCH2pT1nIgDFQAAAAAdAAAAABAJ)
 \u1E87 - countdown
 
+\u1E88 - background roh levá strana
+\u1E89 - background střed
+\u1E8A - background roh pravá strana
+
+"񎾜񎾜" dva tyto odstraní mini mezerku mezi obrázkem" / -0.8741666666666666666666666667
+#4e5c24 odstraní stín
+
+resource pack věci
+https://github.com/McTsts/mc-core-shaders/blob/main/remove%20text%20shadow/1.20%20-%201.21/rendertype_text.fsh
+
 https://www.fileformat.info/info/unicode/char/1e82/index.htm
 
 
