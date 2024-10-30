@@ -5,11 +5,8 @@ import org.bukkit.plugin.Plugin;
 
 public interface SlimeWorldLoader {
 
-    public boolean cloneSlimeArenaWorld(Plugin plugin, String arena, String gameID);
-
-    public boolean loadSlimeWorld(Plugin plugin, String worldName);
-
-    public boolean loadSlimeWorld(Plugin plugin, String worldName, Player player);
-
-    public boolean loadSlimeLobbyWorld(Plugin plugin, String worldName);
+    boolean cloneSlimeArenaWorld(Plugin plugin, String arena, String gameID);
+    boolean loadSlimeWorld(Plugin plugin, String worldName);
+    boolean loadSlimeWorld(Plugin plugin, String worldName, Player player);
+    boolean loadSlimeLobbyWorld(Plugin plugin, String worldName);
 }
