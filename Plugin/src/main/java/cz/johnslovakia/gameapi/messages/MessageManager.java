@@ -2,12 +2,14 @@ package cz.johnslovakia.gameapi.messages;
 
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import lombok.Getter;
 import org.bukkit.entity.Player;
 
 import java.util.*;
 
 public class MessageManager {
 
+    @Getter
     private static Map<String, Map<Language, String>> messages = new HashMap<>();
 
     public static void addMessage(String name, Language language, String message){
@@ -38,10 +40,6 @@ public class MessageManager {
 
     public static Message get(List<GamePlayer> audience, String key){
         return new Message(audience, key);
-    }
-
-    public static Map<String, Map<Language, String>> getMessages() {
-        return messages;
     }
 
     public static Map<Language, String> getMessages(String key){

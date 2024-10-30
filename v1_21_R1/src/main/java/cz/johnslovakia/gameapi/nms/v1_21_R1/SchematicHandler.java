@@ -26,14 +26,9 @@ public class SchematicHandler implements Schematic {
     @Override
     public void pasteSchematic(Plugin plugin, Location pasteLocation, String schematicFileName, String path) {
         try {
-            Path pluginFolderPath = plugin.getDataFolder().toPath().toAbsolutePath().getParent();
-            //String schematicFolderPath = pluginFolderPath + File.separator + "MiniUHC" + File.separator + "schematics" + File.separator;
-            File schematicFile = new File(pluginFolderPath + File.separator + path + File.separator + schematicFileName + ".schem");
-            if (!schematicFile.exists()){
-                schematicFile = new File(pluginFolderPath + File.separator + path + File.separator + schematicFileName + ".schematic");
-            }
-
+            File schematicFile = getFile(plugin, schematicFileName, path);
             ClipboardFormat format = ClipboardFormats.findByFile(schematicFile);
+
             if (format == null) {
                 plugin.getLogger().severe("Unsupported schema format.");
                 return;
@@ -57,9 +52,18 @@ public class SchematicHandler implements Schematic {
                 Operations.complete(operation);
             }
         } catch (IOException | WorldEditException e) {
-            e.printStackTrace();
-            plugin.getLogger().severe("An error occurred while pasting the schema.");
+            throw new RuntimeException("An error occurred while pasting the schema.", e);
         }
 
+    }
+
+    private static File getFile(Plugin plugin, String schematicFileName, String path) {
+        Path pluginFolderPath = plugin.getDataFolder().toPath().toAbsolutePath().getParent();
+        //String schematicFolderPath = pluginFolderPath + File.separator + "MiniUHC" + File.separator + "schematics" + File.separator;
+        File schematicFile = new File(pluginFolderPath + File.separator + path + File.separator + schematicFileName + ".schem");
+        if (!schematicFile.exists()){
+            schematicFile = new File(pluginFolderPath + File.separator + path + File.separator + schematicFileName + ".schematic");
+        }
+        return schematicFile;
     }
 }

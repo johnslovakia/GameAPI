@@ -20,9 +20,11 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 
+@Getter
 public class PlayerScore implements Comparable<PlayerScore> {
 
-    private String name, displayName;
+    private final String name;
+    private String displayName;
     private GamePlayer gamePlayer;
     private int score = 0;
     private Stat stat;
@@ -159,17 +161,9 @@ public class PlayerScore implements Comparable<PlayerScore> {
         return getEarned().get(rewardType);
     }
 
-    public Map<Economy, Integer> getRewardTypes() {
-        return rewardTypes;
-    }
-
     @Override
     public int compareTo(PlayerScore o) {
         return o.getScore() - this.getScore();
-    }
-
-    public Set<Trigger<?>> getTriggers() {
-        return triggers;
     }
 
     public PlayerScore setTriggers(Set<Trigger<?>> triggers) {
@@ -177,37 +171,17 @@ public class PlayerScore implements Comparable<PlayerScore> {
         return this;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
     public PlayerScore setDisplayName(String displayName) {
         this.displayName = displayName;
         return this;
-    }
-
-    public GamePlayer getGamePlayer() {
-        return gamePlayer;
     }
 
     public void setGamePlayer(GamePlayer gamePlayer) {
         this.gamePlayer = gamePlayer;
     }
 
-    public int getScore() {
-        return score;
-    }
-
     public void setScore(int score) {
         this.score = score;
-    }
-
-    public Map<Economy, Integer> getEarned() {
-        return earned;
     }
 
     public PlayerScore setRewardTypes(Map<Economy, Integer> rewardTypes) {
@@ -215,26 +189,14 @@ public class PlayerScore implements Comparable<PlayerScore> {
         return this;
     }
 
-    public boolean isAllowedMessage() {
-        return allowedMessage;
-    }
-
     public PlayerScore setAllowedMessage(boolean allowedMessage) {
         this.allowedMessage = allowedMessage;
         return this;
     }
 
-    public boolean isScoreRanking() {
-        return scoreRanking;
-    }
-
     public PlayerScore setScoreRanking(boolean scoreRanking) {
         this.scoreRanking = scoreRanking;
         return this;
-    }
-
-    public Stat getStat() {
-        return stat;
     }
 
     public PlayerScore setStat(Stat stat) {

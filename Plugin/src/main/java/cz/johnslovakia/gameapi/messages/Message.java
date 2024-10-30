@@ -1,7 +1,6 @@
 package cz.johnslovakia.gameapi.messages;
 
 import cz.johnslovakia.gameapi.GameAPI;
-import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import org.bukkit.ChatColor;
@@ -15,9 +14,9 @@ import java.util.regex.Pattern;
 
 public class Message {
 
-    private List<GamePlayer> audience = new ArrayList<>();
-    private Map<GamePlayer, String> messages = new HashMap<>();
-    private List<AddToMessage> addToMessage = new ArrayList<>();
+    private final List<GamePlayer> audience;
+    private final Map<GamePlayer, String> messages = new HashMap<>();
+    private final List<AddToMessage> addToMessage = new ArrayList<>();
 
     public Message(List<GamePlayer> audience, String key) {
         this.audience = audience;
@@ -105,7 +104,7 @@ public class Message {
             finalMessage = new StringBuilder(ChatColor.translateAlternateColorCodes('&', finalMessage.toString()));
             if (!addToMessage.isEmpty()){
                 for (AddToMessage add : addToMessage){
-                    if (add.getValidator().test(recipient)) {
+                    if (add.validator().test(recipient)) {
                         finalMessage.append(" ").append(add.getMessage(recipient));
                     }
                 }
