@@ -6,25 +6,14 @@ import lombok.Getter;
 import java.util.function.Predicate;
 
 @Getter
-public class AddToMessage {
+public record AddToMessage(String message, Predicate<GamePlayer> validator, boolean translate) {
 
-    String message;
-    Predicate<GamePlayer> validator;
-    boolean translate = false;
-
-    public AddToMessage(String message, Predicate<GamePlayer> validator, boolean translate) {
-        this.message = message;
-        this.validator = validator;
-        this.translate = translate;
-    }
-
-    public String getMessage(GamePlayer gamePlayer){
+    public String getMessage(GamePlayer gamePlayer) {
         if (validator == null || validator.test(gamePlayer)) {
-            String finalMessage = message;
             if (translate) {
-                return finalMessage = MessageManager.get(gamePlayer, message).getTranslated();
-            }else{
-                return finalMessage;
+                return MessageManager.get(gamePlayer, message).getTranslated();
+            } else {
+                return message;
             }
         }
         return "not_valid";
