@@ -82,7 +82,7 @@ public class Message {
             return "§cIncorrect use of the 'getTranslated()' method! This method can only be used if you only want to get a message for one player.";
         }
 
-        return messages.values().stream().toList().get(0);
+        return StringUtils.colorizer(messages.values().stream().toList().get(0));
     }
 
     public void addToItemLore(ItemBuilder itemBuilder){

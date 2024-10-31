@@ -33,13 +33,7 @@ public class SpectatorManager {
 
         if (GameManager.getGames().size() > 1) {
             Item playAgain = new Item(new ItemBuilder(XMaterial.PAPER.parseMaterial()).hideAllFlags().toItemStack(),
-                    1, "inventory.play_again",
-                    new Consumer<PlayerInteractEvent>() {
-                        @Override
-                        public void accept(PlayerInteractEvent e) {
-                            GameManager.newArena(e.getPlayer(), false);
-                        }
-                    });
+                    1, "inventory.play_again", gamePlayer -> GameManager.newArena(gamePlayer.getOnlinePlayer(), false));
             im.registerItem(playAgain);
             im2.registerItem(playAgain);
         }

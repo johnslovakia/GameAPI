@@ -38,7 +38,7 @@ public interface Kit {
         }
 
         player.getInventory().setContents(data.getKitInventories().get(this) != null ? data.getKitInventories().get(this).getContents() : getContent().getInventory().getContents());
-        player.getInventory().setArmorContents(getContent().getArmor().toArray(new ItemStack[0]));
+        //player.getInventory().setArmorContents(getContent().getArmor().toArray(new ItemStack[0]));
         Utils.colorizeArmor(gamePlayer);
 
         if (kitManager.getDefaultKit() != this) {
@@ -82,7 +82,8 @@ public interface Kit {
     default void unselect(GamePlayer gamePlayer) {
         gamePlayer.getPlayerData().setKit((getKitManager().getDefaultKit() != null ? getKitManager().getDefaultKit() : null));
 
-        MessageManager.get(gamePlayer, "kit.unselected")
+        MessageManager.get(gamePlayer, "chat.kit.unselected")
+                .replace("%kit%", getName())
                 .send();
     }
 
@@ -99,9 +100,10 @@ public interface Kit {
                 gamePlayer.getPlayerData().setKit(null);
             }
             if (kitManager.getDefaultKit() != this) {
-                MessageManager.get(player, "kit.selected")
+                MessageManager.get(player, "chat.kit.selected")
                         .replace("%kit%", getName())
                         .send();
+                gamePlayer.getPlayerData().setKit(this);
             }
 
             KitSelectEvent ev = new KitSelectEvent(gamePlayer, this);
@@ -110,7 +112,7 @@ public interface Kit {
             if (getKitManager().isPurchaseKitForever()){
                 return;
             }
-            MessageManager.get(player, "kit.dont_have_enough")
+            MessageManager.get(player, "chat.kit.dont_have_enough")
                     .replace("%need_more%", "" + (getPrice() - balance))
                     .replace("%economy_name%", economy.getName())
                     .send();

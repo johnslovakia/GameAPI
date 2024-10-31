@@ -89,7 +89,7 @@ public class ItemBuilder {
      */
     public ItemBuilder setName(String name){
         ItemMeta im = is.getItemMeta();
-        im.setDisplayName(name);
+        im.setDisplayName(StringUtils.colorizer(name));
         is.setItemMeta(im);
         return this;
     }

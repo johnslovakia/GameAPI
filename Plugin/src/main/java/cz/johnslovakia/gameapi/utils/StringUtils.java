@@ -34,12 +34,28 @@ public class StringUtils {
     }
 
     public static String colorizer(String message) {
-        Pattern pattern = Pattern.compile("#[a-fA-F0-9]{6}");
+        /*Pattern pattern = Pattern.compile("#[a-fA-F0-9]{6}");
         Matcher matcher = pattern.matcher(message);
 
         while (matcher.find()) {
             String color = message.substring(matcher.start(), matcher.end());
             message = message.replace(color, net.md_5.bungee.api.ChatColor.of(color) + "");
+            matcher = pattern.matcher(message);
+        }
+        return ChatColor.translateAlternateColorCodes('&', message);*/
+        Pattern pattern = Pattern.compile("#[a-fA-F0-9]{6}");
+        Matcher matcher = pattern.matcher(message);
+        while (matcher.find()) {
+            String hexCode = message.substring(matcher.start(), matcher.end());
+            String replaceSharp = hexCode.replace('#', 'x');
+
+            char[] ch = replaceSharp.toCharArray();
+            StringBuilder builder = new StringBuilder("");
+            for (char c : ch) {
+                builder.append("&" + c);
+            }
+
+            message = message.replace(hexCode, builder.toString());
             matcher = pattern.matcher(message);
         }
         return ChatColor.translateAlternateColorCodes('&', message);

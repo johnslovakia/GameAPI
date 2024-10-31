@@ -38,8 +38,8 @@ public class KitManager implements Listener {
         this.giveAfterDeath = giveAfterDeath;
         GameAPI.getInstance().setKitManager(this);
 
-        GameAPI.getInstance().getMinigame().getMinigameTable().addColumn(Type.JSON, "KitInventories");
-        GameAPI.getInstance().getMinigame().getMinigameTable().addColumn(Type.VARCHAR128, "DefaultKit");
+        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
+        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
     }
 
     public boolean hasKitPermission(GamePlayer gamePlayer, Kit kit){

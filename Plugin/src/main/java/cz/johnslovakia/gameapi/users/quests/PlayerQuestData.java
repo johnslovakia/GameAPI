@@ -46,7 +46,7 @@ public class PlayerQuestData {
     }
 
     public boolean isCompleted(){
-        return quest.getCompletionGoal() >= progress;
+        return progress >= quest.getCompletionGoal();
     }
 
     public enum Status{

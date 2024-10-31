@@ -56,7 +56,7 @@ public class Game {
     @Getter @Setter
     private SpectatorManager spectatorManager;
     @Getter @Setter
-    private boolean firstGameKill;
+    private boolean firstGameKill = true;
 
     private Winner winner;
 
@@ -513,7 +513,7 @@ public class Game {
 
 
         HashMap<GamePlayer, Integer> oldWinstreaks = new HashMap<>();
-        for (GamePlayer gp : getParticipants()){
+        for (GamePlayer gp : getParticipants()) {
             oldWinstreaks.put(gp, gp.getPlayerData().getStat("Winstreak").getStatScore());
 
             gp.getOnlinePlayer().sendMessage("");
@@ -564,13 +564,16 @@ public class Game {
             @Override
             public void run() {
                 sendRewardSummary();
-                for (GamePlayer gp : oldWinstreaks.keySet()) {
-                    MessageManager.get(gp, "chat.winstreak")
-                            .replace("%old_winstreak%", "" + oldWinstreaks.get(gp))
-                            .replace("%new_winstreak%", (gp.getPlayerData().getStat("Winstreak").getStatScore() == 0 ? "§c" : "§a") + gp.getPlayerData().getStat("Winstreak").getStatScore())
-                            .send();
 
-                    gp.getOnlinePlayer().sendMessage("");
+                for (GamePlayer gp : oldWinstreaks.keySet()) {
+                    if (winner != null) {
+                        MessageManager.get(gp, "chat.winstreak")
+                                .replace("%old_winstreak%", "" + oldWinstreaks.get(gp))
+                                .replace("%new_winstreak%", (gp.getPlayerData().getStat("Winstreak").getStatScore() == 0 ? "§c" : "§a") + gp.getPlayerData().getStat("Winstreak").getStatScore())
+                                .send();
+
+                        gp.getOnlinePlayer().sendMessage("");
+                    }
 
 
                     List<PlayerScore> stats = PlayerManager.getScoresByPlayer(gp).stream().filter(s -> s.getScore() != 0 && s.getStat() != null).toList();

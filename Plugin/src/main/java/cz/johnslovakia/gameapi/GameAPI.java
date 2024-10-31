@@ -3,6 +3,7 @@ package cz.johnslovakia.gameapi;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.infernalsuite.aswm.loaders.mysql.MysqlLoader;
+import cz.johnslovakia.gameapi.GUIs.KitInventory;
 import cz.johnslovakia.gameapi.api.Schematic;
 import cz.johnslovakia.gameapi.api.SlimeWorldLoader;
 import cz.johnslovakia.gameapi.api.UserInterface;
@@ -12,6 +13,7 @@ import cz.johnslovakia.gameapi.datastorage.PlayerTable;
 import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.economy.EconomyInterface;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
+import cz.johnslovakia.gameapi.game.kit.KitInventoryEditor;
 import cz.johnslovakia.gameapi.game.kit.KitManager;
 import cz.johnslovakia.gameapi.game.perk.PerkManager;
 import cz.johnslovakia.gameapi.listeners.*;
@@ -260,7 +262,13 @@ public class GameAPI extends JavaPlugin {
                                     .from(minigameTable.getTableName())
                                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                                     .obtainOne();
-                            return result.map(row -> row.getInt(economy.getName())).orElse(0);
+
+                            if (result.isPresent()){
+                                if (result.get().get(economy.getName()) != null) {
+                                    return result.get().getInt(economy.getName());
+                                }
+                            }
+                            return 0;
                         }
                     });
                 }else{
@@ -310,7 +318,13 @@ public class GameAPI extends JavaPlugin {
                                     .from(PlayerTable.TABLE_NAME)
                                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                                     .obtainOne();
-                            return result.map(row -> row.getInt(economy.getName())).orElse(0);
+
+                            if (result.isPresent()){
+                                if (result.get().get(economy.getName()) != null) {
+                                    return result.get().getInt(economy.getName());
+                                }
+                            }
+                            return 0;
                         }
                     });
                 }
@@ -373,6 +387,8 @@ public class GameAPI extends JavaPlugin {
 
         if (getKitManager() != null){
             Bukkit.getPluginManager().registerEvents(getKitManager(), this);
+            Bukkit.getPluginManager().registerEvents(new KitInventoryEditor(), this);
+            getCommand("saveinventory").setExecutor(new KitInventoryEditor.SaveCommand());
         }
         if (getCosmeticsManager() != null){
             Bukkit.getPluginManager().registerEvents(getCosmeticsManager(), this);

@@ -2,10 +2,7 @@ package cz.johnslovakia.gameapi.users;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
-import cz.johnslovakia.gameapi.datastorage.CosmeticsStorage;
-import cz.johnslovakia.gameapi.datastorage.KitsStorage;
-import cz.johnslovakia.gameapi.datastorage.PlayerTable;
-import cz.johnslovakia.gameapi.datastorage.QuestsStorage;
+import cz.johnslovakia.gameapi.datastorage.*;
 import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
@@ -23,6 +20,7 @@ import cz.johnslovakia.gameapi.users.stats.PlayerStat;
 import cz.johnslovakia.gameapi.users.stats.Stat;
 import cz.johnslovakia.gameapi.utils.BukkitSerialization;
 import cz.johnslovakia.gameapi.utils.Logger;
+import cz.johnslovakia.gameapi.utils.inventoryBuilder.InventoryManager;
 import lombok.Getter;
 import lombok.Setter;
 import me.zort.sqllib.SQLDatabaseConnection;
@@ -56,6 +54,7 @@ public class PlayerData {
     private List<Kit> purchasedKitsThisGame = new ArrayList<>();
     private Map<Kit, Inventory> kitInventories = new HashMap<>();
     private Kit defaultKit;
+    private InventoryManager currentInventory;
 
     private List<PlayerQuestData> questData = new ArrayList<>();
 
@@ -82,6 +81,7 @@ public class PlayerData {
             e.printStackTrace();
         }
 
+
         new BukkitRunnable(){
             @Override
             public void run() {
@@ -90,12 +90,23 @@ public class PlayerData {
                 loadPerks();
                 loadQuests();
 
-                GameAPI.getInstance().getQuestManager().check(gamePlayer);
+                if (GameAPI.getInstance().getQuestManager() != null) {
+                    GameAPI.getInstance().getQuestManager().check(gamePlayer);
+                }
             }
         }.runTaskAsynchronously(GameAPI.getInstance());
     }
 
-    public void setLanguage(Language language) {
+    public Inventory getKitInventory(Kit kit){
+        if (kitInventories.get(kit) == null){
+            return kit.getContent().getInventory();
+        }else{
+            return kitInventories.get(kit);
+        }
+    }
+
+    public PlayerData setLanguage(Language language) {
+        this.language = language;
         new BukkitRunnable(){
             @Override
             public void run() {
@@ -107,7 +118,23 @@ public class PlayerData {
                         .execute();
             }
         }.runTaskAsynchronously(GameAPI.getInstance());
-        setLanguage(language);
+        return this;
+    }
+
+    public PlayerData setDefaultKit(Kit defaultKit) {
+        this.defaultKit = defaultKit;
+        new BukkitRunnable(){
+            @Override
+            public void run() {
+                SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
+                connection.update()
+                        .table(GameAPI.getInstance().getMinigame().getMinigameTable().getTableName())
+                        .set("DefaultKit", defaultKit.getName())
+                        .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
+                        .execute();
+            }
+        }.runTaskAsynchronously(GameAPI.getInstance());
+        return this;
     }
 
     public void addQuestProgress(Quest quest){
@@ -149,6 +176,10 @@ public class PlayerData {
     }
 
     private void loadQuests(){
+        if (GameAPI.getInstance().getQuestManager() == null){
+            return;
+        }
+
         Minigame minigame = GameAPI.getInstance().getMinigame();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
@@ -214,6 +245,10 @@ public class PlayerData {
     }
 
     private void loadPerks(){
+        if (GameAPI.getInstance().getPerkManager() == null){
+            return;
+        }
+
         Minigame minigame = GameAPI.getInstance().getMinigame();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
@@ -255,6 +290,10 @@ public class PlayerData {
     }
 
     private void loadKits(){
+        if (GameAPI.getInstance().getKitManager() == null){
+            return;
+        }
+
         Minigame minigame = GameAPI.getInstance().getMinigame();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 

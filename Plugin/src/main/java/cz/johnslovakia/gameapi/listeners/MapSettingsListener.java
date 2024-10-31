@@ -416,13 +416,13 @@ public class MapSettingsListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent e){
-        GamePlayer player = PlayerManager.getGamePlayer((Player) e.getWhoClicked());
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer((Player) e.getWhoClicked());
 
-        if (e.getView().getTitle().equalsIgnoreCase("Inventory Editor")){
+        if (e.getView().getTitle().equalsIgnoreCase("Inventory Editor") || gamePlayer.getPlayerData().getCurrentInventory().getName().equalsIgnoreCase("Set Kit Inventory")){
             return;
         }
 
-        AreaSettings settings = AreaManager.getActiveSettings(player);
+        AreaSettings settings = AreaManager.getActiveSettings(gamePlayer);
         if(settings != null){
             if(!settings.isAllowInventoryChange()) e.setCancelled(true);
         }

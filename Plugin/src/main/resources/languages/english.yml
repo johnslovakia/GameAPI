@@ -84,6 +84,7 @@ inventory.cosmetics.selected: "§fCosmetic selected!"
 inventory.kit.default_kit.select: "§a► Right-click to save as default"
 inventory.kit.default_kit.selected: "§fSaved as your default kit"
 inventory.kit.default_kit.reset: "§c► Click to reset default kit"
+inventory.kit.edit_inventory.action_info: "§a► Left+Shift click to edit inventory"
 inventory.map.votes: "§fVotes: §a%votes%"
 inventory.map.creators: "§fCreators: §a%creators%"
 inventory.map.remaining: "§fVotes remaining: §a%creators%"
@@ -103,6 +104,21 @@ inventory.stats.title: "Statistics"
 inventory.stats.name: "§a%minigame_name% Statistics"
 inventory.stats.top10: "§aTOP 10 killers"
 
+inventory.set_kit_inventory.item.save_inventory: "#72f622Save Kit Inventory"
+inventory.set_kit_inventory.item.save_inventory.lore: "§a► Click to save"
+inventory.set_kit_inventory.item.reset: "§cReset"
+inventory.set_kit_inventory.item.reset.lore: "§c► Click to reset"
+inventory.set_kit_inventory.item.auto_equip_armor: "Auto-Equip Armor"
+inventory.set_kit_inventory.item.auto_equip_armor.action1: "§a► Click to place armor/newline/  §ain your inventory"
+inventory.set_kit_inventory.item.auto_equip_armor.action2: "§a► Click to auto-equip armor"
+inventory.item.go_back: "§7Go back"
+
+chat.set_kit_inventory.saving: "§7Saving your new inventory layout..."
+chat.set_kit_inventory.saved: "§7Your inventory for kit §a%kit% §7layout has been saved!"
+chat.set_kit_inventory.closed_inventory: "§cYour inventory layout for kit #dc3131%kit% §cwasn't saved because you closed the inventory."
+chat.set_kit_inventory.closed_inventory.wanna_save: " §a↳ §fDo you want to save the layout? §a[Click me]"
+chat.set_kit_inventory.closed_inventory.wanna_save.hover: "§7Click to save the layout"
+
 
 #Items
 item.play_again: "§6§lPLAY AGAIN"
@@ -111,11 +127,11 @@ item.teleporter: "§aTeleporter"
 
 
 #Kill Messages
-chat.kill: "§a%dead%§r §fwas killed by §a%killer%§r"
-chat.first_blood: "§a%killer%§r §fdrew §4§lFIRST BLOOD §r§fin the game!"
-chat.void: "§a%dead%§r §ffell out of the world!"
-chat.fall: "§a%dead%§r §ffell from a high place!"
-chat.died: "§a%dead%§r §fdied!"
+chat.kill: "ẃ §a%dead%§r §fwas killed by §a%killer%§r"
+chat.first_blood: "ẁ §a%killer%§r §fdrew §4§lFIRST BLOOD §r§fin the game!"
+chat.void: "ẃ §a%dead%§r §ffell out of the world!"
+chat.fall: "ẃ §a%dead%§r §ffell from a high place!"
+chat.died: "ẃ §a%dead%§r §fdied!"
 chat.kill_fast: "§cYou kill too fast. Rewards will not be counted."
 
 

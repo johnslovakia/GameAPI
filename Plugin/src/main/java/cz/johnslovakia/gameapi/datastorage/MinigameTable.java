@@ -47,7 +47,7 @@ public class MinigameTable {
         if (connection != null) {
             QueryResult result = connection.exec(() ->
                     "ALTER TABLE " + TABLE_NAME +
-                            "ADD IF NOT EXISTS " + name + " " + type.getB());
+                            " ADD IF NOT EXISTS " + name + " " + type.getB());
 
             if (!result.isSuccessful()) {
                 Logger.log("Failed to add new column " + TABLE_NAME + " table!", Logger.LogType.ERROR);

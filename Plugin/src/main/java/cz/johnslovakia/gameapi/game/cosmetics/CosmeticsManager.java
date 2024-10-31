@@ -36,7 +36,7 @@ public class CosmeticsManager implements Listener{
         this.name = name;
         this.economy = economy;
 
-        GameAPI.getInstance().getMinigame().getMinigameTable().addColumn(Type.JSON, "Cosmetics");
+        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "Cosmetics");
     }
 
     public CosmeticsCategory getCategoryByName(String name){

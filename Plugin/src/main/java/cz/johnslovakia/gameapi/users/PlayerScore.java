@@ -73,7 +73,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
 
         StringBuilder text = new StringBuilder();
 
-        if (!getRewardTypes().isEmpty() && (score == -1 || score < rewardLimit)) {
+        if (!getRewardTypes().isEmpty()/* && (score == 0 || score < rewardLimit)*/) {
             int i = 0;
             for (Economy economy : list) {
                 int reward = getRewardTypes().get(economy);
@@ -280,7 +280,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
         private Map<Economy, Integer> rewardTypes = new HashMap<>();
         private boolean message = true;
         private boolean scoreRanking = false;
-        private int limit = -1;
+        private int limit = 0;
         private Stat stat;
         @Getter
         private Set<Trigger<?>> triggers = new HashSet<>();

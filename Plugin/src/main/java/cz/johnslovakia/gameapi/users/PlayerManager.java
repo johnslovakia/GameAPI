@@ -116,7 +116,7 @@ public class PlayerManager {
         private boolean message = true;
 
         private boolean scoreRanking = false;
-        private int limit = -1;
+        private int limit = 0;
         private Stat stat;
         private Set<Trigger<?>> triggers = new HashSet<>();
 

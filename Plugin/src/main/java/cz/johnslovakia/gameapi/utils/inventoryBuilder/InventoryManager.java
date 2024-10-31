@@ -3,6 +3,7 @@ package cz.johnslovakia.gameapi.utils.inventoryBuilder;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.events.GameQuitEvent;
 import cz.johnslovakia.gameapi.messages.MessageManager;
+import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -92,7 +93,7 @@ public class InventoryManager implements Listener {
         if (jItem == null){
             return;
         }
-        jItem.run(e);
+        jItem.getConsumer().accept(PlayerManager.getGamePlayer(player));
         e.setCancelled(true);
 
     }
@@ -150,6 +151,11 @@ public class InventoryManager implements Listener {
         if (getItemByString(player, item.getItemMeta().getDisplayName()) == null) {
             return;
         }
+        Item jItem = getItemByString(player, item.getItemMeta().getDisplayName());
+        if (jItem == null){
+            return;
+        }
+        jItem.getConsumer().accept(PlayerManager.getGamePlayer(player));
         e.setCancelled(true);
     }
 
@@ -178,12 +184,18 @@ public class InventoryManager implements Listener {
     }
 
     public void give(Player player){
+        give(player, true);
+    }
+
+    public void give(Player player, boolean clearInventory){
         if (!players.contains(player)) {
             players.add(player);
         }
         PlayerInventory inventory = player.getInventory();
 
-        inventory.clear();
+        if (clearInventory) {
+            inventory.clear();
+        }
 
         if (fillFreeSlots != null){
             for (int i = 0; i < inventory.getSize(); i++) {
@@ -198,6 +210,7 @@ public class InventoryManager implements Listener {
             inventory.setItem(item.getSlot(), translated);
         }
         inventory.setHeldItemSlot(holdItemSlot);
+        PlayerManager.getGamePlayer(player).getPlayerData().setCurrentInventory(this);
         //player.updateInventory();
 
     }
