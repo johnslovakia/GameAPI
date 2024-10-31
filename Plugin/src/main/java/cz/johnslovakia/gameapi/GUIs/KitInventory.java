@@ -11,29 +11,13 @@ import cz.johnslovakia.gameapi.game.kit.KitManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
-import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.Sounds;
-import cz.johnslovakia.gameapi.utils.inventoryBuilder.InventoryManager;
-import cz.johnslovakia.gameapi.utils.inventoryBuilder.Item;
 import me.zort.containr.Component;
 import me.zort.containr.Element;
 import me.zort.containr.GUI;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-
-import java.util.function.Consumer;
 
 public class KitInventory implements Listener {
 
@@ -173,6 +157,7 @@ public class KitInventory implements Listener {
                                             player.closeInventory();
                                         } else {
                                             if (i.getClickType().isShiftClick()){
+                                                //KitInventoryEditor.setKitInventory(gamePlayer, kit);
                                                 KitInventoryEditor.setKitInventory(gamePlayer, kit);
                                                 return;
                                             }

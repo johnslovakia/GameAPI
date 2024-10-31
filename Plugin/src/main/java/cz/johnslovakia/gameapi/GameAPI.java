@@ -3,7 +3,6 @@ package cz.johnslovakia.gameapi;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.infernalsuite.aswm.loaders.mysql.MysqlLoader;
-import cz.johnslovakia.gameapi.GUIs.KitInventory;
 import cz.johnslovakia.gameapi.api.Schematic;
 import cz.johnslovakia.gameapi.api.SlimeWorldLoader;
 import cz.johnslovakia.gameapi.api.UserInterface;
@@ -22,8 +21,6 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.quests.QuestManager;
 import cz.johnslovakia.gameapi.users.stats.StatsManager;
-import cz.johnslovakia.gameapi.utils.BetterInvisibility;
-import cz.johnslovakia.gameapi.utils.BukkitSerialization;
 import cz.johnslovakia.gameapi.utils.InputStreamWithName;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
@@ -40,14 +37,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.FileUtil;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.jar.JarFile;
 
 @Getter
 public class GameAPI extends JavaPlugin {

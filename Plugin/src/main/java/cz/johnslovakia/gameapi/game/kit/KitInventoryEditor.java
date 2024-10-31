@@ -1,19 +1,14 @@
 package cz.johnslovakia.gameapi.game.kit;
 
-import com.cryptomorin.xseries.XEnchantment;
+import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GUIs.KitInventory;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
-import cz.johnslovakia.gameapi.utils.inventoryBuilder.InventoryManager;
-import cz.johnslovakia.gameapi.utils.inventoryBuilder.Item;
-import me.zort.containr.Component;
-import me.zort.containr.GUI;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -22,9 +17,9 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -34,109 +29,57 @@ import java.util.Objects;
 
 public class KitInventoryEditor implements Listener {
 
-    /*@EventHandler
-    public void onInventoryClose(InventoryCloseEvent event) {
-        if (event.getPlayer() instanceof Player player) {
-            GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-
-            if (gamePlayer.getPlayerData().getCurrentInventory() == null){
-                return;
-            }
-            if (!event.getInventory().getType().equals(InventoryType.PLAYER)
-                    && !player.getOpenInventory().getTitle().contains("Inventory Editor")){
-                return;
-            }
-
-            gamePlayer.getMetadata().put("set_kit_inventory.inventory", player.getInventory());
-            InventoryManager oldInventory = (InventoryManager) gamePlayer.getMetadata().get("set_kit_inventory.oldInventory");
-            oldInventory.give(player);
-
-            Kit kit = (Kit) gamePlayer.getMetadata().get("set_kit_inventory.kit");
-            MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory")
-                    .replace("%kit%", kit.getName())
-                    .send();
-
-            ComponentBuilder message = new ComponentBuilder(MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save").getTranslated());
-            message.event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/saveinventory"));
-            message.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save.hover").getTranslated()).create()));
-            player.spigot().sendMessage(message.create());
-
-            /*Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), () -> {
-                player.openInventory(event.getInventory());
-            }, 1L);*
-        }
-    }*/
-
-    private static Inventory getCopyOfInventory(Inventory playerInventory, Kit kit, boolean autoArmor){
-        Inventory finalInventory = Bukkit.createInventory(null, InventoryType.PLAYER);
-        //finalInventory.setContents(inventory.getContents());
-        for (int i = 0; i < playerInventory.getSize(); i++) {
-            ItemStack item = playerInventory.getItem(i);
-            if (item != null) {
-                finalInventory.setItem(i, item);
-            }
-        }
-
-        if (autoArmor){
-            for (ItemStack item : getArmor(kit.getContent().getContents())){
-                if (item.getType().toString().toLowerCase().contains("helmet")){
-                    finalInventory.setItem(39, item);
-                }else if (item.getType().toString().toLowerCase().contains("chestplate")){
-                    finalInventory.setItem(38, item);
-                }else if (item.getType().toString().toLowerCase().contains("leggings")){
-                    finalInventory.setItem(37, item);
-                }else if (item.getType().toString().toLowerCase().contains("boots")){
-                    finalInventory.setItem(36, item);
-                }
-            }
-        }
-
-        return finalInventory;
-    }
-
-    private static void save(GamePlayer gamePlayer, Kit kit, Inventory playerInventory, boolean autoArmor){
-        Player player = gamePlayer.getOnlinePlayer();
-        //player.closeInventory();
-
-        InventoryManager oldInventory = (InventoryManager) gamePlayer.getMetadata().get("set_kit_inventory.oldInventory");
-
-
-        gamePlayer.getPlayerData().setKitInventory(kit, getCopyOfInventory(playerInventory, kit, autoArmor));
-
-        player.getInventory().clear();
-        oldInventory.give(player);
-
-        MessageManager.get(gamePlayer, "chat.set_kit_inventory.saved")
-                .replace("%kit%", kit.getName())
-                .send();
-        gamePlayer.getMetadata().remove("set_kit_inventory.kit");
-    }
 
     public static void setKitInventory(GamePlayer gamePlayer, Kit kit) {
-        Player player = gamePlayer.getOnlinePlayer();
-        Inventory inventory = player.getInventory();
-        InventoryManager oldInventory = gamePlayer.getPlayerData().getCurrentInventory();
         Inventory currentKitInventory = gamePlayer.getPlayerData().getKitInventory(kit);
 
-
         gamePlayer.getMetadata().put("set_kit_inventory.kit", kit);
-        gamePlayer.getMetadata().put("set_kit_inventory.oldInventory", oldInventory);
 
-        /*inventory.setContents(Arrays.stream(currentKitInventory.getContents())
-                .filter(Objects::nonNull)
-                .filter(is -> !is.getType().equals(Material.AIR))
-                .filter(is -> !(is.getType().toString().toLowerCase().contains("helmet")
-                        || is.getType().toString().toLowerCase().contains("chestplate")
-                        || is.getType().toString().toLowerCase().contains("leggings")
-                        || is.getType().toString().toLowerCase().contains("boots")))
-                .toArray(ItemStack[]::new));*/ //bere to vždy armor i když není auto
-        inventory.setContents(currentKitInventory.getContents());
+        if (containsArmor(kit.getContent().getContents())){
+            gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", !containsArmor(Arrays.stream(currentKitInventory.getStorageContents())
+                    .filter(Objects::nonNull)
+                    .filter(is -> !is.getType().equals(Material.AIR))
+                    .filter(is -> !(is.getType().toString().toLowerCase().contains("helmet")
+                            || is.getType().toString().toLowerCase().contains("chestplate")
+                            || is.getType().toString().toLowerCase().contains("leggings")
+                            || is.getType().toString().toLowerCase().contains("boots"))
+            ).toArray(ItemStack[]::new)));
+            //gamePlayer.getOnlinePlayer().sendMessage(containsArmor(kit.getContent().getContents()) + " " + !containsArmor(currentKitInventory.getStorageContents()));
+
+        }
 
         openGUI(gamePlayer, kit);
     }
 
-    public static void openGUI(GamePlayer gamePlayer, Kit kit){
-        Inventory inventory = gamePlayer.getOnlinePlayer().getInventory();
+    private static boolean containsArmor(ItemStack[] items){
+        return Arrays.stream(items)
+                .filter(Objects::nonNull)
+                .filter(is -> !is.getType().equals(Material.AIR))
+                .anyMatch(is ->
+                                is.getType().toString().toLowerCase().contains("helmet")
+                                || is.getType().toString().toLowerCase().contains("chestplate")
+                                || is.getType().toString().toLowerCase().contains("leggings")
+                                || is.getType().toString().toLowerCase().contains("boots"));
+    }
+
+
+    public static void openGUI(GamePlayer gamePlayer, Kit kit) {
+        Inventory gui = Bukkit.createInventory(null, 54, "Inventory Editor");
+
+        for (int i = 27; i <= 35; i++){
+            gui.setItem(i, new ItemBuilder(XMaterial.GRAY_STAINED_GLASS_PANE.parseItem()).setName("").setLore(MessageManager.get(gamePlayer.getOnlinePlayer(), "inventory.set_kit_inventory.item.info").getTranslated()).toItemStack());
+        }
+
+        Inventory currentKitInventory = gamePlayer.getPlayerData().getKitInventory(kit);
+        ItemStack[] hotbarItems = Arrays.copyOfRange(currentKitInventory.getContents(), 0, 8);
+        ItemStack[] topInventoryItems = Arrays.copyOfRange(currentKitInventory.getContents(), 9, 35);
+
+        for (int i = 0; i < 8; i++) {
+            gui.setItem(i + 36, hotbarItems[i]); // Hotbar
+        }
+        for (int i = 0; i < 26; i++) {
+            gui.setItem(i, topInventoryItems[i]); // Top inventory
+        }
 
         ItemBuilder save = new ItemBuilder(Material.EMERALD_BLOCK);
         save.setName(MessageManager.get(gamePlayer, "inventory.set_kit_inventory.item.save_inventory").getTranslated());
@@ -158,76 +101,21 @@ public class KitInventoryEditor implements Listener {
                     .addToItemLore(kitItem);
         }
 
+        ItemBuilder back = new ItemBuilder(Material.ARROW).setName(MessageManager.get(gamePlayer, "inventory.item.go_back").getTranslated());
 
-        GUI finalGUI = Component.gui()
-                .title("Inventory Editor")
-                .rows(1)
-                .prepare((gui, guiPlayer) -> {
-                    AutoArmor autoArmorItem = getAutoArmorItem(gamePlayer, kit);
-                    gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", autoArmorItem.autoArmor);
+        gui.setItem(45, back.toItemStack());
+        gui.setItem(46, reset.toItemStack());
+        gui.setItem(49, kitItem.toItemStack());
+        if (containsArmor(kit.getContent().getContents())) {
+            gui.setItem(52, getArmorItem(gamePlayer));
+        }
+        gui.setItem(53, save.toItemStack());
 
-                    gui.setElement(0, Component.element(new ItemBuilder(Material.ARROW).setName(MessageManager.get(gamePlayer, "inventory.item.go_back").getTranslated()).toItemStack()).addClick(i -> {
-                        gamePlayer.getOnlinePlayer().getInventory().clear();
-                        InventoryManager oldInventory = (InventoryManager) gamePlayer.getMetadata().get("set_kit_inventory.oldInventory");
-                        oldInventory.give(guiPlayer);
-
-                        gui.close(guiPlayer);
-                        KitInventory.openKitInventory(gamePlayer);
-                    }).build());
-                    gui.setElement(1, Component.element(reset.toItemStack()).addClick(i -> {
-                        inventory.setContents(kit.getContent().getContents());
-                        openGUI(gamePlayer, kit);
-                    }).build());
-
-
-                    gui.setElement(4, Component.element(kitItem.toItemStack()).build());
-
-
-                    if (containsArmor(kit.getContent().getContents())) {
-                        gui.setElement(7, Component.element(autoArmorItem.item).addClick(i -> {
-                            if (autoArmorItem.autoArmor) {
-                                getArmor(kit.getContent().getContents()).forEach(inventory::addItem);
-                                openGUI(gamePlayer, kit);
-                            }else{
-                                getArmor(kit.getContent().getContents()).forEach(inventory::removeItem);
-                                openGUI(gamePlayer, kit);
-                            }
-                        }).build());
-                    }
-                    gui.setElement(8, Component.element(save.toItemStack()).addClick(i -> {
-                        gui.close(guiPlayer);
-                        KitInventory.openKitInventory(gamePlayer);
-                        save(gamePlayer, kit, inventory, autoArmorItem.autoArmor);
-                    }).build());
-
-
-
-                    gui.onClose(GUI.CloseReason.BY_PLAYER, player -> {
-                        gamePlayer.getMetadata().put("set_kit_inventory.inventory", getCopyOfInventory(inventory, kit, autoArmorItem.autoArmor));
-                        InventoryManager oldInventory = (InventoryManager) gamePlayer.getMetadata().get("set_kit_inventory.oldInventory");
-                        oldInventory.give(player);
-
-                        MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory")
-                                .replace("%kit%", kit.getName())
-                                .send();
-
-                        ComponentBuilder message = new ComponentBuilder(MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save").getTranslated());
-                        message.event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/saveinventory"));
-                        message.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save.hover").getTranslated()).create()));
-                        player.spigot().sendMessage(message.create());
-                    });
-                })
-                .build();
-
-
-                finalGUI.open(gamePlayer.getOnlinePlayer());
+        gamePlayer.getOnlinePlayer().openInventory(gui);
     }
 
-    private static AutoArmor getAutoArmorItem(GamePlayer gamePlayer, Kit kit){
-        Inventory currentKitInventory = gamePlayer.getOnlinePlayer().getInventory();
-
-        boolean cArmor = containsArmor(kit.getContent().getContents());
-        boolean autoArmor = cArmor && !containsArmor(currentKitInventory.getStorageContents());
+    private static ItemStack getArmorItem(GamePlayer gamePlayer){
+        boolean autoArmor = (boolean) gamePlayer.getMetadata().get("set_kit_inventory.autoArmor");
 
         ItemBuilder armor = new ItemBuilder(Material.LEATHER_CHESTPLATE);
         armor.setName((autoArmor ? "#72f622" : "§c") + MessageManager.get(gamePlayer, "inventory.set_kit_inventory.item.auto_equip_armor").getTranslated());
@@ -237,21 +125,118 @@ public class KitInventoryEditor implements Listener {
         }else{
             MessageManager.get(gamePlayer, "inventory.set_kit_inventory.item.auto_equip_armor.action2").addToItemLore(armor);
         }
-
-        return new AutoArmor(autoArmor, armor.toItemStack());
+        return armor.toItemStack();
     }
 
-    public record AutoArmor(boolean autoArmor, ItemStack item){}
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        Player player = (Player) event.getWhoClicked();
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        ItemStack item = event.getCurrentItem();
 
-    private static boolean containsArmor(ItemStack[] items){
-        return Arrays.stream(items)
-                .filter(Objects::nonNull)
-                .filter(is -> !is.getType().equals(Material.AIR))
-                .anyMatch(is ->
-                        is.getType().toString().toLowerCase().contains("helmet")
-                        || is.getType().toString().toLowerCase().contains("chestplate")
-                        || is.getType().toString().toLowerCase().contains("leggings")
-                        || is.getType().toString().toLowerCase().contains("boots"));
+        if (event.getClickedInventory() == null
+            || !player.getOpenInventory().getTitle().contains("Inventory Editor")
+            || !event.getClickedInventory().equals(player.getOpenInventory().getTopInventory())
+            || item == null){
+            return;
+        }
+
+        Inventory gui = event.getClickedInventory();
+        Kit kit = (Kit) gamePlayer.getMetadata().get("set_kit_inventory.kit");
+
+        if (item.getType().equals(Material.GRAY_STAINED_GLASS_PANE) || event.isShiftClick()){
+            event.setCancelled(true);
+        }
+
+        switch (event.getSlot()) {
+            case 45:
+                event.setCancelled(true);
+
+                gamePlayer.getMetadata().put("set_kit_inventory.check_closing", false);
+                KitInventory.openKitInventory(gamePlayer);
+                break;
+            case 46:
+                event.setCancelled(true);
+                gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", true);
+
+                Inventory kitInventory = kit.getContent().getInventory();
+                ItemStack[] hotbarItems = Arrays.copyOfRange(kitInventory.getContents(), 0, 8);
+                ItemStack[] topInventoryItems = Arrays.copyOfRange(kitInventory.getContents(), 9, 35);
+
+                for (int i = 0; i < 8; i++) {
+                    gui.setItem(i + 36, hotbarItems[i]); // Hotbar
+                }
+                for (int i = 0; i < 26; i++) {
+                    gui.setItem(i, topInventoryItems[i]); // Top inventory
+                }
+                break;
+            case 52:
+                event.setCancelled(true);
+
+                if ((boolean) gamePlayer.getMetadata().get("set_kit_inventory.autoArmor")) {
+                    gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", false);
+                    getArmor(kit.getContent().getContents()).forEach(is -> gui.setItem(findEmptySlot(gui), is));
+                }else{
+                    gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", true);
+                    getArmor(kit.getContent().getContents()).forEach(gui::remove);
+                }
+                gui.setItem(52, getArmorItem(gamePlayer));
+
+                break;
+            case 53:
+                event.setCancelled(true);
+
+                gamePlayer.getMetadata().put("set_kit_inventory.check_closing", false);
+                player.closeInventory();
+                KitInventory.openKitInventory(gamePlayer);
+                save(gamePlayer, kit, gui, (boolean) gamePlayer.getMetadata().get("set_kit_inventory.autoArmor"));
+                break;
+        }
+    }
+
+    private int findEmptySlot(Inventory gui) {
+        for (int i = 36; i <= 44; i++) {
+            if (gui.getItem(i) == null || gui.getItem(i).getType() == Material.AIR) {
+                return i;
+            }
+        }
+        for (int i = 0; i <= 26; i++) {
+            if (gui.getItem(i) == null || gui.getItem(i).getType() == Material.AIR) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (event.getPlayer() instanceof Player player) {
+            GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+
+            if (gamePlayer.getPlayerData().getCurrentInventory() == null){
+                return;
+            }
+            if (!event.getInventory().getType().equals(InventoryType.PLAYER)
+                    && !player.getOpenInventory().getTitle().contains("Inventory Editor")){
+                return;
+            }
+            if (gamePlayer.getMetadata().get("set_kit_inventory.check_closing") != null && !(boolean) gamePlayer.getMetadata().get("set_kit_inventory.check_closing")){
+                return;
+            }
+
+
+            gamePlayer.getMetadata().put("set_kit_inventory.inventory", player.getInventory());
+
+            Kit kit = (Kit) gamePlayer.getMetadata().get("set_kit_inventory.kit");
+            MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory")
+                    .replace("%kit%", kit.getName())
+                    .send();
+
+            ComponentBuilder message = new ComponentBuilder(MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save").getTranslated());
+            message.event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/saveinventory"));
+            message.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save.hover").getTranslated()).create()));
+            player.spigot().sendMessage(message.create());
+        }
     }
 
     private static List<ItemStack> getArmor(ItemStack[] items){
@@ -265,6 +250,41 @@ public class KitInventoryEditor implements Listener {
                 .toList();
     }
 
+    private static Inventory getCopyOfInventory(Inventory inventory, Kit kit, boolean autoArmor) {
+        Inventory finalInventory = Bukkit.createInventory(null, InventoryType.PLAYER);
+
+        for (int i = 36; i < 45; i++){
+            finalInventory.setItem(i - 36, inventory.getItem(i));
+        }
+        for (int i = 9; i < 35; i++){
+            finalInventory.setItem(i, inventory.getItem(i - 9));
+        }
+
+        if (autoArmor){
+            for (ItemStack item : getArmor(kit.getContent().getContents())){
+                if (item.getType().toString().toLowerCase().contains("helmet")){
+                    finalInventory.setItem(39, item);
+                }else if (item.getType().toString().toLowerCase().contains("chestplate")){
+                    finalInventory.setItem(38, item);
+                }else if (item.getType().toString().toLowerCase().contains("leggings")){
+                    finalInventory.setItem(37, item);
+                }else if (item.getType().toString().toLowerCase().contains("boots")){
+                    finalInventory.setItem(36, item);
+                }
+            }
+        }
+
+        return finalInventory;
+    }
+
+    private static void save(GamePlayer gamePlayer, Kit kit, Inventory inventory, boolean autoArmor) {
+        gamePlayer.getPlayerData().setKitInventory(kit, getCopyOfInventory(inventory, kit, autoArmor));
+
+        MessageManager.get(gamePlayer, "chat.set_kit_inventory.saved")
+                .replace("%kit%", kit.getName())
+                .send();
+        gamePlayer.getMetadata().remove("set_kit_inventory.kit");
+    }
 
     public static class SaveCommand implements CommandExecutor {
 

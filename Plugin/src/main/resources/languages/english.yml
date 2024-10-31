@@ -104,6 +104,7 @@ inventory.stats.title: "Statistics"
 inventory.stats.name: "§a%minigame_name% Statistics"
 inventory.stats.top10: "§aTOP 10 killers"
 
+inventory.set_kit_inventory.item.info: "§8↑ Inventory/newline/§8↓ HotBar"
 inventory.set_kit_inventory.item.save_inventory: "#72f622Save Kit Inventory"
 inventory.set_kit_inventory.item.save_inventory.lore: "§a► Click to save"
 inventory.set_kit_inventory.item.reset: "§cReset"
