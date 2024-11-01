@@ -112,10 +112,14 @@ public interface Kit {
             if (getKitManager().isPurchaseKitForever()){
                 return;
             }
-            MessageManager.get(player, "chat.kit.dont_have_enough")
+            MessageManager.get(player, "chat.dont_have_enough")
                     .replace("%need_more%", "" + (getPrice() - balance))
                     .replace("%economy_name%", economy.getName())
                     .send();
         }
+    }
+
+    default String getTranslationKey(){
+        return "perk." + getName().toLowerCase().replace(" ", "_");
     }
 }

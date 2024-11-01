@@ -241,6 +241,7 @@ public class ItemBuilder {
 
     public ItemBuilder addFlags(ItemFlag... itemFlag) {
         ItemMeta im = this.is.getItemMeta();
+        assert im != null;
         im.addItemFlags(/*new ItemFlag[]{*/itemFlag/*}*/);
         this.is.setItemMeta(im);
         return this;

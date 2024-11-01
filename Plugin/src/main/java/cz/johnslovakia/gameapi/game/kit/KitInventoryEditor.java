@@ -1,7 +1,7 @@
 package cz.johnslovakia.gameapi.game.kit;
 
 import com.cryptomorin.xseries.XMaterial;
-import cz.johnslovakia.gameapi.GUIs.KitInventory;
+import cz.johnslovakia.gameapi.guis.KitInventory;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;

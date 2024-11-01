@@ -7,9 +7,9 @@ public enum PerkType {
     CHANCE("%"), SECONDS("s");
 
     @Getter
-    private final String type;
+    private final String string;
 
     PerkType(String s) {
-        this.type = s;
+        this.string = s;
     }
 }

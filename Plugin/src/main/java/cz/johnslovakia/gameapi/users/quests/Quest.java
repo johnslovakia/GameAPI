@@ -35,7 +35,7 @@ public interface Quest {
                 player.sendMessage(MessageManager.get(player, "chat.quests.completed")
                         .replace("%type%", MessageManager.get(player, "quest_type." + getType().toString().toLowerCase()).getTranslated())
                         .replace("%quest_name%", getName())
-                        .replace("%description%", MessageManager.get(player, getType().name().toLowerCase() + "_quest." + getName().toLowerCase().replace(" ", "_")).getTranslated())
+                        .replace("%description%", MessageManager.get(player, getTranslationKey()).getTranslated())
                         .getTranslated());
                 for (Economy economy : getRewards().keySet()){
                     player.sendMessage(" " + economy.getChatColor() + "+" + getRewards().get(economy) + " §7" + economy.getName());
@@ -61,40 +61,7 @@ public interface Quest {
         }
     }
 
-    /*default <T extends Event> Trigger<T> getTrigger() {
-        Class<? extends Event> eventClass = getTriggerEventClass();
-
-        @SuppressWarnings("unchecked")
-        Class<T> eventClassCasted = (Class<T>) eventClass;
-
-        return new Trigger<>(eventClassCasted,
-                e -> getPlayerFromEvent((T) e),
-                e -> isValidEvent((T) e),
-                gamePlayer -> {
-                    Player player = gamePlayer.getOnlinePlayer();
-
-                    new BukkitRunnable(){
-                        @Override
-                        public void run() {
-                            player.playSound(player.getLocation(), "Completed", 20.0F, 20.0F); //TODO: funguje?
-                            player.sendMessage("");
-                            player.sendMessage(MessageManager.get(player, "chat.quests.completed")
-                                    .replace("%type%", MessageManager.get(player, "quest_type." + getType().toString().toLowerCase()).getTranslated())
-                                    .replace("%quest_name%", getName())
-                                    .replace("%description%", MessageManager.get(player, getType().name().toLowerCase() + "_quest." + getName().toLowerCase().replace(" ", "_")).getTranslated())
-                                    .getTranslated());
-                            for (Economy economy : getRewards().keySet()){
-                                player.sendMessage(" " + economy.getChatColor() + "+" + getRewards().get(economy) + " §7" + economy.getName());
-                            }
-                            player.sendMessage("");
-
-                            for (Economy economy : getRewards().keySet()) {
-                                economy.getEconomyInterface().deposit(gamePlayer, getRewards().get(economy));
-                            }
-                        }
-                    }.runTaskLater(GameAPI.getInstance(), 15L);
-
-                    gamePlayer.getPlayerData().setComplete(this);
-                });
-    }*/
+    default String getTranslationKey(){
+        return getType().name().toLowerCase() + "_quest." + getName().toLowerCase().replace(" ", "_");
+    }
 }

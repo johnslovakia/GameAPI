@@ -18,6 +18,8 @@
 󏿎 - +50 mezera
 󐂖 - +150 mezera
 
+#71c900 zelena
+
 resource pack věci
 https://github.com/McTsts/mc-core-shaders/blob/main/remove%20text%20shadow/1.20%20-%201.21/rendertype_text.fsh
 

@@ -15,6 +15,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Getter
 public class PerkManager {
@@ -53,9 +54,9 @@ public class PerkManager {
     }
 
     public PerkLevel getNextPlayerPerkLevel(GamePlayer gamePlayer, Perk perk){
-        int currentLevel = gamePlayer.getPlayerData().getPerkLevel(perk).level();
-        if (perk.getLevels().size() > currentLevel){
-            return perk.getLevels().get(currentLevel + 1);
+        PerkLevel currentLevel = Objects.requireNonNullElse(gamePlayer.getPlayerData().getPerkLevel(perk), perk.getLevels().get(0));
+        if (perk.getLevels().size() > currentLevel.level()) {
+            return perk.getLevels().get(currentLevel.level());
         }
         return null;
     }

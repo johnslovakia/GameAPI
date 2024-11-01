@@ -26,6 +26,7 @@ import lombok.Setter;
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
+import org.bukkit.Bukkit;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.json.JSONArray;
@@ -33,6 +34,7 @@ import org.json.JSONObject;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.logging.Level;
 
 @Getter @Setter
 public class PlayerData {
@@ -212,11 +214,17 @@ public class PlayerData {
 
                         Quest quest = GameAPI.getInstance().getQuestManager().getQuest(type, name);
 
-                        PlayerQuestData questData = new PlayerQuestData(quest, gamePlayer);
+                        PlayerQuestData questData;
                         if (status.equals(PlayerQuestData.Status.COMPLETED)) {
                             questData = new PlayerQuestData(quest, gamePlayer, completionDate);
                         } else if (status.equals(PlayerQuestData.Status.IN_PROGRESS)) {
                             questData = new PlayerQuestData(quest, gamePlayer, progress);
+                        }else{
+                            questData = new PlayerQuestData(quest, gamePlayer);
+                        }
+                        if (progress >= quest.getCompletionGoal()){
+                            Bukkit.getLogger().log(Level.WARNING, "Quest data is incorrectly stored in the database. Status: " + status.name() + " Progress: " + progress + " Completion goal: " + quest.getCompletionGoal() + " Quest Name: " + quest.getDisplayName());
+                            questData.setStatus(PlayerQuestData.Status.COMPLETED);
                         }
 
                         getQuestData().add(questData);

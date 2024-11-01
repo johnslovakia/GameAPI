@@ -32,6 +32,19 @@ public class KitInventory implements Listener {
                     Game game = playerData.getGame();
                     int balance = playerData.getBalance(economy);
 
+                    ItemBuilder close = new ItemBuilder(Material.MAP);
+                    close.setCustomModelData(1010);
+                    close.hideAllFlags();
+                    close.setName(MessageManager.get(player, "inventory.item.close")
+                            .getTranslated());
+
+                    ItemBuilder info = new ItemBuilder(Material.MAP);
+                    info.setCustomModelData(1010);
+                    info.hideAllFlags();
+                    info.setName(MessageManager.get(player, "inventory.info_item.kit_inventory.name")
+                            .getTranslated());
+                    info.setLore(MessageManager.get(player, "inventory.info_item.kit_inventory.lore").getTranslated());
+
 
                     ItemBuilder reset = new ItemBuilder(Material.MAP);
                     reset.setCustomModelData(1010);
@@ -41,6 +54,11 @@ public class KitInventory implements Listener {
                     reset.removeLore();
                     MessageManager.get(player, "inventory.kit.reset_lore")
                             .addToItemLore(reset);
+
+
+
+                    gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> gui.close(player)).build());
+                    gui.appendElement(8, Component.element(info.toItemStack()).build());
 
                     gui.setContainer(47, Component.staticContainer()
                             .size(5, 1)

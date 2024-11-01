@@ -53,7 +53,7 @@ public interface Perk {
                     }
                 }.runTaskAsynchronously(GameAPI.getInstance());
             }else{
-                MessageManager.get(player, "chat.perk.dont_have_enough")
+                MessageManager.get(player, "chat.dont_have_enough")
                         .replace("%economy_name%", economy.getName())
                         .replace("%need_more%", "" + (nextLevelPrice - balance))
                         .send();
@@ -64,5 +64,9 @@ public interface Perk {
                     .send();
             player.playSound(player.getLocation(), Sounds.ANVIL_BREAK.bukkitSound(), 10.0F, 10.0F);
         }
+    }
+
+    default String getTranslationKey(){
+        return "perk." + getName().toLowerCase().replace(" ", "_");
     }
 }

@@ -110,7 +110,11 @@ public class Message {
             if (!addToMessage.isEmpty()){
                 for (AddToMessage add : addToMessage){
                     if (add.validator().test(recipient)) {
-                        finalMessage.append(" ").append(add.getMessage(recipient));
+                        String addMessage = add.getMessage(recipient);
+                        if (!addMessage.startsWith(" ")){
+                            finalMessage.append(" ");
+                        }
+                        finalMessage.append(add.getMessage(recipient));
                     }
                 }
             }

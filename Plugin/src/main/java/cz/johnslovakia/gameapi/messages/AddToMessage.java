@@ -5,7 +5,6 @@ import lombok.Getter;
 
 import java.util.function.Predicate;
 
-@Getter
 public record AddToMessage(String message, Predicate<GamePlayer> validator, boolean translate) {
 
     public String getMessage(GamePlayer gamePlayer) {
