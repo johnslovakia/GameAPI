@@ -56,4 +56,9 @@ public class EndCountdown implements TaskInterface {
         GameManager.resetGame(game);
         Task.cancelAll(game);
     }
+
+    @Override
+    public void onCancel(Task task) {
+        bossBar.removeAll();
+    }
 }

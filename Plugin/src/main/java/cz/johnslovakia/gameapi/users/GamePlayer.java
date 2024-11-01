@@ -191,6 +191,26 @@ public class GamePlayer extends Winner {
         return null;
     }
 
+    public void resetAttributes(){
+        getOnlinePlayer().getInventory().setArmorContents(null);
+        getOnlinePlayer().getInventory().clear();
+        GameAPI.getInstance().getVersionSupport().setMaxPlayerHealth(getOnlinePlayer(), 20D);
+        getOnlinePlayer().setHealth(20);
+        getOnlinePlayer().setFoodLevel(20);
+        getOnlinePlayer().setLevel(0);
+        getOnlinePlayer().setExp(0);
+        getOnlinePlayer().setAllowFlight(false);
+        getOnlinePlayer().setFlying(false);
+        getOnlinePlayer().setFireTicks(0);
+        getOnlinePlayer().setGameMode(GameMode.SURVIVAL);
+        for(PotionEffect effect : getOnlinePlayer().getActivePotionEffects()){
+            if (effect.getType().equals(PotionEffectType.BLINDNESS)){
+                continue;
+            }
+            getOnlinePlayer().removePotionEffect(effect.getType());
+        }
+    }
+
     public GamePlayer getGamePlayer(){
         return this;
     }

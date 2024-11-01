@@ -84,4 +84,9 @@ public class PreparationCountdown implements TaskInterface {
         }
         game.startGame();
     }
+
+    @Override
+    public void onCancel(Task task) {
+        bossBar.removeAll();
+    }
 }

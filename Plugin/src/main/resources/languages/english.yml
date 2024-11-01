@@ -1,4 +1,4 @@
-#Inventories
+﻿#Inventories
 inventory.item.close: "§7Click to close"
 inventory.info_item.kit_inventory.name: "§fAbout kits"
 inventory.info_item.kit_inventory.lore: "§7Kits provide players with unique starting items,/newline/§7giving them tactical advantages and supporting/newline/§7different strategies in gameplay."

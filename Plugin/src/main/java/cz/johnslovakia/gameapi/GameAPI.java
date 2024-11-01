@@ -40,8 +40,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.logging.Level;
 
 @Getter
 public class GameAPI extends JavaPlugin {
@@ -333,7 +336,11 @@ public class GameAPI extends JavaPlugin {
         }
 
         try {
+            Bukkit.getLogger().log(Level.INFO, "Creating language files...");
+
             for (InputStreamWithName is : minigame.getLanguageFiles()) {
+                long startTime = System.currentTimeMillis();
+
                 String name = is.getFileName();
 
                 File mainFile = new File(pluginLanguagesFolder, name);
@@ -346,7 +353,7 @@ public class GameAPI extends JavaPlugin {
                 File gFile = Files.createTempFile("gFile", ".yml").toFile();
                 FileUtils.copyInputStreamToFile(getResource("languages/" + name), gFile);
 
-                try (BufferedReader br = new BufferedReader(new FileReader(gFile))) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(gFile), StandardCharsets.UTF_8))) {
                     String line;
                     while ((line = br.readLine()) != null) {
                         String key = line.split(":")[0];
@@ -354,7 +361,7 @@ public class GameAPI extends JavaPlugin {
                             continue;
                         }
 
-                        try (FileWriter writer = new FileWriter(mainFile, true)) {
+                        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(mainFile, true), StandardCharsets.UTF_8))) {
                             writer.append(line).append("\n");
                         }
                     }
@@ -362,7 +369,10 @@ public class GameAPI extends JavaPlugin {
                     throw new RuntimeException(e);
                 }
 
+                Bukkit.getLogger().log(Level.INFO, "Language file " + name + " created (" + (System.currentTimeMillis() - startTime) + "ms)");
                 loadMessagesFromFile(mainFile);
+
+
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

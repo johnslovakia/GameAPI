@@ -137,6 +137,7 @@ public class Task {
         if (integerTask != null) {
             integerTask.cancel();
         }
+        getTaskInterface().onCancel(this);
     }
 
     public Integer getRestartCount(){
@@ -159,13 +160,7 @@ public class Task {
 
 
     public void cancelRunnable(boolean b) {
-        //super.cancel();
-        if (doubleTask != null) {
-            doubleTask.cancel();
-        }
-        if (integerTask != null) {
-            integerTask.cancel();
-        }
+        cancel();
         if (b) {
             tasks.remove(this);
         }

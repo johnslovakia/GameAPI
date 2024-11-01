@@ -88,31 +88,9 @@ public class GameCountdown implements TaskInterface {
 
     private static final int CHARACTER_WIDTH = 6; // Odhadovaná šířka jednoho znaku
 
-    // Metoda pro vytvoření titulu s vycentrovaným časem
-    public static String createTitleWithCenteredTime(String duration, int kills, int deaths) {
-        // Texty pro kills a deaths
-        String killText = kills + " ẁ"; // Kills text
-        String deathText = deaths + " ẃ"; // Deaths text
 
-        // Odhadneme šířku textu
-        int durationWidth = duration.length() * CHARACTER_WIDTH;
-        int killWidth = killText.length() * CHARACTER_WIDTH;
-        int deathWidth = deathText.length() * CHARACTER_WIDTH;
-
-        // Celková šířka boss baru (např. 150, podle vašich potřeb)
-        int totalWidth = 150;
-        int rightSideWidth = killWidth + deathWidth; // Šířka pravé strany
-
-        // Vypočítáme, kolik "negative space" je potřeba pro vycentrování času
-        int spaceWidth = (totalWidth - rightSideWidth - durationWidth) / 2;
-
-        // Sestavíme řetězec s negativními mezerami
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < spaceWidth / CHARACTER_WIDTH; i++) {
-            sb.append("\uDB00\uDC00"); // Nebo jiný znak pro prázdný prostor
-        }
-
-        // Vytvoříme finální text s vycentrovaným časem
-        return sb.toString() + duration + " " + "\uDB00\uDC96" + killText + "\uDB00\uDC0A" + deathText;
+    @Override
+    public void onCancel(Task task) {
+        bossBars.forEach((gamePlayer, bossBar) -> bossBar.removeAll());
     }
 }

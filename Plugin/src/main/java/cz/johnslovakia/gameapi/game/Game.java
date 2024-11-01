@@ -5,6 +5,7 @@ import cz.johnslovakia.gameapi.MinigameSettings;
 import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.economy.RewardsManager;
 import cz.johnslovakia.gameapi.events.*;
+import cz.johnslovakia.gameapi.game.kit.Kit;
 import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.game.map.MapVotesComparator;
 import cz.johnslovakia.gameapi.game.team.GameTeam;
@@ -142,8 +143,14 @@ public class Game {
 
             player.setDisplayName("§r" + player.getName());
             player.setPlayerListName("§r" + player.getName());
+            gamePlayer.resetAttributes();
             player.setGameMode(GameMode.ADVENTURE);
             player.teleport(lobbyPoint);
+
+            /*Kit defaultKit = gamePlayer.getPlayerData().getDefaultKit();
+            if (defaultKit != null) {
+                defaultKit.select(gamePlayer);
+            }*/ //v PlayerData.java
 
             player.getInventory().clear();
             if (getLobbyInventory() != null){
