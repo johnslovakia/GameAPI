@@ -18,7 +18,6 @@ public class Cooldown{
     @Getter
     private static List<Cooldown> list = new ArrayList<>();
 
-
     private final String name;
     private final int cooldown;
     private Map<GamePlayer, Double> players = new HashMap<>();

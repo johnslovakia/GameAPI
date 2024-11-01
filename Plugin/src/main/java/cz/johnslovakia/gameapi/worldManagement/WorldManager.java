@@ -90,13 +90,6 @@ public class WorldManager {
     }
 
 
-
-
-
-    public static List<String> getLoadedWorlds() {
-        return loadedWorlds;
-    }
-
     public static void addLoadedWorld(String worldName){
         if (loadedWorlds.contains(worldName)){
             return;

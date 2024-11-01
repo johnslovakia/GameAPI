@@ -19,10 +19,10 @@ import java.util.List;
 @Getter
 public class PerkManager {
 
-    private String name;
+    private final String name;
 
-    private List<Perk> perks = new ArrayList<>();
-    private Economy economy;
+    private final List<Perk> perks = new ArrayList<>();
+    private final Economy economy;
 
     public PerkManager(String name, Economy economy){
         this.name = name;

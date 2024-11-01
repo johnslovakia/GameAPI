@@ -1,29 +1,27 @@
 package cz.johnslovakia.gameapi.users;
 
 import cz.johnslovakia.gameapi.GameAPI;
-import cz.johnslovakia.gameapi.datastorage.PlayerTable;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.Winner;
 import cz.johnslovakia.gameapi.game.map.Area;
 import cz.johnslovakia.gameapi.game.team.GameTeam;
 import cz.johnslovakia.gameapi.messages.Language;
 import cz.johnslovakia.gameapi.messages.MessageManager;
-
 import cz.johnslovakia.gameapi.users.friends.FriendsInterface;
 import cz.johnslovakia.gameapi.users.parties.PartiesHook;
 import cz.johnslovakia.gameapi.users.parties.PartyInterface;
+
 import fr.mrmicky.fastboard.FastBoard;
+
 import lombok.Getter;
 import lombok.Setter;
-import me.zort.sqllib.SQLDatabaseConnection;
-import me.zort.sqllib.internal.query.UpdateQuery;
+
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
 import java.util.HashMap;

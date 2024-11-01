@@ -26,7 +26,8 @@ import java.util.*;
 @Getter
 public class PlayerScore implements Comparable<PlayerScore> {
 
-    private String name, pluralName, displayName;
+    private String pluralName, displayName;
+    private final String name;
     private GamePlayer gamePlayer;
     @Setter
     private int score = 0;
@@ -279,6 +280,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
         private String name, pluralName, displayName;
         private Map<Economy, Integer> rewardTypes = new HashMap<>();
         private boolean message = true;
+
         private boolean scoreRanking = false;
         private int limit = 0;
         private Stat stat;

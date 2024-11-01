@@ -17,11 +17,11 @@ import java.util.List;
 public class Task {
 
     private Integer startCounter = 10;
-    private int counter = 10;
-    private double doubleCounter = 10.0D;
+    private int counter;
+    private double doubleCounter;
     private boolean doubleCounterBoolean = false;
     private int restartCount = 0;
-    private Plugin plugin;
+    private final Plugin plugin;
 
     private String id;
     private Game game;
@@ -31,9 +31,10 @@ public class Task {
 
     private TaskInterface taskInterface;
 
+    @Getter
     private static final List<Task> tasks = new ArrayList<>();
 
-    private Task task;
+    private final Task task;
 
     public Task(Game game, String id, int startTime, Plugin plugin) {
         task = this;
@@ -157,11 +158,6 @@ public class Task {
     }
 
 
-
-    public static List<Task> getTasks() {
-        return tasks;
-    }
-
     public void cancelRunnable(boolean b) {
         //super.cancel();
         if (doubleTask != null) {
@@ -176,10 +172,10 @@ public class Task {
     }
 
     public static void cancel(Game game, String id) {
-        if (getTask(game, id) == null){
-            return;
+        Task t = getTask(game, id);
+        if (t != null){
+            t.cancelRunnable(true);
         }
-        getTask(game, id).cancelRunnable(true);
     }
 
     public static Task getTask(Game game, String id){

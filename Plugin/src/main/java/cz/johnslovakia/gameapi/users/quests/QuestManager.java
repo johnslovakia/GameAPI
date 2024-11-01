@@ -20,8 +20,8 @@ import java.util.List;
 @Getter
 public class QuestManager {
 
-    private String name;
-    private List<Quest> quests = new ArrayList<>();
+    private final String name;
+    private final List<Quest> quests = new ArrayList<>();
 
     public QuestManager(String name) {
         this.name = name;

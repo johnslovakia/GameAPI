@@ -13,4 +13,5 @@ public interface Achievement {
     String getName();
     Map<Economy, Integer> getRewards();
     Set<Trigger<?>> getTriggers();
+
 }

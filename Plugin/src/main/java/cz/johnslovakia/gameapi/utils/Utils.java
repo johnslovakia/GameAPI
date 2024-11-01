@@ -15,6 +15,7 @@ import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
@@ -23,10 +24,8 @@ import org.bukkit.potion.PotionType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.*;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.Field;
+import java.util.*;
 
 public class Utils {
 
@@ -268,8 +267,8 @@ public class Utils {
     private static double calculateDamageApplied(double damage, double points, double toughness, int resistance, int epf) {
         double withArmorAndToughness = damage * (1 - Math.min(20, Math.max(points / 5, points - damage / (2 + toughness / 4))) / 25);
         double withResistance = withArmorAndToughness * (1 - (resistance * 0.2));
-        double withEnchants = withResistance * (1 - (Math.min(20.0, epf) / 25));
-        return withEnchants;
+
+        return withResistance * (1 - (Math.min(20.0, epf) / 25));
     }
 
     private static int getEPF(PlayerInventory inv) {
@@ -285,8 +284,14 @@ public class Utils {
     }
 
     public static void damagePlayer(Player player, double damage) {
-        double points = player.getAttribute(Attribute.GENERIC_ARMOR).getValue();
-        double toughness = player.getAttribute(Attribute.GENERIC_ARMOR_TOUGHNESS).getValue();
+        double points = Objects.requireNonNull(
+                player.getAttribute(Attribute.GENERIC_ARMOR)
+        ).getValue();
+        double toughness = Objects.requireNonNull(
+                player.getAttribute(Attribute.GENERIC_ARMOR_TOUGHNESS)
+        ).getValue();
+
+
         PotionEffect effect = player.getPotionEffect(PotionEffectType.RESISTANCE);
         int resistance = effect == null ? 0 : effect.getAmplifier();
         int epf = getEPF(player.getInventory());
@@ -312,6 +317,8 @@ public class Utils {
                     out.write(buffer, 0, bytesRead);
                 }
             }
+
+            in.close();
             return tempFile;
         } catch (IOException e) {
             e.printStackTrace();

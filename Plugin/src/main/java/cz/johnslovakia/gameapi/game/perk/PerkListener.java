@@ -1,11 +1,14 @@
 package cz.johnslovakia.gameapi.game.perk;
 
+import lombok.Getter;
+
 import java.util.function.Consumer;
 
 public class PerkListener<T> {
 
-    private Class<T> type;
-    private Consumer<T> consumer;
+    @Getter
+    private final Class<T> type;
+    private final Consumer<T> consumer;
 
     public PerkListener(Class<T> type, Consumer<T> consumer) {
         this.type = type;
@@ -13,7 +16,5 @@ public class PerkListener<T> {
     }
 
     public void accept(T t) { consumer.accept(t); }
-
-    public Class<T> getType() { return type; }
 
 }

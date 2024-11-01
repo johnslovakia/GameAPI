@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.game.map;
 
 import cz.johnslovakia.gameapi.game.Game;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,9 +10,10 @@ import java.util.List;
 @Getter
 public class MapManager {
 
-    private Game game;
-    private List<GameMap> maps = new ArrayList<>();
+    private final Game game;
+    private final List<GameMap> maps = new ArrayList<>();
 
+    @Setter
     private boolean voting = true;
 
     public MapManager(Game game) {
@@ -30,7 +32,4 @@ public class MapManager {
         return voting;
     }
 
-    public void setVoting(boolean voting) {
-        this.voting = voting;
-    }
 }

@@ -1,16 +1,20 @@
 package cz.johnslovakia.gameapi.messages;
 
+import lombok.Getter;
+
+@Getter
 public enum MessageType {
 
-    CHAT("/chat/"), ACTIONBAR("/actionbar/"), TITLE("/title/"), SUBTITLE("/subtitle/"), KICK("/kick/");
+    CHAT("/chat/"),
+    ACTIONBAR("/actionbar/"),
+    TITLE("/title/"),
+    SUBTITLE("/subtitle/"),
+    KICK("/kick/");
 
-    private String key;
+    private final String key;
 
-    private MessageType(String key){
+    MessageType(String key){
         this.key = key;
     }
 
-    public String getKey() {
-        return key;
-    }
 }

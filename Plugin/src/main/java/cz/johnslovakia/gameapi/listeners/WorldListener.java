@@ -8,7 +8,7 @@ import org.bukkit.event.world.WorldInitEvent;
 public class WorldListener implements Listener {
 
     @EventHandler(priority= EventPriority.HIGHEST)
-    public void worldInit(WorldInitEvent e) {
+    public void onWorldInit(WorldInitEvent e) {
         e.getWorld().setAutoSave(false);
         e.getWorld().setKeepSpawnInMemory(false);
     }

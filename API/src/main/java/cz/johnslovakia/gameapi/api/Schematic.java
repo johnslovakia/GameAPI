@@ -5,5 +5,6 @@ import org.bukkit.plugin.Plugin;
 
 public interface Schematic {
 
-    public void pasteSchematic(Plugin plugin, Location pasteLocation, String schematicFileName, String path);
+    void pasteSchematic(Plugin plugin, Location pasteLocation, String schematicFileName, String path);
+
 }

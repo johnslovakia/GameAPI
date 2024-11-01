@@ -12,16 +12,14 @@ import java.util.*;
 
 public class PlayerManager {
 
-    public static HashMap<UUID, GamePlayer> playerMap = new HashMap<>();
+    public static final HashMap<UUID, GamePlayer> playerMap = new HashMap<>();
     @Getter
-    public static HashMap<Score, List<PlayerScore>> playerScores = new HashMap<>();
+    public static final HashMap<Score, List<PlayerScore>> playerScores = new HashMap<>();
 
     public static void removeGamePlayer(Player player){
         UUID uuid = player.getUniqueId();
 
-        if (playerMap.containsKey(uuid)){
-            playerMap.remove(uuid);
-        }
+        playerMap.remove(uuid);
     }
 
     public static boolean exists(UUID uuid){

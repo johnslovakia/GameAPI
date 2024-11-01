@@ -2,7 +2,7 @@ package cz.johnslovakia.gameapi.task;
 
 public interface TaskInterface {
 
-    void onStart(Task task);
-    void onCount(Task task);
-    void onEnd(Task task);
+    default void onStart(Task task){}
+    default void onCount(Task task){}
+    default void onEnd(Task task){}
 }

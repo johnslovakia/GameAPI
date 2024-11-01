@@ -1,19 +1,28 @@
 package cz.johnslovakia.gameapi.game.map;
 
 import cz.johnslovakia.gameapi.utils.Logger;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.World;
 
 public class MapLocation {
 
-    private String id;
+    @Getter
+    private final String id;
 
+    @Setter
     private String worldName;
+    @Getter
     private double x;
+    @Getter
     private double y;
+    @Getter
     private double z;
 
+    @Getter
     private float yaw;
+    @Getter
     private float pitch;
 
     public MapLocation(String id, double x, double y, double z, float yaw, float pitch) {
@@ -74,33 +83,9 @@ public class MapLocation {
     }
 
 
-    public String getId() {
-        return id;
-    }
-
     //public Arena getArena() {
         //return arena;
     //}
-
-    public double getX() {
-        return x;
-    }
-
-    public double getY() {
-        return y;
-    }
-
-    public double getZ() {
-        return z;
-    }
-
-    public float getYaw() {
-        return yaw;
-    }
-
-    public float getPitch() {
-        return pitch;
-    }
 
     public void setX(double x) {
         this.x = x;
@@ -129,7 +114,4 @@ public class MapLocation {
         return worldName;
     }
 
-    public void setWorldName(String worldName) {
-        this.worldName = worldName;
-    }
 }

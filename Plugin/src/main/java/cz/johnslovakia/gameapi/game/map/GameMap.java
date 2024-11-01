@@ -15,8 +15,6 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
 import java.util.*;
 
@@ -25,7 +23,7 @@ public class GameMap {
 
     @Setter
     private Game game;
-    private String name, authors;
+    private final String name, authors;
     @Setter
     public MapLocation spectatorSpawn;
     public Area mainArea;
@@ -50,10 +48,10 @@ public class GameMap {
     @Setter
     private boolean ingame = true;
 
-    private List<MapLocation> spawns = new ArrayList<>();
-    private Map<GamePlayer, Location> playerToLocation = new HashMap<>();
-    private List<Area> areas = new ArrayList<>();
-    private HashMap<String, Object> metadata = new HashMap<>();
+    private final List<MapLocation> spawns = new ArrayList<>();
+    private final Map<GamePlayer, Location> playerToLocation = new HashMap<>();
+    private final List<Area> areas = new ArrayList<>();
+    private final HashMap<String, Object> metadata = new HashMap<>();
 
     public GameMap(Game game, String name, String authors) {
         this.game = game;
@@ -190,8 +188,9 @@ public class GameMap {
             if (getWorld() != null) {
                 try {
                     WorldManager.unload(this, game);
-                }catch (Exception ignored){
-
+                }catch (Exception e){
+                    // This exception cannot be ignored
+                    throw new RuntimeException(e);
                 }
             }
         }

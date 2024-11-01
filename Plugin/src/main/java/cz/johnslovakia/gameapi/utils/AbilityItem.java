@@ -28,8 +28,8 @@ public class AbilityItem implements Listener {
     private final String name;
     private final ItemStack itemStack;
 
-    private Map<Action, Consumer<GamePlayer>> actions = new HashMap<>();
-    private Map<Action, Cooldown> cooldowns = new HashMap<>();
+    private final Map<Action, Consumer<GamePlayer>> actions;
+    private final Map<Action, Cooldown> cooldowns;
     private final String loreTranslationKey;
     private final boolean consumable;
 
@@ -100,6 +100,7 @@ public class AbilityItem implements Listener {
 
         if (meta.getDisplayName().contains(name)){
             if (loreTranslationKey != null) {
+                meta.setLore(Collections.singletonList(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated()));
                 ItemBuilder item = new ItemBuilder(e.getCurrentItem());
                 item.setLore(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated());
                 e.setCurrentItem(item.toItemStack());
@@ -163,13 +164,13 @@ public class AbilityItem implements Listener {
     }
 
 
-    public static class Builder{
+    public static class Builder {
 
         private final String name;
         private final ItemStack itemStack;
 
-        private Map<Action, Consumer<GamePlayer>> actions = new HashMap<>();
-        private Map<Action, Cooldown> cooldowns = new HashMap<>();
+        private final Map<Action, Consumer<GamePlayer>> actions = new HashMap<>();
+        private final Map<Action, Cooldown> cooldowns = new HashMap<>();
         private String loreTranslationKey;
         private boolean consumable = false;
 
@@ -198,7 +199,7 @@ public class AbilityItem implements Listener {
             return this;
         }
 
-        public AbilityItem build(){
+        public AbilityItem build() {
             return new AbilityItem(this);
         }
     }

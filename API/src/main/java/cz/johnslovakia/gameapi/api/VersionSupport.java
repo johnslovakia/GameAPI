@@ -10,19 +10,19 @@ import org.bukkit.scoreboard.Scoreboard;
 
 public interface VersionSupport {
 
-    public double getMaxPlayerHealth(Player player);
-    public void setMaxPlayerHealth(Player player, double max);
-    public ItemStack getCustomHead(String url);
-    public ItemStack getPlayerHead(Player player);
-    public void hidePlayer(Plugin plugin, Player player, Player hide);
-    public void showPlayer(Plugin plugin, Player player, Player show);
-    public void displayHealthBar(Player player, Scoreboard scoreboard);
-    public void setTeamNameTag(Player player, String id, ChatColor chatColor);
-    public int getItemDamage(ItemStack itemStack);
-    public void setItemDamage(ItemStack itemStack, int damage);
-    public void forceRespawn(JavaPlugin plugin, Player player);
-    public void openAnvil(Player player);
-    public ItemStack getItemInMainHand(Player player);
-    public void setItemInMainHand(Player player, ItemStack item);
-    public ItemMeta setItemUnbreakable(ItemStack itemStack);
+    double getMaxPlayerHealth(Player player);
+    void setMaxPlayerHealth(Player player, double max);
+    ItemStack getCustomHead(String url);
+    ItemStack getPlayerHead(Player player);
+    void hidePlayer(Plugin plugin, Player player, Player hide);
+    void showPlayer(Plugin plugin, Player player, Player show);
+    void displayHealthBar(Player player, Scoreboard scoreboard);
+    void setTeamNameTag(Player player, String id, ChatColor chatColor);
+    int getItemDamage(ItemStack itemStack);
+    void setItemDamage(ItemStack itemStack, int damage);
+    void forceRespawn(JavaPlugin plugin, Player player);
+    void openAnvil(Player player);
+    ItemStack getItemInMainHand(Player player);
+    void setItemInMainHand(Player player, ItemStack item);
+    ItemMeta setItemUnbreakable(ItemStack itemStack);
 }
