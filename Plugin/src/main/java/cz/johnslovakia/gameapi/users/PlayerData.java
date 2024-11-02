@@ -34,6 +34,7 @@ import org.json.JSONObject;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 @Getter @Setter
@@ -319,6 +320,10 @@ public class PlayerData {
                     Kit dKit = GameAPI.getInstance().getKitManager().getKit(result.get().getString("DefaultKit"));
                     if (dKit != null) {
                         this.defaultKit = dKit;
+
+                        Bukkit.getScheduler().runTask(GameAPI.getInstance(), () -> {
+                            defaultKit.select(gamePlayer);
+                        });
                     }
                 }
 
@@ -345,6 +350,13 @@ public class PlayerData {
                 gamePlayer.getOnlinePlayer().sendMessage("Can't get your kits data. Sorry for the inconvenience. (2)");
             }
         }
+        /*CompletableFuture<Kit> futureKit = CompletableFuture.supplyAsync(() -> defaultKit);
+
+        futureKit.thenAccept(kit -> {
+            if (kit != null) {
+                kit.select(gamePlayer);
+            }
+        });*/
     }
 
     public void addPurchasedKitThisGame(Kit kit){

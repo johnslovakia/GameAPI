@@ -5,6 +5,7 @@ import cz.johnslovakia.gameapi.events.GameJoinEvent;
 import cz.johnslovakia.gameapi.events.GameQuitEvent;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameManager;
+import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.stats.StatsHolograms;
@@ -61,10 +62,10 @@ public class JoinQuitListener implements Listener {
                     gamePlayer.getPlayerData().getGame()
             );
 
-            if (game.isPresent()) {
+            if (game.isPresent() && !(game.get().getState().equals(GameState.ENDING) || game.get().getState().equals(GameState.PREPARATION))) {
                 game.get().joinPlayer(player);
             } else {
-                //TODO: možná PlayerManager.removeGamePlayer(...)?
+                PlayerManager.removeGamePlayer(player);
                 GameManager.newArena(player, true);
             }
         }

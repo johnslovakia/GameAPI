@@ -10,6 +10,12 @@ import me.zort.containr.GUI;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 public class VotingInventory {
 
     private static ItemStack getEditedItem(GamePlayer gamePlayer, GameMap map){
@@ -65,10 +71,14 @@ public class VotingInventory {
                     gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> gui.close(player)).build());
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
 
-                    gui.setContainer(9, Component.staticContainer()
-                            .size(9, 2)
+                    gui.setContainer(10, Component.staticContainer()
+                            .size(7, 1)
                             .init(container -> {
-                                for (GameMap map : gamePlayer.getPlayerData().getGame().getMapManager().getMaps()){
+
+                                List<GameMap> maps = gamePlayer.getPlayerData().getGame().getMapManager().getMaps();
+                                Collections.shuffle(maps);
+
+                                for (GameMap map : maps.subList(0, Math.min(7, maps.size()))){
                                     if (!map.isIngame()){
                                         continue;
                                     }
@@ -80,7 +90,7 @@ public class VotingInventory {
                                         }
                                     }).build();
 
-                                    gui.appendElement(element);
+                                    container.appendElement(element);
                                 }
                             }).build());
 

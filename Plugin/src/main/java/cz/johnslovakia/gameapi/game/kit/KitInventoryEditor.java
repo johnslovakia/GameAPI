@@ -20,7 +20,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Arrays;
@@ -35,15 +37,9 @@ public class KitInventoryEditor implements Listener {
 
         gamePlayer.getMetadata().put("set_kit_inventory.kit", kit);
 
+        ItemStack[] inventoryItems = Arrays.copyOfRange(currentKitInventory.getContents(), 0, 35);
         if (containsArmor(kit.getContent().getContents())){
-            gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", !containsArmor(Arrays.stream(currentKitInventory.getStorageContents())
-                    .filter(Objects::nonNull)
-                    .filter(is -> !is.getType().equals(Material.AIR))
-                    .filter(is -> !(is.getType().toString().toLowerCase().contains("helmet")
-                            || is.getType().toString().toLowerCase().contains("chestplate")
-                            || is.getType().toString().toLowerCase().contains("leggings")
-                            || is.getType().toString().toLowerCase().contains("boots"))
-            ).toArray(ItemStack[]::new)));
+            gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", !containsArmor(inventoryItems));
             //gamePlayer.getOnlinePlayer().sendMessage(containsArmor(kit.getContent().getContents()) + " " + !containsArmor(currentKitInventory.getStorageContents()));
 
         }
@@ -129,6 +125,15 @@ public class KitInventoryEditor implements Listener {
     }
 
     @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+        InventoryView openInventory = event.getPlayer().getOpenInventory();
+
+        if (openInventory.getTitle().equalsIgnoreCase("Inventory Editor")) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
@@ -149,6 +154,8 @@ public class KitInventoryEditor implements Listener {
         }
 
         switch (event.getSlot()) {
+            case 47, 48, 49, 50, 51:
+                event.setCancelled(true);
             case 45:
                 event.setCancelled(true);
 

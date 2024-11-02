@@ -49,11 +49,15 @@ public class GameCountdown implements TaskInterface {
     public void onCount(Task task) {
         for (GamePlayer gamePlayer : task.getGame().getParticipants()) {
             BossBar bossBar = bossBars.get(gamePlayer);
+            boolean respawning = gamePlayer.getPlayerData().getGame().getSettings().isEnabledRespawning();
 
             int kills = gamePlayer.getScoreByName("Kill").getScore();
             int deaths = gamePlayer.getScoreByName("Death").getScore();
             String killText = kills + " ẁ";
-            String deathText = deaths + " ẃ";
+            String deathText = "";
+            if (respawning){
+                deathText = deaths + " ẃ";
+            }
 
             int width = (((killText.length()) * CHARACTER_WIDTH) / 2) + ((deathText.length() * CHARACTER_WIDTH) / 2) + 5;
 
@@ -61,8 +65,8 @@ public class GameCountdown implements TaskInterface {
                     + "\uDB00\uDC96" + StringUtils.getDurationString(task.getCounter())
                     + "\uDB00\uDC96"
                     + gamePlayer.getScoreByName("Kill").getScore() + " ẁ"
-                    + "\uDB00\uDC0F"
-                    + gamePlayer.getScoreByName("Death").getScore() + " ẃ");
+                    + (respawning ? "\uDB00\uDC0F"
+                    + gamePlayer.getScoreByName("Death").getScore() + " ẃ" : ""));
             /*bossBar.setTitle(createTitleWithCenteredTime(
                     StringUtils.getDurationString(task.getCounter()),
                     gamePlayer.getScoreByName("Kill").getScore(),

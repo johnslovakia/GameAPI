@@ -98,8 +98,8 @@ public class PerksInventory {
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
 
 
-                    gui.setContainer(9, Component.staticContainer()
-                            .size(9, 2)
+                    gui.setContainer(10, Component.staticContainer()
+                            .size(7, 2)
                             .init(container -> {
                                 for (Perk perk : GameAPI.getInstance().getPerkManager().getPerks()){
                                     Element element = Component.element(getEditedItem(gamePlayer, perk)).addClick(i -> {
@@ -109,7 +109,7 @@ public class PerksInventory {
                                         player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 20.0F, 20.0F);
                                     }).build();
 
-                                    gui.appendElement(element);
+                                    container.appendElement(element);
                                 }
                             }).build());
 

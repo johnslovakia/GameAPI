@@ -11,6 +11,7 @@ import cz.johnslovakia.gameapi.game.map.MapVotesComparator;
 import cz.johnslovakia.gameapi.game.team.GameTeam;
 import cz.johnslovakia.gameapi.game.team.TeamJoinCause;
 import cz.johnslovakia.gameapi.game.map.MapManager;
+import cz.johnslovakia.gameapi.listeners.PVPListener;
 import cz.johnslovakia.gameapi.task.tasks.EndCountdown;
 import cz.johnslovakia.gameapi.task.tasks.StartCountdown;
 import cz.johnslovakia.gameapi.users.*;
@@ -22,6 +23,7 @@ import cz.johnslovakia.gameapi.task.tasks.PreparationCountdown;
 import cz.johnslovakia.gameapi.users.friends.FriendsInterface;
 import cz.johnslovakia.gameapi.users.parties.PartyInterface;
 import cz.johnslovakia.gameapi.users.stats.StatsHolograms;
+import cz.johnslovakia.gameapi.utils.Sounds;
 import cz.johnslovakia.gameapi.utils.StringUtils;
 import cz.johnslovakia.gameapi.utils.Utils;
 import cz.johnslovakia.gameapi.utils.Logger;
@@ -38,6 +40,7 @@ import org.bukkit.block.Block;
 import org.bukkit.boss.BossBar;
 import org.bukkit.boss.KeyedBossBar;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
@@ -179,6 +182,8 @@ public class Game {
 
                 gamePlayer.setSpectator(false);
                 gamePlayer.getPlayerData().getGame().preparePlayer(gamePlayer);
+                gamePlayer.setType(GamePlayerType.PLAYER);
+                player.teleport(Objects.requireNonNullElse((Location) gamePlayer.getMetadata().get("death_location"), getPlayingMap().getPlayerToLocation(gamePlayer)));
 
 
                 GameJoinEvent ev = new GameJoinEvent(this, gamePlayer, GameJoinEvent.JoinType.LOBBY);
@@ -215,10 +220,9 @@ public class Game {
 
             GameJoinEvent ev = new GameJoinEvent(this, gamePlayer, GameJoinEvent.JoinType.SPECTATOR);
             Bukkit.getPluginManager().callEvent(ev);
-        }else{
-            //TODO: message
-            Utils.sendToLobby(player);
+            return;
         }
+        GameManager.newArena(player, true);
     }
 
     public void quitPlayer(Player player){
@@ -246,16 +250,18 @@ public class Game {
             //TODO: možná udělat jinak, aby se nemuseli načítat furt data, ale aby se smazali selectnuté kity,... a třeba votes
             PlayerManager.removeGamePlayer(player);
         }else if (getState() == GameState.INGAME || getState() == GameState.PREPARATION){
+            if (!gamePlayer.isSpectator()){
+                gamePlayer.setType(GamePlayerType.DISCONNECTED);
+                player.damage(GameAPI.getInstance().getVersionSupport().getMaxPlayerHealth(player));
+
+                // boolean killer = PVPListener.containsLastDamager(gamePlayer) && (System.currentTimeMillis() - PVPListener.getLastDamager(gamePlayer).getMs()) <= 12000;
+                // GamePlayerDeathEvent deathEvent = new GamePlayerDeathEvent(gamePlayer.getPlayerData().getGame(), (killer ? PVPListener.getLastDamager(gamePlayer).getLastDamager() : null), PlayerManager.getGamePlayer(player), null,null);
+                // Bukkit.getPluginManager().callEvent(deathEvent);
+            }
+
             if (getPlayers().isEmpty()){
                 endGame(null);
             }
-
-            //TODO: udělat jinak a aby to po rejoinu mohlo vrátit věci apod. počítat kill když se odpojí
-            if (!gamePlayer.isSpectator()){
-                player.damage(GameAPI.getInstance().getVersionSupport().getMaxPlayerHealth(player));
-            }
-
-            gamePlayer.setType(GamePlayerType.DISCONNECTED);
         }else{
             PlayerManager.removeGamePlayer(player);
         }
@@ -310,10 +316,7 @@ public class Game {
     }
 
     public void preparePlayer(GamePlayer gamePlayer){
-        preparePlayer(gamePlayer, false);
-    }
-
-    public void preparePlayer(GamePlayer gamePlayer, boolean rejoin){
+        boolean rejoin = gamePlayer.getType().equals(GamePlayerType.DISCONNECTED);
         Player player = gamePlayer.getOnlinePlayer();
 
         player.setGameMode(GameMode.SURVIVAL);
@@ -341,24 +344,19 @@ public class Game {
             if (getSettings().isUseTeams() && getSettings().getMaxTeamPlayers() > 1) {
                 player.sendMessage(MessageManager.get(player, "chat.team_chat").getTranslated());
             }
-        }
 
+            if (getLobbyInventory() != null) {
+                getLobbyInventory().unloadInventory(player);
+            }
+            player.getInventory().clear();
 
-        if (getLobbyInventory() != null) {
-            getLobbyInventory().unloadInventory(player);
-        }
-        player.getInventory().clear();
-
-        if (gamePlayer.getPlayerData().getKit() != null) {
-            gamePlayer.getPlayerData().getKit().activate(gamePlayer);
-        }
-        if (getState().equals(GameState.INGAME) && getSettings().isAllowedJoiningAfterStart()){
-            //getPlayingMap().teleport(gamePlayer);
-            player.teleport(gamePlayer.getPlayerData().getTeam().getSpawn());
-        }
-
-        if (gamePlayer.getType().equals(GamePlayerType.DISCONNECTED)){
-            gamePlayer.setType(GamePlayerType.PLAYER);
+            if (gamePlayer.getPlayerData().getKit() != null) {
+                gamePlayer.getPlayerData().getKit().activate(gamePlayer);
+            }
+            if (getState().equals(GameState.INGAME) && getSettings().isAllowedJoiningAfterStart()) {
+                //getPlayingMap().teleport(gamePlayer);
+                player.teleport(gamePlayer.getPlayerData().getTeam().getSpawn());
+            }
         }
     }
 
@@ -465,13 +463,15 @@ public class Game {
 
 
 
-        Task task = new Task(this, "EndCountdown", 15, new EndCountdown(), GameAPI.getInstance());
+        Task task = new Task(this, "EndCountdown", (!getParticipants().isEmpty() ? 15 : 5), new EndCountdown(), GameAPI.getInstance());
         task.setGame(this);
 
 
         for (GamePlayer gamePlayer : getParticipants()) {
             if (getSettings().teleportPlayersAfterEnd()){
                 gamePlayer.getOnlinePlayer().teleport(getLobbyPoint());
+            }else{
+                gamePlayer.getOnlinePlayer().setAllowFlight(true);
             }
 
             gamePlayer.getOnlinePlayer().sendMessage("");
@@ -693,6 +693,7 @@ public class Game {
     public void sendRewardSummary(){
         for (GamePlayer gamePlayer : getParticipants()){
             Player player = gamePlayer.getOnlinePlayer();
+            player.playSound(player, Sounds.LEVEL_UP.bukkitSound(), 1F, 1F);
 
             if (!RewardsManager.earnedSomething(gamePlayer)){
                 return;

@@ -28,7 +28,7 @@ public class GameEndEvent extends Event {
 
     public List<GamePlayer> getLossers(){
         if (game.getWinner() == null){
-            return game.getParticipants();
+            return List.of();
         }
 
         return game.getParticipants().stream().filter(gamePlayer ->

@@ -6,11 +6,13 @@ import cz.johnslovakia.gameapi.events.PlayerDamageByPlayerEvent;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.users.GamePlayerType;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.damage.DamageSource;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -28,10 +30,10 @@ public class PVPListener implements Listener {
     //public static Map<GamePlayer, List<GamePlayer>> damagers = new HashMap<>();
     //public static Map<GamePlayer, Map<GamePlayer, Long>> lastDamager = new HashMap<>();
 
-    private final List<LastDamager> lastDamager = new ArrayList<>();
-    private final List<Damager> damagers = new ArrayList<>();
+    private final static List<LastDamager> lastDamager = new ArrayList<>();
+    private final static List<Damager> damagers = new ArrayList<>();
 
-    public LastDamager getLastDamager(GamePlayer killed){
+    public static LastDamager getLastDamager(GamePlayer killed){
         for (LastDamager damagerClass : lastDamager){
             if (damagerClass.getDamaged().equals(killed)){
                 return damagerClass;
@@ -40,7 +42,7 @@ public class PVPListener implements Listener {
         return null;
     }
 
-    public boolean containsLastDamager(GamePlayer killed){
+    public static boolean containsLastDamager(GamePlayer killed){
         for (LastDamager damagerClass : lastDamager){
             if (damagerClass.getDamaged().equals(killed)){
                 return true;
@@ -214,6 +216,11 @@ public class PVPListener implements Listener {
         Player player = e.getEntity();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
+        if (gamePlayer.getType().equals(GamePlayerType.DISCONNECTED)){
+            e.setKeepInventory(true);
+            e.setKeepLevel(true);
+        }
+
         gamePlayer.getMetadata().put("death_location", player.getLocation());
 
         boolean killer = false;
@@ -221,7 +228,6 @@ public class PVPListener implements Listener {
             if (System.currentTimeMillis() - getLastDamager(gamePlayer).getMs() <= 12000){
                 killer = true;
             }
-
         }
 
         if (killer){
@@ -250,17 +256,9 @@ public class PVPListener implements Listener {
         } else {
             if (player.getLastDamageCause() == null) {
                 GamePlayerDeathEvent ev = new GamePlayerDeathEvent(gamePlayer.getPlayerData().getGame(), null, PlayerManager.getGamePlayer(player), null,null);
-                /*if (gamePlayer.getGame().isFirstGameKill()){
-                    ev.setFirstGameKill(true);
-                    gamePlayer.getGame().setFirstGameKill(false);
-                }*/
                 Bukkit.getPluginManager().callEvent(ev);
             } else {
                 GamePlayerDeathEvent ev = new GamePlayerDeathEvent(gamePlayer.getPlayerData().getGame(), null, PlayerManager.getGamePlayer(player), null, (player.getLastDamageCause() != null ? player.getLastDamageCause().getCause() : null));
-                /*if (gamePlayer.getGame().isFirstGameKill()){
-                    ev.setFirstGameKill(true);
-                    gamePlayer.getGame().setFirstGameKill(false);
-                }*/
                 Bukkit.getPluginManager().callEvent(ev);
             }
         }
