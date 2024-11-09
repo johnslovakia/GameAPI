@@ -97,12 +97,11 @@ public class Task {
             doubleTask = new BukkitRunnable() {
                 @Override
                 public void run() {
+                    doubleCounter = doubleCounter - 0.1D;
+
                     if (getDoubleCounter() == 0) {
                         doubleCounter = startCounter.doubleValue();
                         this.cancel();
-                        //cancelRunnable(true);
-                    } else {
-                        doubleCounter = doubleCounter - 0.1D;
                     }
                 }
             }.runTaskTimer(this.plugin, 1, 1);
@@ -111,22 +110,23 @@ public class Task {
         integerTask = new BukkitRunnable(){
             @Override
             public void run() {
-                if (counter == 0) {
-                    if (taskInterface != null) {
+                counter--;
+                
+                if (taskInterface != null) {
+                    if (counter == 0){
                         taskInterface.onEnd(getThisTask());
-                    }
-
-                    counter = startCounter;
-                    cancelRunnable(true);
-                } else {
-                    counter--;
-                    if (taskInterface != null) {
+                    }else{
                         taskInterface.onCount(getThisTask());
                     }
                 }
 
                 TaskEvent ev = new TaskEvent(task);
                 Bukkit.getPluginManager().callEvent(ev);
+                
+                if (counter == 0) {
+                    counter = startCounter;
+                    cancelRunnable(true);
+                }
             }
         }.runTaskTimer(this.plugin, 0, 20L);
     }
