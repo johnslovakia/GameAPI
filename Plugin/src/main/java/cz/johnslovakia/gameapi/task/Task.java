@@ -112,11 +112,12 @@ public class Task {
             @Override
             public void run() {
                 if (counter == 0) {
-                    counter = startCounter;
-                    cancelRunnable(true);
                     if (taskInterface != null) {
                         taskInterface.onEnd(getThisTask());
                     }
+
+                    counter = startCounter;
+                    cancelRunnable(true);
                 } else {
                     counter--;
                     if (taskInterface != null) {
@@ -137,7 +138,9 @@ public class Task {
         if (integerTask != null) {
             integerTask.cancel();
         }
-        getTaskInterface().onCancel(this);
+        if (getTaskInterface() != null) {
+            getTaskInterface().onCancel(this);
+        }
     }
 
     public Integer getRestartCount(){

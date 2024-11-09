@@ -93,7 +93,7 @@ public class InventoryManager implements Listener {
         if (jItem == null){
             return;
         }
-        jItem.getConsumer().accept(PlayerManager.getGamePlayer(player));
+        jItem.getConsumer().accept(e);
         e.setCancelled(true);
 
     }
@@ -121,42 +121,6 @@ public class InventoryManager implements Listener {
         if (jItem != null){
             e.setCancelled(true);
         }
-    }
-
-    @EventHandler
-    public void onInventoryClick(InventoryClickEvent e) {
-        Player player = (Player) e.getWhoClicked();
-        Inventory inv = e.getInventory();
-        ItemStack item = e.getCurrentItem();
-
-        if (!players.contains(player)) {
-            return;
-        }
-        if (item == null) {
-            return;
-        }
-        if (item.equals(fillFreeSlots)){
-            e.setCancelled(true);
-            return;
-        }
-        if (item.getType() == Material.AIR) {
-            return;
-        }
-        if (!item.hasItemMeta()){
-            return;
-        }
-        if (item.getItemMeta().getDisplayName() == null){
-            return;
-        }
-        if (getItemByString(player, item.getItemMeta().getDisplayName()) == null) {
-            return;
-        }
-        Item jItem = getItemByString(player, item.getItemMeta().getDisplayName());
-        if (jItem == null){
-            return;
-        }
-        jItem.getConsumer().accept(PlayerManager.getGamePlayer(player));
-        e.setCancelled(true);
     }
 
     public void onItemDurabilityChange(PlayerItemDamageEvent e){

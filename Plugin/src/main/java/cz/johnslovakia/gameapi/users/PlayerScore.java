@@ -26,7 +26,8 @@ import java.util.*;
 @Getter
 public class PlayerScore implements Comparable<PlayerScore> {
 
-    private String pluralName, displayName;
+    private final String pluralName;
+    private String displayName;
     private final String name;
     private GamePlayer gamePlayer;
     @Setter
@@ -178,10 +179,17 @@ public class PlayerScore implements Comparable<PlayerScore> {
     }
 
     public String getDisplayName(boolean plural){
-        if (plural && score > 1){
-            return pluralName;
+        if (plural && score > 1 && pluralName != null){
+            return getPluralName();
         }
         return displayName;
+    }
+
+    public String getPluralName(){
+        if (pluralName.equals(name)){
+            return getDisplayName();
+        }
+        return pluralName;
     }
 
 
@@ -370,12 +378,12 @@ public class PlayerScore implements Comparable<PlayerScore> {
             PlayerManager.Score score = new PlayerManager.Score(name);
             score.setName(this.name);
             score.setDisplayName((this.displayName != null ? this.displayName : this.name));
+            score.setPluralName(this.pluralName);
             score.setRewardTypes(this.rewardTypes);
             score.setAllowedMessage(this.message);
             score.setScoreRanking(this.scoreRanking);
             score.setStat(this.stat);
             score.setTriggers(this.triggers);
-            score.setPluralName(this.pluralName);
             score.setLimit(limit);
 
             return score;

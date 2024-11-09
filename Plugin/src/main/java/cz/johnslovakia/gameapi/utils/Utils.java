@@ -29,6 +29,11 @@ import java.util.*;
 
 public class Utils {
 
+    public static void levitatePlayer(Player player, int level, int blocks) {
+        double duration = (blocks / (0.9 + 0.9 * level)) * 20;
+        player.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, (int) duration, level));
+    }
+
     public ItemStack getPotionItemStack(PotionType type, int level, boolean extend, boolean upgraded, boolean splash, String displayName){
         ItemStack potion = new ItemStack((splash ? Material.SPLASH_POTION : Material.POTION), 1);
         PotionMeta meta = (PotionMeta) potion.getItemMeta();

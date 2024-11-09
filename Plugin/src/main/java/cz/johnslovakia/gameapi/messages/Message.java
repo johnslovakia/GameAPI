@@ -91,6 +91,10 @@ public class Message {
 
 
     public void send(){
+        if (audience.isEmpty()){
+            return;
+        }
+
         MessageType msgType = MessageType.CHAT;
         for (MessageType type : MessageType.values()) {
             if (messages.values().stream().toList().get(0).startsWith(type.getKey())) {

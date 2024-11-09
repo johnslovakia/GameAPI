@@ -15,11 +15,10 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
@@ -99,6 +98,12 @@ public class KitInventoryEditor implements Listener {
 
         ItemBuilder back = new ItemBuilder(Material.ARROW).setName(MessageManager.get(gamePlayer, "inventory.item.go_back").getTranslated());
 
+        ItemBuilder invisibleItem = new ItemBuilder(Material.MAP);
+        reset.setCustomModelData(1010);
+        for (int i = 45; i <= 53; i++){
+            gui.setItem(i, invisibleItem.toItemStack());
+        }
+
         gui.setItem(45, back.toItemStack());
         gui.setItem(46, reset.toItemStack());
         gui.setItem(49, kitItem.toItemStack());
@@ -149,21 +154,29 @@ public class KitInventoryEditor implements Listener {
         Inventory gui = event.getClickedInventory();
         Kit kit = (Kit) gamePlayer.getMetadata().get("set_kit_inventory.kit");
 
-        if (item.getType().equals(Material.GRAY_STAINED_GLASS_PANE) || event.isShiftClick()){
+        if (item.getType().equals(Material.GRAY_STAINED_GLASS_PANE) || event.isShiftClick() || event.getClick().isKeyboardClick()){
+            event.setCancelled(true);
+        }
+
+        int slot = event.getSlot();
+        if (!((slot >= 0 && slot <= 26) || (slot >= 36 && slot <= 44))) {
+            event.setCancelled(true);
+        }
+        if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+            event.setResult(Event.Result.DENY);
+            event.setCancelled(true);
+        }
+        if (event.getAction() == InventoryAction.PLACE_ALL && slot >= 45) {
+            event.setResult(Event.Result.DENY);
             event.setCancelled(true);
         }
 
         switch (event.getSlot()) {
-            case 47, 48, 49, 50, 51:
-                event.setCancelled(true);
             case 45:
-                event.setCancelled(true);
-
                 gamePlayer.getMetadata().put("set_kit_inventory.check_closing", false);
                 KitInventory.openKitInventory(gamePlayer);
                 break;
             case 46:
-                event.setCancelled(true);
                 gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", true);
 
                 Inventory kitInventory = kit.getContent().getInventory();
@@ -178,8 +191,6 @@ public class KitInventoryEditor implements Listener {
                 }
                 break;
             case 52:
-                event.setCancelled(true);
-
                 if ((boolean) gamePlayer.getMetadata().get("set_kit_inventory.autoArmor")) {
                     gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", false);
                     getArmor(kit.getContent().getContents()).forEach(is -> gui.setItem(findEmptySlot(gui), is));
@@ -191,8 +202,6 @@ public class KitInventoryEditor implements Listener {
 
                 break;
             case 53:
-                event.setCancelled(true);
-
                 gamePlayer.getMetadata().put("set_kit_inventory.check_closing", false);
                 player.closeInventory();
                 KitInventory.openKitInventory(gamePlayer);

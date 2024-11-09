@@ -19,10 +19,10 @@ public class Cooldown{
     private static List<Cooldown> list = new ArrayList<>();
 
     private final String name;
-    private final int cooldown;
+    private final double cooldown;
     private Map<GamePlayer, Double> players = new HashMap<>();
 
-    public Cooldown(String name, Integer cooldown) {
+    public Cooldown(String name, double cooldown) {
         this.name = name;
         this.cooldown = cooldown;
 

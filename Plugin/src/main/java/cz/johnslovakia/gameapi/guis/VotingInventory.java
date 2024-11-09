@@ -85,9 +85,7 @@ public class VotingInventory {
 
                                     Element element = Component.element(getEditedItem(gamePlayer, map)).addClick(i -> {
                                         map.voteForMap(player);
-                                        if (getPlayersFreeVotes(gamePlayer) == 0) {
-                                            player.closeInventory();
-                                        }
+                                        openGUI(gamePlayer);
                                     }).build();
 
                                     container.appendElement(element);

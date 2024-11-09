@@ -1,30 +1,47 @@
 package cz.johnslovakia.gameapi.utils;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.messages.Language;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+
+import lombok.Getter;
+
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Arrow;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryPickupItemEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class AbilityItem implements Listener {
 
+    @Getter
+    public static List<AbilityItem> abilityItems = new ArrayList<>();
+
+    public static AbilityItem getAbilityItem(String name){
+        for (AbilityItem abilityItem : abilityItems){
+            if (abilityItem.getName().equalsIgnoreCase(name)){
+                return abilityItem;
+            }
+        }
+        return null;
+    }
+
+
+    @Getter
     private final String name;
     private final ItemStack itemStack;
 
@@ -43,7 +60,18 @@ public class AbilityItem implements Listener {
         this.loreTranslationKey = builder.loreTranslationKey;
         this.consumable = builder.consumable;
 
+        abilityItems.add(this);
+
         Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
+    }
+
+    public ItemStack getFinalItemStack(){
+        ItemBuilder finalItem = new ItemBuilder(itemStack);
+        finalItem.setName("§a" + name);
+        if (loreTranslationKey != null) {
+            finalItem.setLore(MessageManager.get(Language.getDefaultLanguage(), loreTranslationKey));
+        }
+        return finalItem.toItemStack();
     }
 
     public ItemStack getFinalItemStack(GamePlayer gamePlayer){
@@ -53,6 +81,29 @@ public class AbilityItem implements Listener {
             finalItem.setLore(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated());
         }
         return finalItem.toItemStack();
+    }
+
+    @EventHandler
+    public void onInventoryOpen(InventoryOpenEvent e) {
+        if (!(e.getPlayer() instanceof Player player)){
+            return;
+        }
+        if (!e.getInventory().getType().equals(InventoryType.CHEST) || e.getInventory().getLocation() == null){
+            return;
+        }
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+
+        Arrays.stream(e.getInventory().getContents()).toList().forEach(itemStack -> {
+            if (itemStack == null){
+                return;
+            }
+            if (itemStack.getType().equals(Material.AIR)){
+                return;
+            }
+            if (itemStack.equals(getFinalItemStack())){
+                itemStack.setItemMeta(getFinalItemStack(gamePlayer).getItemMeta());
+            }
+        });
     }
 
     @EventHandler
@@ -136,6 +187,17 @@ public class AbilityItem implements Listener {
             /*if (!e.getAction().equals(action)){
                 continue;
             }*/
+
+            Block block = e.getClickedBlock();
+            if (block != null){
+                List<Material> materials = Arrays.asList(Material.CHEST, Material.CRAFTING_TABLE, Material.ENCHANTING_TABLE, Material.ANVIL, Material.CHIPPED_ANVIL, Material.DAMAGED_ANVIL);
+                if (materials.contains(block.getType())){
+                    return;
+                }
+            }
+
+            e.setCancelled(true);
+
             Cooldown cooldown = null;
             if (!cooldowns.isEmpty() && cooldowns.get(action) != null){
                 cooldown = cooldowns.get(action);
@@ -146,12 +208,13 @@ public class AbilityItem implements Listener {
                 return;
             }
             actions.get(action).accept(gamePlayer);
-            if (consumable){
+            if (consumable && e.getHand() != null){
                 if (item.getAmount() > 1) {
                     item.setAmount(item.getAmount() - 1);
                 } else {
                     player.getInventory().remove(item);
                 }
+
             }
             if (cooldown != null) {
                 cooldown.startCooldown(gamePlayer);
@@ -200,6 +263,11 @@ public class AbilityItem implements Listener {
         }
 
         public AbilityItem build() {
+            AbilityItem abilityItem = getAbilityItem(name);
+            if (abilityItem != null){
+                return abilityItem;
+            }
+
             return new AbilityItem(this);
         }
     }

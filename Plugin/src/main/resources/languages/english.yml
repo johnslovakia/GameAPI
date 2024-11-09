@@ -138,11 +138,11 @@ item.teleporter: "§aTeleporter"
 
 
 #Kill Messages
-chat.kill: "ẃ §a%dead%§r §fwas killed by §a%killer%§r"
-chat.first_blood: "ẁ §a%killer%§r §fdrew §4§lFIRST BLOOD §r§fin the game!"
-chat.void: "ẃ §a%dead%§r §ffell out of the world!"
-chat.fall: "ẃ §a%dead%§r §ffell from a high place!"
-chat.died: "ẃ §a%dead%§r §fdied!"
+chat.kill: "§7[§rẃ§7] §a%dead%§r §7was killed by §a%killer%§r"
+chat.first_blood: "§7[§rẁ§7] §a%killer%§r §fdrew §4§lFIRST BLOOD §r§fin the game!"
+chat.void: "§7[§rẃ§7] §a%dead%§r §7fell out of the world!"
+chat.fall: "§7[§rẃ§7] §a%dead%§r §7fell from a high place!"
+chat.died: "§7[§rẃ§7] §a%dead%§r §7died!"
 chat.kill_fast: "§cYou kill too fast. Rewards will not be counted."
 
 
@@ -197,10 +197,10 @@ chat.quests.completed: " §a%type% Quest Completed! §7(%description%)"
 chat.quests.started: " §fStarted Quest: §a%name%"
 chat.economy.reward.limit: " §7You have reached the reward limit for §a%score%, so you will not receive any additional rewards."
 
-chat.team_chat: "Ẁ §aTeam chat §fis enabled by default in this game. To send a message to everyone, start your message with §a'!'§f."
+chat.team_chat: "Ẁ §aTeam chat §7is enabled by default in this game. To send a message to everyone, start your message with §a'!'§7."
 chat.restarting: "Ẁ §fThe server is restarting!"
-chat.kit.balance_deducted: "Ẁ §f%economy_name% will be deducted after the game starts."
-chat.current_balance: "Ẁ §fCurrent balance: §a%balance% %economy_name%"
+chat.kit.balance_deducted: "Ẁ §a%economy_name% §7will be deducted after the game starts."
+chat.current_balance: "Ẁ §7Current balance: §a%balance% %economy_name%"
 chat.time_reduced: "Ẁ §fWaiting time was reduced to §a%reduced% §fseconds."
 chat.map_won: "Ẁ §fVoting won map: §a%map%!"
 chat.party.team_join: "Ẁ §fYou've been assigned to the team joined by a member of your party."
@@ -239,7 +239,7 @@ chat.end.thanks: "§aThanks for playing."
 
 
 #Titles
-title.battle_started.subtitle: "§fGood luck!"
+title.battle_started: "/title/§aThe battle has begun!/subtitle/§7Good luck!"
 title.battle_begings_in.subtitle: "§fBattle begins in"
 title.time_is_up.title: "/title/§c§lTime is up!"
 title.game_started.title: "§aGame started!"

@@ -91,8 +91,6 @@ public class KitInventory implements Listener {
                                     String translateKey = "kit." + kit.getName().toLowerCase().replace(" ", "_");
 
                                     ItemBuilder item = new ItemBuilder(kit.getIcon());
-                                    item.hideAllFlags();
-
                                     item.removeEnchantment(XEnchantment.ARROW_INFINITE.getEnchant());
                                     item.setName((balance >= kit.getPrice() || kit.getPrice() == 0 || kitManager.hasKitPermission(gamePlayer, kit) ? "§a§l" + kit.getName() : "§c§l" + kit.getName()));
                                     item.removeLore();
@@ -159,6 +157,8 @@ public class KitInventory implements Listener {
 
                                     MessageManager.get(player, "inventory.kit.edit_inventory.action_info")
                                             .addToItemLore(item);
+
+                                    item.hideAllFlags();
 
 
                                     Element spacerElement = Component.element(item.toItemStack()).addClick(i -> {

@@ -30,6 +30,14 @@ public class MessageManager {
         }
     }
 
+    public static String get(Language language, String key){
+        if (!existMessage(key) && messages.get(key).get(language) == null){
+            return "§cNo translation found for message key: " + key + " (Language: " + language.getName() + ")";
+        }else{
+            return messages.get(key).get(language);
+        }
+    }
+
     public static Message get(Player player, String key){
         return get(PlayerManager.getGamePlayer(player), key);
     }

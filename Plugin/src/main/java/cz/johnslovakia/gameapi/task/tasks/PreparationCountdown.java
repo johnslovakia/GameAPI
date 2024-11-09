@@ -9,6 +9,7 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.Utils;
 import cz.johnslovakia.gameapi.utils.Sounds;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
@@ -45,26 +46,12 @@ public class PreparationCountdown implements TaskInterface {
                     .replace("%time%", Utils.getDurationString(task.getCounter()))
                     .getTranslated());
             bossBar.setProgress(task.getCounter() / (double) task.getStartCounter());
-        }
 
-        
-        if (task.getCounter() == 3) {
-            for (GamePlayer gamePlayer : players) {
-                Player player = gamePlayer.getOnlinePlayer();
+            Player player = gamePlayer.getOnlinePlayer();
 
-                GameAPI.getInstance().getUserInterface().sendTitle(player, "§a➌", MessageManager.get(player, "title.battle_begings_in.subtitle").getTranslated());
-                player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 20.0F, 20.0F);
-            }
-        } else if (task.getCounter() == 2) {
-            for (GamePlayer gamePlayer : players) {
-                Player player = gamePlayer.getOnlinePlayer();
-                GameAPI.getInstance().getUserInterface().sendTitle(player, "§a➋", MessageManager.get(player, "title.battle_begings_in.subtitle").getTranslated());
-                player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 20.0F, 20.0F);
-            }
-        } else if (task.getCounter() == 1) {
-            for (GamePlayer gamePlayer : players) {
-                Player player = gamePlayer.getOnlinePlayer();
-                GameAPI.getInstance().getUserInterface().sendTitle(player, "§a➊", MessageManager.get(player, "title.battle_begings_in.subtitle").getTranslated());
+            if (task.getCounter() <= 3 && task.getCounter() > 0) {
+                ChatColor[] colors = {ChatColor.GREEN, ChatColor.AQUA, ChatColor.YELLOW};
+                GameAPI.getInstance().getUserInterface().sendTitle(player, colors[task.getCounter() - 1] + "► " + task.getCounter() + " ◄", MessageManager.get(player, "title.battle_begings_in.subtitle").getTranslated());
                 player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 20.0F, 20.0F);
             }
         }
@@ -74,14 +61,14 @@ public class PreparationCountdown implements TaskInterface {
     public void onEnd(Task task) {
         Game game = task.getGame();
 
-        bossBar.removeAll();
-
         for (GamePlayer gamePlayer : game.getPlayers()) {
             Player player = gamePlayer.getOnlinePlayer();
+            MessageManager.get(gamePlayer, "title.battle_started")
+                    .send();
             player.playSound(player, "custom:gamestart", 20.0F, 20.0F);
-            GameAPI.getInstance().getUserInterface().sendTitle(player, MessageManager.get(player, "title.battle_started.subtitle").getTranslated(), "");
             gamePlayer.setEnabledMovement(true);
         }
+        bossBar.removeAll();
         game.startGame();
     }
 

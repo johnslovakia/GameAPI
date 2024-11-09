@@ -233,10 +233,17 @@ public class Game {
         GameQuitEvent ev = new GameQuitEvent(this, gamePlayer);
         Bukkit.getPluginManager().callEvent(ev);
 
+        new BukkitRunnable(){
+            @Override
+            public void run() {
+                gamePlayer.getPlayerData().saveAll();
+            }
+        }.runTaskAsynchronously(GameAPI.getInstance());
+
         if (getState().equals(GameState.WAITING) || getState().equals(GameState.STARTING)){
             MessageManager.get(getParticipants(), "chat.quit")
                     .replace("%prefix%",  gamePlayer.getPlayerData().getPrefix())
-                    .replace("%player%", gp -> (gp.getFriends().isFriendWith(gamePlayer) || gp.getParty().getAllOnlinePlayers().contains(gamePlayer) ? "§6" : "") + player.getName())
+                    .replace("%player%", gp -> (gp.getFriends() != null && gp.getFriends().isFriendWith(gamePlayer) || gp.getParty() != null && !gp.getParty().getAllOnlinePlayers().isEmpty() && gp.getParty().getAllOnlinePlayers().contains(gamePlayer) ? "§6" : "") + player.getName())
                     .replace("%players%", String.valueOf(getPlayers().size()))
                     .add("Ẅ", gp -> gp.getFriends().isFriendWith(gamePlayer))
                     .add("ẅ", gp -> gp.getParty().getAllOnlinePlayers().contains(gamePlayer))
@@ -265,6 +272,7 @@ public class Game {
         }else{
             PlayerManager.removeGamePlayer(player);
         }
+
 
         checkArenaFullness();
     }
@@ -413,6 +421,8 @@ public class Game {
                 StatsHolograms.remove(gamePlayer.getOnlinePlayer());
             }
         }
+
+        getMetadata().put("players_at_start", getPlayers().size());
     }
 
     public void startGame(){
@@ -430,8 +440,6 @@ public class Game {
 
         GameStartEvent ev = new GameStartEvent(this);
         Bukkit.getPluginManager().callEvent(ev);
-
-        getMetadata().put("players_at_start", getPlayers().size());
     }
 
     public void endGame(Winner winner){
@@ -624,7 +632,7 @@ public class Game {
                 MessageManager.get(gamePlayer, "chat.top3players.position")
                         .replace("%position%", "" + position)
                         .replace("%player_head%", ChatHeadAPI.getInstance().getHeadAsString(pos.getOfflinePlayer()))
-                        .replace("%player%", pos.getOnlinePlayer().getName())
+                        .replace("%player%", (pos.equals(gamePlayer) ? "§l" : "") +  pos.getOnlinePlayer().getName() + "§r")
                         .replace("%score%", "" + pos.getScoreByName(rankingScore).getScore())
                         .replace("%ranking_score_name%", rankingScore)
                         .send();
@@ -647,7 +655,6 @@ public class Game {
 
                 ComponentBuilder b = new ComponentBuilder("");
                 for (GamePlayer partyMember : fullRanking.keySet().stream().filter(p -> party.getAllOnlinePlayers().contains(p)).toList()) {
-                    //b.append(" " + ChatHeadAPI.getInstance().getHeadAsString(partyMember.getOfflinePlayer()) + " §f" + partyMember.getOnlinePlayer().getName() + " §7- " + );
                     b.append(MessageManager.get(gamePlayer, "chat.top3players.position")
                             .replace("%position%", "" + fullRanking.get(partyMember))
                             .replace("%player_head%", ChatHeadAPI.getInstance().getHeadAsString(partyMember.getOfflinePlayer()))
@@ -666,25 +673,25 @@ public class Game {
             if (friends.hasFriends() && !friends.getAllOnlinePlayers().isEmpty()) {
                 List<GamePlayer> friendsList = new ArrayList<>(friends.getAllOnlinePlayers()).stream().filter(p -> (!party.isInParty() || party.getAllOnlinePlayers().contains(p))).toList();
 
-                TextComponent message = new TextComponent(MessageManager.get(gamePlayer, "chat.top3players.friends_position").getTranslated());
+                if (!friendsList.isEmpty()) {
+                    TextComponent message = new TextComponent(MessageManager.get(gamePlayer, "chat.top3players.friends_position").getTranslated());
 
-                ComponentBuilder b = new ComponentBuilder("");
-                for (GamePlayer friend : fullRanking.keySet().stream().filter(friendsList::contains).toList()) {
-                    //b.append(" " + ChatHeadAPI.getInstance().getHeadAsString(partyMember.getOfflinePlayer()) + " §f" + partyMember.getOnlinePlayer().getName() + " §7- " + );
-                    b.append(MessageManager.get(gamePlayer, "chat.top3players.position")
-                            .replace("%position%", "" + fullRanking.get(friend))
-                            .replace("%player_head%", ChatHeadAPI.getInstance().getHeadAsString(friend.getOfflinePlayer()))
-                            .replace("%player%", friend.getOnlinePlayer().getName())
-                            .replace("%score%", "" + friend.getScoreByName(rankingScore).getScore())
-                            .replace("%ranking_score_name%", rankingScore)
-                            .getTranslated());
-                    b.append("\n");
+                    ComponentBuilder b = new ComponentBuilder("");
+                    for (GamePlayer friend : fullRanking.keySet().stream().filter(friendsList::contains).toList()) {
+                        b.append(MessageManager.get(gamePlayer, "chat.top3players.position")
+                                .replace("%position%", "" + fullRanking.get(friend))
+                                .replace("%player_head%", ChatHeadAPI.getInstance().getHeadAsString(friend.getOfflinePlayer()))
+                                .replace("%player%", friend.getOnlinePlayer().getName())
+                                .replace("%score%", "" + friend.getScoreByName(rankingScore).getScore())
+                                .replace("%ranking_score_name%", rankingScore)
+                                .getTranslated());
+                        b.append("\n");
+                    }
+
+                    message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));
+                    gamePlayer.getOnlinePlayer().spigot().sendMessage(message);
                 }
-
-                message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));
-                gamePlayer.getOnlinePlayer().spigot().sendMessage(message);
             }
-
 
             player.sendMessage("");
         }

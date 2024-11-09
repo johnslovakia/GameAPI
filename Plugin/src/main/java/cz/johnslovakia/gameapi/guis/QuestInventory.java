@@ -101,7 +101,7 @@ public class QuestInventory {
                                         .replace("%name%", quest.getDisplayName())
                                         .send();
 
-                                gui.update(player);
+                                openGUI(gamePlayer);
                             }
                             player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 20.0F, 20.0F);
                         }).build();
