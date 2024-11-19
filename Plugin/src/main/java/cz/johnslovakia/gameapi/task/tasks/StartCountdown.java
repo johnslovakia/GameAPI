@@ -26,6 +26,9 @@ public class StartCountdown implements TaskInterface {
         this.bossBar = Bukkit.createBossBar("Game starting in:", BarColor.YELLOW ,BarStyle.SOLID);
 
         for (GamePlayer gamePlayer : task.getGame().getPlayers()){
+            ((BossBar)gamePlayer.getMetadata().get("bossbar.waiting_for_players")).removeAll();
+            gamePlayer.getMetadata().remove("bossbar.waiting_for_players");
+
             bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.game_starting_in")
                     .replace("%time%", Utils.getDurationString(task.getCounter()))
                     .getTranslated());

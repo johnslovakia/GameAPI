@@ -7,6 +7,7 @@ import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsCategory;
+import cz.johnslovakia.gameapi.game.kit.KitManager;
 import cz.johnslovakia.gameapi.game.perk.Perk;
 import cz.johnslovakia.gameapi.game.perk.PerkLevel;
 import cz.johnslovakia.gameapi.game.team.GameTeam;
@@ -34,7 +35,6 @@ import org.json.JSONObject;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 @Getter @Setter
@@ -98,6 +98,14 @@ public class PlayerData {
                 }
             }
         }.runTaskAsynchronously(GameAPI.getInstance());
+    }
+
+    public void flushSomeData(){
+        game = null;
+        team = null;
+        kit = defaultKit;
+        currentInventory = null;
+        votesForMaps.clear();
     }
 
     public Inventory getKitInventory(Kit kit){
@@ -299,7 +307,8 @@ public class PlayerData {
     }
 
     private void loadKits(){
-        if (GameAPI.getInstance().getKitManager() == null){
+        KitManager kitManager = KitManager.getKitManager(game);
+        if (kitManager == null){
             return;
         }
 
@@ -317,7 +326,7 @@ public class PlayerData {
             try{
                 String rDKit = result.get().getString("DefaultKit");
                 if (rDKit != null) {
-                    Kit dKit = GameAPI.getInstance().getKitManager().getKit(result.get().getString("DefaultKit"));
+                    Kit dKit = kitManager.getKit(result.get().getString("DefaultKit"));
                     if (dKit != null) {
                         this.defaultKit = dKit;
 
@@ -338,7 +347,7 @@ public class PlayerData {
                         JSONObject kitObject = inventoriesArray.getJSONObject(i);
                         String name = kitObject.getString("name");
                         String inventory = kitObject.getString("inventory");
-                        Kit k = GameAPI.getInstance().getKitManager().getKit(name);
+                        Kit k = kitManager.getKit(name);
 
                         if (k != null) {
                             kitInventories.put(k, BukkitSerialization.fromBase64(inventory));
@@ -350,13 +359,6 @@ public class PlayerData {
                 gamePlayer.getOnlinePlayer().sendMessage("Can't get your kits data. Sorry for the inconvenience. (2)");
             }
         }
-        /*CompletableFuture<Kit> futureKit = CompletableFuture.supplyAsync(() -> defaultKit);
-
-        futureKit.thenAccept(kit -> {
-            if (kit != null) {
-                kit.select(gamePlayer);
-            }
-        });*/
     }
 
     public void addPurchasedKitThisGame(Kit kit){

@@ -1,6 +1,6 @@
-\uE235 - Červený vykřičník
-\uE236 - Zelený info znak
-\u1E80 - Modrý info znak
+\u1E88 (starý \uE235) - Červený vykřičník Ẉ
+\uE236 - Zelený info znak 
+\u1E80 - Modrý info znak Ẁ
 \u1E81 - Sword znak ẁ
 \u1E82 - Victory
 \u1E83 - Lebka ẃ
@@ -18,7 +18,12 @@
 󏿎 - +50 mezera
 󐂖 - +150 mezera
 
-#71c900 zelena
+#71c900 - tmavší §a
+#8e8e8e (stará: #a1a1a1) - tmavší §7
+#df1c1c (stará: #dc3131) - tmavší §c
+#36dbe4 (stará: #40e8f0) - aqua
+#09a8af (stará 2: #21b6bd) (stará: #29dce5) - tmavší aqua
+
 
 resource pack věci
 https://github.com/McTsts/mc-core-shaders/blob/main/remove%20text%20shadow/1.20%20-%201.21/rendertype_text.fsh

@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.game;
 
 import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.game.kit.KitManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
@@ -117,7 +118,7 @@ public class SpectatorManager {
         MessageManager.get(player, "inventory.player_inventory.experience")
                 .replace("%experience%", "" + target.getLevel())
                 .addToItemLore(inf);
-        if (GameAPI.getInstance().getKitManager() != null) {
+        if (KitManager.getKitManager(gamePlayer.getPlayerData().getGame()) != null) {
             MessageManager.get(player, "inventory.teleporter.kit")
                     .replace("%kit%", (PlayerManager.getGamePlayer(target).getPlayerData().getKit()) != null ? PlayerManager.getGamePlayer(target).getPlayerData().getKit().getName() : MessageManager.get(player, "word.none_kit").getTranslated())
                     .addToItemLore(inf);

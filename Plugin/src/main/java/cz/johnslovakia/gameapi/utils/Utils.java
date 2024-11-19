@@ -10,11 +10,14 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.PotionMeta;
@@ -28,6 +31,27 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 public class Utils {
+
+    public static int getRandom(int lower, int upper) {
+        Random random = new Random();
+        return random.nextInt((upper - lower) + 1) + lower;
+    }
+
+    public static void spawnFireworks(Location location, int amount, Color color, FireworkEffect.Type type){
+        Firework fw = (Firework) location.getWorld().spawnEntity(location, EntityType.FIREWORK_ROCKET);
+        FireworkMeta fwm = fw.getFireworkMeta();
+
+        fwm.setPower(2);
+        fwm.addEffect(FireworkEffect.builder().withColor(color).flicker(true).with(type).build());
+        fw.setFireworkMeta(fwm);
+        fw.detonate();
+
+        for(int i = 0;i < amount; i++){
+            Firework fw2 = (Firework) location.getWorld().spawnEntity(location, EntityType.FIREWORK_ROCKET);
+            fw2.setFireworkMeta(fwm);
+        }
+    }
+
 
     public static void levitatePlayer(Player player, int level, int blocks) {
         double duration = (blocks / (0.9 + 0.9 * level)) * 20;

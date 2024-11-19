@@ -54,8 +54,6 @@ public class GameAPI extends JavaPlugin {
     private Minigame minigame;
 
     @Setter
-    private KitManager kitManager;
-    @Setter
     private CosmeticsManager cosmeticsManager;
     @Setter
     private PerkManager perkManager;
@@ -392,11 +390,6 @@ public class GameAPI extends JavaPlugin {
         }
 
 
-        if (getKitManager() != null){
-            Bukkit.getPluginManager().registerEvents(getKitManager(), this);
-            Bukkit.getPluginManager().registerEvents(new KitInventoryEditor(), this);
-            getCommand("saveinventory").setExecutor(new KitInventoryEditor.SaveCommand());
-        }
         if (getCosmeticsManager() != null){
             Bukkit.getPluginManager().registerEvents(getCosmeticsManager(), this);
         }

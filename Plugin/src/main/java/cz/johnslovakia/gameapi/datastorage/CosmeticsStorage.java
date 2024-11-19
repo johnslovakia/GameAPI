@@ -1,21 +1,13 @@
 package cz.johnslovakia.gameapi.datastorage;
 
-import com.google.common.reflect.TypeToken;
-import com.google.gson.Gson;
-import com.google.gson.JsonParseException;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsCategory;
-import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 

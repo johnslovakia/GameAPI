@@ -12,6 +12,7 @@ import java.util.*;
 
 public class PlayerManager {
 
+    @Getter
     public static final HashMap<UUID, GamePlayer> playerMap = new HashMap<>();
     @Getter
     public static final HashMap<Score, List<PlayerScore>> playerScores = new HashMap<>();

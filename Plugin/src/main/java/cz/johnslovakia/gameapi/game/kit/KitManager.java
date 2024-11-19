@@ -13,33 +13,65 @@ import org.bukkit.event.Listener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 
 @Getter
 public class KitManager implements Listener {
 
-    private String name;
-    private Economy economy;
+    private static final List<KitManager> kitManagers = new ArrayList<>();
 
-    private List<Kit> kits = new ArrayList<>();
+    public static void addKitManager(KitManager manager){
+        if (!kitManagers.contains(manager)){
+            kitManagers.add(manager);
+
+            Bukkit.getPluginManager().registerEvents(manager, GameAPI.getInstance());
+            Bukkit.getPluginManager().registerEvents(manager, GameAPI.getInstance());
+            Objects.requireNonNull(GameAPI.getInstance().getCommand("saveinventory")).setExecutor(new KitInventoryEditor.SaveCommand());
+        }
+    }
+
+    public static KitManager getKitManager(Game game){
+        for (KitManager kitManager : kitManagers.stream().filter(kitManager -> kitManager.getGame() != null).toList()){
+            if (kitManager.getGame().equals(game)){
+                return kitManager;
+            }
+        }
+        return kitManagers.get(0);
+    }
+
+
+    private Game game;
+    private final Economy economy;
+
+    private final List<Kit> kits = new ArrayList<>();
     @Setter
     private Kit defaultKit;
 
     private final boolean purchaseKitForever;
     private final boolean giveAfterDeath;
 
-    /** @param buyingForever If the boolean is "true", the player will buy kits forever,
-     * if the boolean is "false", the player will buy a kit for one game.
-     */
-    public KitManager(String name, Economy economy, boolean buyingForever, boolean giveAfterDeath) {
-        this.name = name;
+    public KitManager(Economy economy, boolean buyingForever, boolean giveAfterDeath) {
         this.economy = economy;
         this.purchaseKitForever = buyingForever;
         this.giveAfterDeath = giveAfterDeath;
-        GameAPI.getInstance().setKitManager(this);
 
         GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
         GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
+
+        addKitManager(this);
+    }
+
+    public KitManager(Game game, Economy economy, boolean buyingForever, boolean giveAfterDeath) {
+        this.game = game;
+        this.economy = economy;
+        this.purchaseKitForever = buyingForever;
+        this.giveAfterDeath = giveAfterDeath;
+
+        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
+        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
+
+        addKitManager(this);
     }
 
     public boolean hasKitPermission(GamePlayer gamePlayer, Kit kit){

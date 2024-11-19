@@ -23,19 +23,11 @@ public class MessageManager {
     }
 
     public static void addMessage(String name, String message){
+        Map<Language, String> map = messages.computeIfAbsent(name, k -> new HashMap<>());
         for (Language language : Language.getLanguages()) {
-            Map<Language, String> map = new HashMap<>();
-            map.put(language, message);
-            messages.put(name, map);
+            map.putIfAbsent(language, message);
         }
-    }
-
-    public static String get(Language language, String key){
-        if (!existMessage(key) && messages.get(key).get(language) == null){
-            return "§cNo translation found for message key: " + key + " (Language: " + language.getName() + ")";
-        }else{
-            return messages.get(key).get(language);
-        }
+        messages.put(name, map);
     }
 
     public static Message get(Player player, String key){
@@ -48,6 +40,14 @@ public class MessageManager {
 
     public static Message get(List<GamePlayer> audience, String key){
         return new Message(audience, key);
+    }
+
+    public static String get(Language language, String key){
+        if (!existMessage(key) && messages.get(key).get(language) == null){
+            return "§cNo translation found for message key: " + key + " (Language: " + language.getName() + ")";
+        }else{
+            return messages.get(key).get(language);
+        }
     }
 
     public static Map<Language, String> getMessages(String key){

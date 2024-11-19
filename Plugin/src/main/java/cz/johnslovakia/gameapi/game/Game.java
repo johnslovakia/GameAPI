@@ -6,6 +6,7 @@ import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.economy.RewardsManager;
 import cz.johnslovakia.gameapi.events.*;
 import cz.johnslovakia.gameapi.game.kit.Kit;
+import cz.johnslovakia.gameapi.game.kit.KitManager;
 import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.game.map.MapVotesComparator;
 import cz.johnslovakia.gameapi.game.team.GameTeam;
@@ -37,33 +38,40 @@ import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.boss.KeyedBossBar;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @Getter
 public class Game {
 
     private final String name;
     private String ID;
-    @Getter @Setter
-    private MapManager mapManager;
     private GameState state = GameState.LOADING;
-    @Getter @Setter
+    @Setter
     private Task runningMainTask;
     private final Location lobbyPoint;
-    @Getter @Setter
+    @Setter
     private InventoryManager lobbyInventory;
-    @Getter @Setter
+    @Setter
     private SpectatorManager spectatorManager;
-    @Getter @Setter
+    @Setter
     private boolean firstGameKill = true;
 
     private Winner winner;
+
+    @Setter
+    private MapManager mapManager;
 
     private final List<GamePlayer> participants = new ArrayList<>();
     private final List<Block> placedBlocks = new ArrayList<>();
@@ -81,7 +89,34 @@ public class Game {
             this.ID = StringUtils.randomString(6, true, true, false);
         }
 
+        if (getSettings().isChooseRandomMap()){
+            selectRandomMap();
+        }
+
         state = GameState.WAITING;
+    }
+
+    int animationTick = 0;
+    public void updateWaitingForPlayersBossBar(){
+        for (GamePlayer gamePlayer : getParticipants()){
+            BossBar bossBar = (BossBar) gamePlayer.getMetadata().get("bossbar.waiting_for_players");
+            if (bossBar == null){
+                bossBar = Bukkit.createBossBar("", BarColor.WHITE , BarStyle.SOLID);
+                bossBar.setVisible(true);
+                bossBar.addPlayer(gamePlayer.getOnlinePlayer());
+                gamePlayer.getMetadata().put("bossbar.waiting_for_players", bossBar);
+            }
+
+            String[] dotPatterns = {"", ".", "..", "..."};
+            animationTick = (animationTick + 1) % dotPatterns.length;
+            String dots = dotPatterns[animationTick];
+
+            bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.waiting_for_players")
+                    .replace("%online%", "" + getParticipants().size())
+                    .replace("%required%", "" + getSettings().getMinPlayers())
+                    .replace("...", dots)
+                    .getTranslated());
+        }
     }
 
 
@@ -93,7 +128,6 @@ public class Game {
         }*/
 
         MinigameSettings settings = getSettings();
-
 
 
         if (getState().equals(GameState.WAITING)
@@ -133,12 +167,23 @@ public class Game {
             getParticipants().add(gamePlayer);
             gamePlayer.getPlayerData().setGame(this);
 
+            if (getParticipants().size() == 1){
+                Bukkit.getScheduler().runTaskTimer(GameAPI.getInstance(), task -> {
+                    if (!getState().equals(GameState.WAITING) || getParticipants().isEmpty()){
+                        task.cancel();
+                        return;
+                    }
+                    updateWaitingForPlayersBossBar();
+                }, 0, 30L);
+            }
+
             Utils.hideAndShowPlayers(gamePlayer);
 
             MessageManager.get(getParticipants(), "chat.join")
                     .replace("%prefix%", gamePlayer.getPlayerData().getPrefix())
                     .replace("%player%", gp -> (gp.getFriends().isFriendWith(gamePlayer) || gp.getParty().getAllOnlinePlayers().contains(gamePlayer) ? "§6" : "") + player.getName())
                     .replace("%players%", String.valueOf(getPlayers().size()))
+                    .replace("%max_players%", "" + getSettings().getMaxPlayers())
                     .add("Ẅ", gp -> gp.getFriends().isFriendWith(gamePlayer))
                     .add("ẅ", gp -> gp.getParty().getAllOnlinePlayers().contains(gamePlayer))
                     .send();
@@ -150,10 +195,7 @@ public class Game {
             player.setGameMode(GameMode.ADVENTURE);
             player.teleport(lobbyPoint);
 
-            /*Kit defaultKit = gamePlayer.getPlayerData().getDefaultKit();
-            if (defaultKit != null) {
-                defaultKit.select(gamePlayer);
-            }*/ //v PlayerData.java
+
 
             player.getInventory().clear();
             if (getLobbyInventory() != null){
@@ -162,7 +204,7 @@ public class Game {
 
 
             if (getPlayers().size() == settings.getMinPlayers()){
-                setState(GameState.STARTING); //TODO: starting
+                setState(GameState.STARTING);
                 Task task = new Task(this, "StartCountdown", getSettings().getStartingTime(), new StartCountdown(), GameAPI.getInstance());
                 task.setGame(this);
             }
@@ -245,6 +287,7 @@ public class Game {
                     .replace("%prefix%",  gamePlayer.getPlayerData().getPrefix())
                     .replace("%player%", gp -> (gp.getFriends() != null && gp.getFriends().isFriendWith(gamePlayer) || gp.getParty() != null && !gp.getParty().getAllOnlinePlayers().isEmpty() && gp.getParty().getAllOnlinePlayers().contains(gamePlayer) ? "§6" : "") + player.getName())
                     .replace("%players%", String.valueOf(getPlayers().size()))
+                    .replace("%max_players%", "" + getSettings().getMaxPlayers())
                     .add("Ẅ", gp -> gp.getFriends().isFriendWith(gamePlayer))
                     .add("ẅ", gp -> gp.getParty().getAllOnlinePlayers().contains(gamePlayer))
                     .send();
@@ -254,9 +297,9 @@ public class Game {
                 gamePlayer.getPlayerData().getTeam().quitPlayer(gamePlayer);
             }
 
-            //TODO: možná udělat jinak, aby se nemuseli načítat furt data, ale aby se smazali selectnuté kity,... a třeba votes
-            PlayerManager.removeGamePlayer(player);
-        }else if (getState() == GameState.INGAME || getState() == GameState.PREPARATION){
+            //PlayerManager.removeGamePlayer(player);
+            gamePlayer.getPlayerData().flushSomeData();
+        }else if (getState() == GameState.INGAME){
             if (!gamePlayer.isSpectator()){
                 gamePlayer.setType(GamePlayerType.DISCONNECTED);
                 player.damage(GameAPI.getInstance().getVersionSupport().getMaxPlayerHealth(player));
@@ -307,7 +350,7 @@ public class Game {
     }
 
     public void startPreparation(){
-        setState(GameState.PREPARATION);
+        setState(GameState.INGAME);
         prepareGame();
 
         GamePreparationEvent ev = new GamePreparationEvent(this);
@@ -315,7 +358,7 @@ public class Game {
 
 
         for (GamePlayer gamePlayer : getPlayers()){
-            gamePlayer.setEnabledMovement(false);
+            gamePlayer.setEnabledMovement(getSettings().isEnabledMovementInPreparation());
         }
 
         Task.cancel(this, "StartCountdown");
@@ -327,13 +370,9 @@ public class Game {
         boolean rejoin = gamePlayer.getType().equals(GamePlayerType.DISCONNECTED);
         Player player = gamePlayer.getOnlinePlayer();
 
-        player.setGameMode(GameMode.SURVIVAL);
-        player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue());
-        player.setLevel(0);
-        player.setExp(0);
-        player.setFireTicks(0);
-        player.setAllowFlight(false);
-        player.setFlying(false);
+        //TODO: jak na rounds... toto spoustět vždy na začátku v startPreparation a jen vynechat tu zprávu...
+
+        gamePlayer.resetAttributes();
 
         if (!rejoin) {
             player.sendMessage("");
@@ -379,7 +418,6 @@ public class Game {
 
         GameMap playingMap = getPlayingMap();
 
-        //TODO: check
         if (playingMap.getSettings().isLoadWorldWithGameAPI()) {
             String worldName = playingMap.getName() + "_" + getID();
             World world = Bukkit.getWorld(worldName);
@@ -401,28 +439,32 @@ public class Game {
         }
 
 
-        getPlayingMap().teleport(this);
-
 
         if (getSettings().isEnabledRespawning() && getSettings().useTeams()){
             TeamManager.getTeams(this).forEach(team -> team.setDead(false));
         }
 
-        for (GamePlayer gamePlayer : getPlayers()) {
-            preparePlayer(gamePlayer);
-        }
-
-
         getPlayingMap().getWorld().setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
 
-
+        getPlayingMap().teleport();
         for (GamePlayer gamePlayer : getPlayers()) {
+            preparePlayer(gamePlayer);
+
             if (GameAPI.useDecentHolograms()) {
                 StatsHolograms.remove(gamePlayer.getOnlinePlayer());
             }
         }
 
-        getMetadata().put("players_at_start", getPlayers().size());
+
+        Iterator<UUID> iterator = PlayerManager.getPlayerMap().keySet().iterator();
+        while (iterator.hasNext()) {
+            UUID uuid = iterator.next();
+            GamePlayer gamePlayer = PlayerManager.getPlayerMap().get(uuid);
+            if (!gamePlayer.isOnline() && gamePlayer.getPlayerData().getGame().equals(this)) {
+                iterator.remove();
+            }
+        }
+
     }
 
     public void startGame(){
@@ -431,12 +473,18 @@ public class Game {
         if (getSettings().isDefaultGameCountdown()) {
             Task task = new Task(this, "GameCountdown", getSettings().getGameTime(), new GameCountdown(), GameAPI.getInstance());
             task.setGame(this);
+
+            if (getSettings().getRounds() > 1){
+                task.setRestartCount(getSettings().getRounds() - 1);
+            }
         }
 
         if (!getSettings().usePreperationTask()){
             Task.cancel(this, "StartCountdown");
             prepareGame();
         }
+
+        getMetadata().put("players_at_start", getPlayers().size());
 
         GameStartEvent ev = new GameStartEvent(this);
         Bukkit.getPluginManager().callEvent(ev);
@@ -511,6 +559,32 @@ public class Game {
                             .replace("%winner%", (winner.getWinnerType().equals(Winner.WinnerType.PLAYER) ? MessageManager.get(gamePlayer, "winnerType.player") + " " : ((GameTeam) winner).getChatColor()) + winner.getWinnerType().getTranslatedName(gamePlayer) + (winner.getWinnerType().equals(Winner.WinnerType.TEAM) ? " " + MessageManager.get(gamePlayer, "winnerType.team") : ""))
                             .send();
                 }
+
+
+                Location location;
+                if (getSettings().isTeleportPlayersAfterEnd()){
+                    location = getLobbyPoint();
+                }else{
+                    location = getPlayingMap().getMainArea().getCenter();
+                }
+                new BukkitRunnable(){
+                    @Override
+                    public void run() {
+                        if (getState() != GameState.ENDING){
+                            this.cancel();
+                            return;
+                        }
+                        location.add(Utils.getRandom(-20, 20), 0, Utils.getRandom(-20, 20));
+
+                        Utils.spawnFireworks(location, 1, Color.WHITE, FireworkEffect.Type.BALL);
+                        Color color = Color.YELLOW;
+                        if (getSettings().isUseTeams()){
+                            color = ((GameTeam) getWinner()).getColor();
+                        }
+                        Utils.spawnFireworks(location, 1, color, FireworkEffect.Type.BALL);
+                    }
+                }.runTaskTimer(GameAPI.getInstance(), 0L, 40L);
+
             }
 
 
@@ -553,17 +627,7 @@ public class Game {
         }
 
         for (GamePlayer gamePlayer : getParticipants()){
-            //TODO: check
-            new BukkitRunnable(){
-                @Override
-                public void run() {
-                    try{
-                        gamePlayer.getPlayerData().saveAll();
-                    } catch (Exception e){
-                        e.printStackTrace();
-                    }
-                }
-            }.runTaskAsynchronously(GameAPI.getInstance());
+            Bukkit.getScheduler().runTaskAsynchronously(GameAPI.getInstance(), bukkitTask -> gamePlayer.getPlayerData().saveAll());
         }
 
 
@@ -785,6 +849,18 @@ public class Game {
             }
             if (i == playingArenas) break;
         }
+    }
+
+    public GameMap selectRandomMap() {
+        List<GameMap> ar = new ArrayList<>();
+        for (GameMap a : getMapManager().getMaps()) {
+            if (!a.isIngame()) continue;
+            ar.add(a);
+        }
+        GameMap a = ar.get(new Random().nextInt(ar.size()));
+        a.setWinned(true);
+        a.setPlaying(true);
+        return a;
     }
 
     public GameMap nextArena() {

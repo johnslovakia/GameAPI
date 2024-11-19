@@ -5,22 +5,34 @@ import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
-import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.Sounds;
+import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public interface Cosmetic {
+import java.util.function.Consumer;
 
-    String getName();
-    ItemStack getIcon();
-    int getPrice();
-    CosmeticRarity getRarity();
-    void execute(Location location);
+@Getter
+public class Cosmetic {
 
-    default void select(GamePlayer gamePlayer){
+    private final String name;
+    private final ItemStack icon;
+    private final int price;
+    private final CosmeticRarity rarity;
+
+    private Consumer<GamePlayer> gamePlayerConsumer;
+    private Consumer<Location> locationConsumer;
+
+    public Cosmetic(String name, ItemStack icon, int price, CosmeticRarity rarity) {
+        this.name = name;
+        this.icon = icon;
+        this.price = price;
+        this.rarity = rarity;
+    }
+
+    public void select(GamePlayer gamePlayer){
         Player player = gamePlayer.getOnlinePlayer();
 
         if (GameAPI.getInstance().getCosmeticsManager().hasSelected(gamePlayer, this)) {
@@ -37,7 +49,7 @@ public interface Cosmetic {
         player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 10.0F, 10.0F);
     }
 
-    default void purchase(GamePlayer gamePlayer){
+    public void purchase(GamePlayer gamePlayer){
         if (GameAPI.getInstance().getCosmeticsManager().hasPlayer(gamePlayer, this)){
             return;
         }
@@ -64,5 +76,16 @@ public interface Cosmetic {
                 .send();
         //gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer().getLocation(), Sounds.LEVEL_UP.bukkitSound(), 10.0F, 10.0F); - už u select
         select(gamePlayer);
+    }
+
+
+    public Cosmetic setGamePlayerConsumer(Consumer<GamePlayer> gamePlayerConsumer) {
+        this.gamePlayerConsumer = gamePlayerConsumer;
+        return this;
+    }
+
+    public Cosmetic setLocationConsumer(Consumer<Location> locationConsumer) {
+        this.locationConsumer = locationConsumer;
+        return this;
     }
 }

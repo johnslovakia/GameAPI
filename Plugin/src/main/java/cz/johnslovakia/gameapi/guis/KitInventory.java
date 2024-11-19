@@ -26,10 +26,11 @@ public class KitInventory implements Listener {
                 .title("七七七七七七七七ㆺ")
                 .rows(6)
                 .prepare((gui, player) -> {
-                    KitManager kitManager = GameAPI.getInstance().getKitManager();
-                    Economy economy = kitManager.getEconomy();
                     PlayerData playerData = gamePlayer.getPlayerData();
                     Game game = playerData.getGame();
+                    KitManager kitManager = KitManager.getKitManager(game);
+
+                    Economy economy = kitManager.getEconomy();
                     int balance = playerData.getBalance(economy);
 
                     ItemBuilder close = new ItemBuilder(Material.MAP);
@@ -66,7 +67,7 @@ public class KitInventory implements Listener {
                                 // Assign components to container
                                 Element spacerElement = Component.element(reset.toItemStack()).addClick(i -> {
                                     if (playerData.getKit() != null) {
-                                        playerData.getKit().unselect(gamePlayer);
+                                        playerData.getKit().unselect(gamePlayer, false);
                                         if (kitManager.getDefaultKit() != null){
                                             kitManager.getDefaultKit().select(gamePlayer);
                                         }

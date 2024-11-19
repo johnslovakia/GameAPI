@@ -23,6 +23,7 @@ public class MinigameSettings {
     private boolean enabledReJoin = false;
     private boolean enabledSpectating = true;
     private boolean enabledJoiningAfterStart = false;
+    private boolean enabledMovementInPreparation = false;
 
     private int maxPlayers = 16;
     private int minPlayers = 12;
@@ -35,6 +36,7 @@ public class MinigameSettings {
     private int gameTime = 3600;
     private int preparationTime = 4;
     private int respawnCooldown = -1;
+    private int rounds = 0;
 
     public boolean useTeams() {
         return useTeams;

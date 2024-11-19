@@ -37,7 +37,6 @@ public class GameManager {
     public static void newArena(Player player, boolean sendToLobbyIfNoArena) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
-
         NewArenaEvent ev = new NewArenaEvent(PlayerManager.getGamePlayer(player));
         Bukkit.getPluginManager().callEvent(ev);
 
@@ -122,9 +121,6 @@ public class GameManager {
                 GamePlayer gamePlayer = game.getParticipants().get(i);
                 Player player = gamePlayer.getOnlinePlayer();
 
-                //gamePlayer.getGame().leavePlayer(player);
-                //gamePlayer.setGame(null);
-
                 if (gamePlayer.getOnlinePlayer().isOnline()) {
                     players.add(player);
                 }
@@ -148,9 +144,7 @@ public class GameManager {
 
         if (!players.isEmpty()) {
             for (Player player : players) {
-                //game.leavePlayer(player);
                 GameManager.newArena(player, true);
-                //newGame.joinPlayer(player);
             }
         }
     }

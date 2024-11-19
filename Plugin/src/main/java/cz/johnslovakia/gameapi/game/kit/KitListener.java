@@ -34,7 +34,7 @@ public class KitListener implements Listener {
         }
 
 
-        if (GameAPI.getInstance().getKitManager().isGiveAfterDeath()) {
+        if (KitManager.getKitManager(game).isGiveAfterDeath()) {
             player.getInventory().setContents(data.getKitInventories().get(kit) != null ? data.getKitInventories().get(kit).getContents() : kit.getContent().getInventory().getContents());
             //player.getInventory().setArmorContents(kit.getContent().getArmor().toArray(new ItemStack[0]));
             Utils.colorizeArmor(gamePlayer);

@@ -36,8 +36,6 @@ public class QuestManager {
                     GameAPI.getInstance().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() {
                     }, EventPriority.NORMAL, (listener, event) -> onEventCall(quest, event), GameAPI.getInstance());
                 }
-
-                //TODO: uložení do databáze, v Json souboru budou překlady
             }
         }
     }
@@ -108,7 +106,7 @@ public class QuestManager {
         LocalDate now = LocalDate.now();
 
         if (questData.getCompletionDate() == null){
-            return false; //TODO: check
+            return false;
         }
 
         if (questData.getQuest().getType().equals(QuestType.DAILY)){

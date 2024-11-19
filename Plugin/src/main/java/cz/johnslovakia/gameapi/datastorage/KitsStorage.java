@@ -1,6 +1,5 @@
 package cz.johnslovakia.gameapi.datastorage;
 
-import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
 import cz.johnslovakia.gameapi.game.kit.Kit;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.BukkitSerialization;
@@ -8,7 +7,6 @@ import org.bukkit.inventory.Inventory;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.List;
 import java.util.Map;
 
 public class KitsStorage {

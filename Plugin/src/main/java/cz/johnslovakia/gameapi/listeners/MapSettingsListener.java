@@ -87,7 +87,7 @@ public class MapSettingsListener implements Listener {
                 }
             }else if(e.getEntityType().equals(EntityType.FIREBALL)){
                 if(!settings.canGhastFireballExplosion()) e.setCancelled(true);
-            }else if(e.getEntityType().equals(EntityType.TNT)){ //TODO: nms - 1.8 PRIMED_TNT
+            }else if(e.getEntityType().equals(EntityType.TNT)){
                 if(!settings.canTNTExplosion()) e.setCancelled(true);
             }else{
                 if(!settings.canOtherExplosion()) e.setCancelled(true);
@@ -301,7 +301,6 @@ public class MapSettingsListener implements Listener {
     }
 
 
-    //TODO: look
     @EventHandler(priority = EventPriority.LOWEST)
     public void blockPlace(BlockPlaceEvent e){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
@@ -318,7 +317,6 @@ public class MapSettingsListener implements Listener {
     }
 
 
-    //TODO: look
     @EventHandler(priority = EventPriority.LOWEST)
     public void blockBreak(BlockBreakEvent e){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());

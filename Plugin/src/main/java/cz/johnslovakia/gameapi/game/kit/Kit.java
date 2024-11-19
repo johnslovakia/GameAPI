@@ -80,11 +80,17 @@ public interface Kit {
     }
 
     default void unselect(GamePlayer gamePlayer) {
+        unselect(gamePlayer, true);
+    }
+
+    default void unselect(GamePlayer gamePlayer, boolean message) {
         gamePlayer.getPlayerData().setKit((getKitManager().getDefaultKit() != null ? getKitManager().getDefaultKit() : null));
 
-        MessageManager.get(gamePlayer, "chat.kit.unselected")
-                .replace("%kit%", getName())
-                .send();
+        if (message) {
+            MessageManager.get(gamePlayer, "chat.kit.unselected")
+                    .replace("%kit%", getName())
+                    .send();
+        }
     }
 
     default void select(GamePlayer gamePlayer) {
@@ -97,6 +103,12 @@ public interface Kit {
 
         if (balance >= getPrice()|| kitManager.hasKitPermission(gamePlayer, this) || gamePlayer.getPlayerData().getPurchasedKitsThisGame().contains(this)) {
             if (gamePlayer.hasKit()){
+                if (gamePlayer.getPlayerData().getKit().equals(this)){
+                    MessageManager.get(gamePlayer, "chat.kit.already_selected")
+                            .send();
+                    return;
+                }
+
                 gamePlayer.getPlayerData().setKit(null);
             }
             if (kitManager.getDefaultKit() != this) {

@@ -1,16 +1,11 @@
 package cz.johnslovakia.gameapi.datastorage;
 
-import cz.johnslovakia.gameapi.GameAPI;
-import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
-import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsCategory;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.quests.PlayerQuestData;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class QuestsStorage {
 
