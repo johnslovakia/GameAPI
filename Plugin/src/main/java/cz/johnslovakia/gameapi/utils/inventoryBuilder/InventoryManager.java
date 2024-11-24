@@ -64,6 +64,9 @@ public class InventoryManager implements Listener {
         Action action = e.getAction();
         ItemStack item = e.getItem();
 
+        if (!players.contains(player)) {
+            return;
+        }
         if (item == null){
             return;
         }
@@ -71,29 +74,24 @@ public class InventoryManager implements Listener {
             e.setCancelled(true);
             return;
         }
-        if (!players.contains(player)) {
+        if (item.getType().equals(Material.AIR) || !item.hasItemMeta()){
+            return;
+        }
+        if (!item.getItemMeta().hasDisplayName()){
             return;
         }
         if (!(action == Action.RIGHT_CLICK_BLOCK || action == Action.RIGHT_CLICK_AIR)) {
             return;
         }
 
-        if (item.getType().equals(Material.AIR)){
-            return;
-        }
-
-        if (item.getItemMeta() == null){
-            return;
-        }
-        if (item.getItemMeta().getDisplayName() == null){
-            return;
-        }
 
         Item jItem = getItemByString(player, item.getItemMeta().getDisplayName());
         if (jItem == null){
             return;
         }
-        jItem.getConsumer().accept(e);
+
+        if (jItem.getConsumer() != null) jItem.getConsumer().accept(e);
+
         e.setCancelled(true);
 
     }
@@ -107,10 +105,10 @@ public class InventoryManager implements Listener {
             e.setCancelled(true);
             return;
         }
-        if (item.getItemStack().getItemMeta() == null){
+        if (!item.getItemStack().hasItemMeta()){
             return;
         }
-        if (item.getItemStack().getItemMeta().getDisplayName() == null){
+        if (!item.getItemStack().getItemMeta().hasDisplayName()){
             return;
         }
         if (!players.contains(player)){
@@ -124,6 +122,12 @@ public class InventoryManager implements Listener {
     }
 
     public void onItemDurabilityChange(PlayerItemDamageEvent e){
+        if (!e.getItem().hasItemMeta()){
+            return;
+        }
+        if (!e.getItem().getItemMeta().hasDisplayName()){
+            return;
+        }
         if (getItemByString(e.getItem().getItemMeta().getDisplayName()) != null){
             e.setCancelled(true);
         }
