@@ -12,8 +12,6 @@ import cz.johnslovakia.gameapi.datastorage.PlayerTable;
 import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.economy.EconomyInterface;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
-import cz.johnslovakia.gameapi.game.kit.KitInventoryEditor;
-import cz.johnslovakia.gameapi.game.kit.KitManager;
 import cz.johnslovakia.gameapi.game.perk.PerkManager;
 import cz.johnslovakia.gameapi.listeners.*;
 import cz.johnslovakia.gameapi.messages.Language;
@@ -40,7 +38,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
@@ -113,6 +110,7 @@ public class GameAPI extends JavaPlugin {
         pm.registerEvents(new PVPListener(), this);
         pm.registerEvents(new RespawnListener(), this);
         pm.registerEvents(new WorldListener(), this);
+        pm.registerEvents(new AntiAFK(), this);
 
         protocolManager = ProtocolLibrary.getProtocolManager();
 
