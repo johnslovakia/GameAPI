@@ -1,8 +1,8 @@
-package cz.johnslovakia.gameapi.game.kit;
+package cz.johnslovakia.gameapi.guis;
 
 import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GameAPI;
-import cz.johnslovakia.gameapi.guis.KitInventory;
+import cz.johnslovakia.gameapi.game.kit.Kit;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
@@ -16,7 +16,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.*;
@@ -24,11 +23,11 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.IntStream;
 
 public class KitInventoryEditor implements Listener {
 
@@ -61,7 +60,7 @@ public class KitInventoryEditor implements Listener {
 
 
     public static void openGUI(GamePlayer gamePlayer, Kit kit) {
-        Inventory gui = Bukkit.createInventory(null, 54, "Inventory Editor");
+        Inventory gui = Bukkit.createInventory(null, 54, "§f七七七七七七七七ㆾ");
 
         for (int i = 27; i <= 35; i++){
             gui.setItem(i, new ItemBuilder(XMaterial.GRAY_STAINED_GLASS_PANE.parseItem()).setName("").setLore(MessageManager.get(gamePlayer.getOnlinePlayer(), "inventory.set_kit_inventory.item.info").getTranslated()).toItemStack());
@@ -132,7 +131,7 @@ public class KitInventoryEditor implements Listener {
     public void onPlayerDropItem(PlayerDropItemEvent event) {
         InventoryView openInventory = event.getPlayer().getOpenInventory();
 
-        if (openInventory.getTitle().equalsIgnoreCase("Inventory Editor")) {
+        if (openInventory.getTitle().contains("ㆾ")) {
             event.setCancelled(true);
         }
     }
@@ -143,7 +142,7 @@ public class KitInventoryEditor implements Listener {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         ItemStack item = event.getCurrentItem();
 
-        if (event.getClickedInventory() == null || !player.getOpenInventory().getTitle().contains("Inventory Editor")){
+        if (event.getClickedInventory() == null || !player.getOpenInventory().getTitle().contains("ㆾ")){
             return;
         }
         if (!event.getClickedInventory().equals(player.getOpenInventory().getTopInventory())){
@@ -240,7 +239,7 @@ public class KitInventoryEditor implements Listener {
                 return;
             }
             if (!event.getInventory().getType().equals(InventoryType.PLAYER)
-                    && !player.getOpenInventory().getTitle().contains("Inventory Editor")){
+                    && !player.getOpenInventory().getTitle().contains("ㆾ")){
                 return;
             }
 
@@ -252,9 +251,19 @@ public class KitInventoryEditor implements Listener {
             }
 
 
-            gamePlayer.getMetadata().put("set_kit_inventory.inventory", event.getInventory());
 
             Kit kit = (Kit) gamePlayer.getMetadata().get("set_kit_inventory.kit");
+
+
+            Inventory oldLayout = gamePlayer.getPlayerData().getKitInventory(kit);
+            Inventory notSavedLayout = getCopyOfInventory(event.getInventory(), kit, (gamePlayer.getMetadata().get("set_kit_inventory.autoArmor") == null || (boolean) gamePlayer.getMetadata().get("set_kit_inventory.autoArmor")));
+            if (oldLayout.getSize() == notSavedLayout.getSize() && IntStream.range(0, oldLayout.getSize()).allMatch(i -> Objects.equals(oldLayout.getItem(i), notSavedLayout.getItem(i)))){
+                return;
+            }
+
+            gamePlayer.getMetadata().put("set_kit_inventory.inventory", event.getInventory());
+
+
             MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory")
                     .replace("%kit%", kit.getName())
                     .send();
