@@ -4,6 +4,7 @@ import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.game.Game;
+import cz.johnslovakia.gameapi.guis.KitInventoryEditor;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,7 +27,7 @@ public class KitManager implements Listener {
             kitManagers.add(manager);
 
             Bukkit.getPluginManager().registerEvents(manager, GameAPI.getInstance());
-            Bukkit.getPluginManager().registerEvents(manager, GameAPI.getInstance());
+            Bukkit.getPluginManager().registerEvents(new KitInventoryEditor(), GameAPI.getInstance());
             Objects.requireNonNull(GameAPI.getInstance().getCommand("saveinventory")).setExecutor(new KitInventoryEditor.SaveCommand());
         }
     }
@@ -86,7 +87,7 @@ public class KitManager implements Listener {
     public void registerKit(Kit... kits) {
         for (Kit kit : kits) {
             if (getKit(kit.getName()) != null) {
-                return;
+                continue;
             }
             this.kits.add(kit);
         }

@@ -67,7 +67,7 @@ public class QuestInventory {
         PlayerData data = gamePlayer.getPlayerData();
 
         GUI inventory = Component.gui()
-                .title("Perks")
+                .title("§f七七七七七七七七ㆼ")
                 .rows(2)
                 .prepare((gui, player) -> {
                     ItemBuilder close = new ItemBuilder(Material.MAP);

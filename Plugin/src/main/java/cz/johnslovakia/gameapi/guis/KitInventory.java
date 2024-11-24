@@ -1,12 +1,10 @@
 package cz.johnslovakia.gameapi.guis;
 
 import com.cryptomorin.xseries.XEnchantment;
-import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.economy.Economy;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.game.kit.Kit;
-import cz.johnslovakia.gameapi.game.kit.KitInventoryEditor;
 import cz.johnslovakia.gameapi.game.kit.KitManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
@@ -23,12 +21,12 @@ public class KitInventory implements Listener {
 
     public static void openKitInventory(GamePlayer gamePlayer) {
         GUI inventory = Component.gui()
-                .title("七七七七七七七七ㆺ")
-                .rows(6)
+                .title("§f七七七七七七七七ㆺ")
+                .rows(3)
                 .prepare((gui, player) -> {
                     PlayerData playerData = gamePlayer.getPlayerData();
                     Game game = playerData.getGame();
-                    KitManager kitManager = KitManager.getKitManager(game);
+                    KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
 
                     Economy economy = kitManager.getEconomy();
                     int balance = playerData.getBalance(economy);
@@ -61,7 +59,7 @@ public class KitInventory implements Listener {
                     gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> gui.close(player)).build());
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
 
-                    gui.setContainer(47, Component.staticContainer()
+                    gui.setContainer(20, Component.staticContainer()
                             .size(5, 1)
                             .init(container -> {
                                 // Assign components to container
@@ -83,7 +81,7 @@ public class KitInventory implements Listener {
 
 
                     gui.setContainer(9, Component.staticContainer()
-                            .size(9, 4)
+                            .size(9, 1)
                             .init(container -> {
                                 for (Kit kit : kitManager.getKits()) {
                                     if (kitManager.getDefaultKit() != null && kitManager.getDefaultKit().equals(kit)) {
@@ -109,7 +107,7 @@ public class KitInventory implements Listener {
                                                 .replace("%economy_name%", economy.getName())
                                                 .addToItemLore(item);
                                     } else if ((playerData.getGame().getSettings().isEnabledChangingKitAfterStart() /*&& kitManager.getPurchasedThisGame().contains(gamePlayer)*/) //TODO: purchasedThisGame
-                                            || (kit.getKitManager().isPurchaseKitForever() && kitManager.hasKitPermission(gamePlayer, kit))) {
+                                            || (kitManager.isPurchaseKitForever() && kitManager.hasKitPermission(gamePlayer, kit))) {
                                         MessageManager.get(player, "inventory.kit.purchased_for")
                                                 .replace("%price%", (kit.getPrice() == 0 ? "" + 0 : "" + kit.getPrice()))
                                                 .replace("%economy_name%", economy.getName())
@@ -129,7 +127,7 @@ public class KitInventory implements Listener {
                                         MessageManager.get(player, "inventory.kit.selected")
                                                 .addToItemLore(item);
                                     } else if ((playerData.getGame().getSettings().isEnabledChangingKitAfterStart() /*&& kit.getPurchasedThisGame().contains(gamePlayer)*/) //TODO: purchasedThisGame
-                                            || (kit.getKitManager().isPurchaseKitForever() && kitManager.hasKitPermission(gamePlayer, kit))
+                                            || (kitManager.isPurchaseKitForever() && kitManager.hasKitPermission(gamePlayer, kit))
                                             || player.hasPermission("kits.free")) {
                                         MessageManager.get(player, "inventory.kit.select")
                                                 .addToItemLore(item);
@@ -139,7 +137,7 @@ public class KitInventory implements Listener {
 
 
                                     if (playerData.getDefaultKit() == null) {
-                                        if (kit.getKitManager().isPurchaseKitForever()) {
+                                        if (kitManager.isPurchaseKitForever()) {
                                             if (kitManager.hasKitPermission(gamePlayer, kit)) {
                                                 MessageManager.get(player, "inventory.kit.default_kit.select")
                                                         .addToItemLore(item);
@@ -182,8 +180,8 @@ public class KitInventory implements Listener {
                                             }
 
 
-                                            if (kit.getKitManager().isPurchaseKitForever()) {
-                                                if (!kit.getKitManager().hasKitPermission(gamePlayer, kit)) {
+                                            if (kitManager.isPurchaseKitForever()) {
+                                                if (!kitManager.hasKitPermission(gamePlayer, kit)) {
                                                     player.playSound(player.getLocation(), Sounds.ANVIL_BREAK.bukkitSound(), 20.0F, 20.0F);
                                                     MessageManager.get(player, "chat.kit.default_kit.must_have_purchased")
                                                             .send();

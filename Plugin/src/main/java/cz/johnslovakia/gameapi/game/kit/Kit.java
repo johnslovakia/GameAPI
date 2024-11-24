@@ -17,14 +17,13 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 public interface Kit {
 
-    KitManager getKitManager();
     String getName();
     int getPrice();
     ItemStack getIcon();
     KitContent getContent();
 
     default void activate(GamePlayer gamePlayer) {
-        KitManager kitManager = getKitManager();
+        KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
 
         Player player = gamePlayer.getOnlinePlayer();
         Game game = gamePlayer.getPlayerData().getGame();
@@ -84,7 +83,8 @@ public interface Kit {
     }
 
     default void unselect(GamePlayer gamePlayer, boolean message) {
-        gamePlayer.getPlayerData().setKit((getKitManager().getDefaultKit() != null ? getKitManager().getDefaultKit() : null));
+        KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
+        gamePlayer.getPlayerData().setKit((kitManager.getDefaultKit() != null ? kitManager.getDefaultKit() : null));
 
         if (message) {
             MessageManager.get(gamePlayer, "chat.kit.unselected")
@@ -94,7 +94,7 @@ public interface Kit {
     }
 
     default void select(GamePlayer gamePlayer) {
-        KitManager kitManager = getKitManager();
+        KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
 
         Player player = gamePlayer.getOnlinePlayer();
         Economy economy = kitManager.getEconomy();
@@ -121,7 +121,7 @@ public interface Kit {
             KitSelectEvent ev = new KitSelectEvent(gamePlayer, this);
             Bukkit.getPluginManager().callEvent(ev);
         } else {
-            if (getKitManager().isPurchaseKitForever()){
+            if (kitManager.isPurchaseKitForever()){
                 return;
             }
             MessageManager.get(player, "chat.dont_have_enough")

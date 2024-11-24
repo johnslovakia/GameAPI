@@ -78,8 +78,8 @@ public class PerksInventory {
 
     public static void openGUI(GamePlayer gamePlayer){
         GUI inventory = Component.gui()
-                .title("Perks")
-                .rows(3)
+                .title("§f七七七七七七七七ㆻ")
+                .rows(2)
                 .prepare((gui, player) -> {
                     ItemBuilder close = new ItemBuilder(Material.MAP);
                     close.setCustomModelData(1010);
@@ -98,8 +98,8 @@ public class PerksInventory {
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
 
 
-                    gui.setContainer(10, Component.staticContainer()
-                            .size(7, 2)
+                    gui.setContainer(9, Component.staticContainer()
+                            .size(9, 1)
                             .init(container -> {
                                 for (Perk perk : GameAPI.getInstance().getPerkManager().getPerks()){
                                     Element element = Component.element(getEditedItem(gamePlayer, perk)).addClick(i -> {

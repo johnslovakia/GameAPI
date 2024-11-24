@@ -52,7 +52,7 @@ public class VotingInventory {
 
     public static void openGUI(GamePlayer gamePlayer){
         GUI inventory = Component.gui()
-                .title("Perks")
+                .title("§f七七七七七七七七ㆽ")
                 .rows(2)
                 .prepare((gui, player) -> {
                     ItemBuilder close = new ItemBuilder(Material.MAP);
@@ -71,8 +71,8 @@ public class VotingInventory {
                     gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> gui.close(player)).build());
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
 
-                    gui.setContainer(10, Component.staticContainer()
-                            .size(7, 1)
+                    gui.setContainer(9, Component.staticContainer()
+                            .size(9, 1)
                             .init(container -> {
 
                                 List<GameMap> maps = gamePlayer.getPlayerData().getGame().getMapManager().getMaps();
