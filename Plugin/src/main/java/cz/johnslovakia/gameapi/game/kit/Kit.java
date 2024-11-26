@@ -9,20 +9,58 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.GamePlayerType;
 import cz.johnslovakia.gameapi.users.PlayerData;
+import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.Utils;
+
+import lombok.Getter;
+import lombok.Setter;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public interface Kit {
+@Getter
+public class Kit implements Listener{
 
-    String getName();
-    int getPrice();
-    ItemStack getIcon();
-    KitContent getContent();
+    private final String name;
+    private final ItemStack icon;
+    private final int price;
 
-    default void activate(GamePlayer gamePlayer) {
+    @Setter
+    private KitContent content;
+
+    private boolean giveAfterDead = false;
+
+    public Kit(String name, ItemStack icon, int price) {
+        this.name = name;
+        this.icon = icon;
+        this.price = price;
+    }
+
+    public void addItem(ItemStack... items){
+        if (content == null) content = new KitContent();
+
+        for (ItemStack item : items){
+            content.addItem(item);
+        }
+    }
+
+    public Kit setGiveAfterDead(boolean giveAfterDead) {
+        this.giveAfterDead = giveAfterDead;
+        if (giveAfterDead){
+            PluginManager pm = Bukkit.getServer().getPluginManager();
+            pm.registerEvents(this, GameAPI.getInstance());
+        }
+
+        return this;
+    }
+
+    public void activate(GamePlayer gamePlayer) {
         KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
 
         Player player = gamePlayer.getOnlinePlayer();
@@ -37,12 +75,10 @@ public interface Kit {
         }
 
         player.getInventory().setContents(data.getKitInventories().get(this) != null ? data.getKitInventories().get(this).getContents() : getContent().getInventory().getContents());
-        //player.getInventory().setArmorContents(getContent().getArmor().toArray(new ItemStack[0]));
         Utils.colorizeArmor(gamePlayer);
 
         if (kitManager.getDefaultKit() != this) {
             if (getPrice() != 0) {
-
                 if (gamePlayer.getPlayerData().getPurchasedKitsThisGame().contains(this) || gamePlayer.getType().equals(GamePlayerType.DISCONNECTED)){
                     return;
                 }
@@ -78,11 +114,11 @@ public interface Kit {
         }
     }
 
-    default void unselect(GamePlayer gamePlayer) {
+    public void unselect(GamePlayer gamePlayer) {
         unselect(gamePlayer, true);
     }
 
-    default void unselect(GamePlayer gamePlayer, boolean message) {
+    public void unselect(GamePlayer gamePlayer, boolean message) {
         KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
         gamePlayer.getPlayerData().setKit((kitManager.getDefaultKit() != null ? kitManager.getDefaultKit() : null));
 
@@ -93,7 +129,7 @@ public interface Kit {
         }
     }
 
-    default void select(GamePlayer gamePlayer) {
+    public void select(GamePlayer gamePlayer) {
         KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
 
         Player player = gamePlayer.getOnlinePlayer();
@@ -131,7 +167,34 @@ public interface Kit {
         }
     }
 
-    default String getTranslationKey(){
+    @EventHandler
+    public void onRespawn(PlayerRespawnEvent e) {
+        Player player = e.getPlayer();
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        PlayerData data = gamePlayer.getPlayerData();
+        Game game = data.getGame();
+        Kit kit = data.getKit();
+
+        if (game.getState() != GameState.INGAME){
+            return;
+        }
+        if (kit == null || !kit.equals(this)){
+            return;
+        }
+
+        if (isGiveAfterDead()) {
+            new BukkitRunnable(){
+                @Override
+                public void run() {
+                    player.getInventory().setContents(data.getKitInventories().get(kit) != null ? data.getKitInventories().get(kit).getContents() : getContent().getInventory().getContents());
+                    Utils.colorizeArmor(gamePlayer);
+                }
+            }.runTaskLater(GameAPI.getInstance(), 2L);
+        }
+    }
+
+
+    public String getTranslationKey(){
         return "perk." + getName().toLowerCase().replace(" ", "_");
     }
 }
