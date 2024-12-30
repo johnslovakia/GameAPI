@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.utils;
 
+import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import cz.johnslovakia.gameapi.game.map.MapLocation;
 import org.bukkit.Location;
@@ -97,30 +98,15 @@ public class ConfigAPI {
         return Utils.getLocationString(fileConfig.getString(path));
     }
 
-    public MapLocation getMapLocation(String id, String path){
-        return getMapLocation(id, path, false);
+    public MapLocation getMapLocation(GameMap gameMap, String id, String path){
+        return getMapLocation(gameMap, id, path, false);
     }
 
-    public MapLocation getMapLocation(String id, String path, boolean yaw_and_pitch){
+    public MapLocation getMapLocation(GameMap gameMap, String id, String path, boolean yaw_and_pitch){
         if (fileConfig.get(path) == null) {
+            Logger.log("getMapLocation: Path '" + path + "' is null!", Logger.LogType.ERROR);
             return null;
         }
-        return Utils.getMapLocationFromString(id, fileConfig.getString(path), yaw_and_pitch);
+        return Utils.getMapLocationFromString(gameMap, id, fileConfig.getString(path), yaw_and_pitch);
     }
-
-    public MapLocation getLobbyPointGameLocation(String path, boolean load){
-        if (fileConfig.getString(path + ".World") == null){
-            Logger.log("Set up the LobbyPoint!", Logger.LogType.ERROR);
-            return null;
-        }
-
-        MapLocation mapLocation = Utils.getMapLocationFromString("lobbyPoint", fileConfig.getString(path), true);
-
-        if (load){
-            WorldManager.loadLobbyWorld(mapLocation.getWorldName());
-        }
-
-        return mapLocation;
-    }
-
 }

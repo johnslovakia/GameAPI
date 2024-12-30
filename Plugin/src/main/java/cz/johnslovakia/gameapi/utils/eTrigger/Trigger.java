@@ -21,15 +21,7 @@ public class Trigger<E extends Event> {
     private final Class<E> eventClass;
     private final Mapper<E> mapper;
     private final Predicate<E> validator;
-    //private final Function<? extends Number, ? extends Number> response;
     private final Consumer<GamePlayer> response;
-
-    /*public static <E> Function<E, List<GamePlayer>> wrapMapper(Function<E, GamePlayer> mapper) {
-        return element -> {
-            GamePlayer player = mapper.apply(element);
-            return player != null ? Collections.singletonList(player) : Collections.emptyList();
-        };
-    }*/
 
     public Trigger(Class<E> eventClass, Mapper<E> mapper) {
         Validate.notNull(eventClass, "eventClass cannot be null");

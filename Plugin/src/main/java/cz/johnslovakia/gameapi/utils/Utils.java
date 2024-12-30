@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.utils;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.game.Game;
+import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.game.map.MapLocation;
 import cz.johnslovakia.gameapi.game.team.GameTeam;
 import cz.johnslovakia.gameapi.messages.MessageManager;
@@ -9,6 +10,7 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
@@ -32,6 +34,11 @@ import java.util.*;
 
 public class Utils {
 
+    public static int getPrice(FileConfiguration config, String path, int defaultPrice){
+        int price = config.getInt(path);
+        return (price != 0 ? price : defaultPrice);
+    }
+
     public static int getRandom(int lower, int upper) {
         Random random = new Random();
         return random.nextInt((upper - lower) + 1) + lower;
@@ -50,6 +57,14 @@ public class Utils {
             Firework fw2 = (Firework) location.getWorld().spawnEntity(location, EntityType.FIREWORK_ROCKET);
             fw2.setFireworkMeta(fwm);
         }
+    }
+
+    public static boolean isPotion(ItemStack item) {
+        if (item == null || item.getType() == Material.AIR) {
+            return false;
+        }
+
+        return item.getType() == Material.POTION || item.getType() == Material.SPLASH_POTION || item.getType() == Material.LINGERING_POTION;
     }
 
 
@@ -98,7 +113,7 @@ public class Utils {
         return (world ? l.getWorld().getName() + ";": "") + l.getBlockX() + ";" + l.getBlockY() + ";" + l.getBlockZ() + ";" + l.getYaw() + ";" + l.getPitch();
     }
 
-    static public MapLocation getMapLocationFromString(String id, String s, boolean yaw_and_pitch) {
+    static public MapLocation getMapLocationFromString(GameMap gameMap, String id, String s, boolean yaw_and_pitch) {
         if (s == null || s.trim().isEmpty()) {
             return null;
         }
@@ -110,9 +125,9 @@ public class Utils {
             final float yaw =  Float.parseFloat(parts[3]);
             final float pitch =  Float.parseFloat(parts[4]);
             if (yaw_and_pitch) {
-                return new MapLocation(id, x, y, z, yaw, pitch);
+                return new MapLocation(gameMap, id, x, y, z, yaw, pitch);
             }else{
-                return new MapLocation(id, x, y, z);
+                return new MapLocation(gameMap, id, x, y, z);
             }
         }else if (parts.length == 6) {
             final String world = parts[0];
@@ -122,9 +137,9 @@ public class Utils {
             final float yaw =  Float.parseFloat(parts[4]);
             final float pitch =  Float.parseFloat(parts[5]);
             if (yaw_and_pitch) {
-                return new MapLocation(id, world, x, y, z, yaw, pitch);
+                return new MapLocation(gameMap, id, x, y, z, yaw, pitch);
             }else{
-                return new MapLocation(id, world, x, y, z);
+                return new MapLocation(gameMap, id, x, y, z);
             }
         }
         return null;
@@ -177,9 +192,11 @@ public class Utils {
             @Override
             public void run() {
                 Collections.shuffle(lobbies);
-                send(player, lobbies.get(0));
+                send(player, (lobbies.isEmpty() ? "Lobby" : lobbies.get(0)));
             }
         }.runTaskAsynchronously(GameAPI.getInstance());
+
+        Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> player.kickPlayer(MessageManager.get(player, "kick.offline_server").getTranslated()), 60L);
     }
 
     public static void send(Player player, String server) {
@@ -313,6 +330,10 @@ public class Utils {
     }
 
     public static void damagePlayer(Player player, double damage) {
+        if (PlayerManager.getGamePlayer(player).isSpectator()){
+            return;
+        }
+
         double points = Objects.requireNonNull(
                 player.getAttribute(Attribute.GENERIC_ARMOR)
         ).getValue();

@@ -5,9 +5,14 @@ import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.StringUtils;
+import cz.johnslovakia.gameapi.utils.Utils;
+import lombok.Getter;
+import lombok.Setter;
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.chat.ComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
@@ -23,8 +28,13 @@ public class Message {
     private final Map<GamePlayer, String> messages = new HashMap<>();
     private final List<AddToMessage> addToMessage = new ArrayList<>();
 
+    @Getter @Setter
+    private String font;
+    private final String key;
+
     public Message(List<GamePlayer> audience, String key) {
         this.audience = audience;
+        this.key = key;
 
         for (GamePlayer recipient : audience){
             Language language = recipient.getLanguage();
@@ -75,6 +85,14 @@ public class Message {
             addToMessage.add(new AddToMessage(message, validator, false));
         }
         return this;
+    }
+
+
+    public String getFontTextComponentJSON(String font){
+        if (audience.size() > 1){
+            return "§cIncorrect use of the 'getFontTextComponentJSON()' method! This method can only be used if you only want to get a message for one player.";
+        }
+        return StringUtils.getFontTextComponentJSON(getTranslated(), font);
     }
 
     public String getTranslated(){
@@ -193,6 +211,10 @@ public class Message {
                 }else {
                     GameAPI.getInstance().getUserInterface().sendTitle(player, finalMessage.toString(), null);
                 }
+            }
+
+            if (MessageManager.getLinkedRewardMessages().containsKey(key)){
+                MessageManager.getLinkedRewardMessages().get(key).sendMessage(recipient);
             }
         }
     }

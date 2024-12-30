@@ -1,19 +1,15 @@
-package cz.johnslovakia.gameapi.economy;
+package cz.johnslovakia.gameapi.users.resources;
 
-import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.users.PlayerScore;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.ChatColor;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-public class Economy {
+public class Resource {
 
-    public static List<Economy> economyList = new ArrayList<>();
+    public static List<Resource> resourceList = new ArrayList<>();
 
 
     @Getter
@@ -24,7 +20,7 @@ public class Economy {
     private int rank;
 
     @Getter @Setter
-    private EconomyInterface economyInterface;
+    private ResourceInterface resourceInterface;
 
 
     /**
@@ -35,36 +31,36 @@ public class Economy {
      * @param rank In case of multiple economies. Set the order in which Economy rewards
      *             are listed at the end of the game.
      */
-    public Economy(String name, ChatColor chatColor, int rank, EconomyInterface economyInterface) {
+    public Resource(String name, ChatColor chatColor, int rank, ResourceInterface resourceInterface) {
         this.name = name;
         this.chatColor = chatColor;
         this.rank = rank;
-        this.economyInterface = economyInterface;
+        this.resourceInterface = resourceInterface;
 
-        economyList.add(this);
+        resourceList.add(this);
     }
 
-    public Economy(String name, String img_char, ChatColor chatColor, int rank, EconomyInterface economyInterface) {
+    public Resource(String name, String img_char, ChatColor chatColor, int rank, ResourceInterface resourceInterface) {
         this.name = name;
         this.img_char = img_char;
         this.chatColor = chatColor;
         this.rank = rank;
-        this.economyInterface = economyInterface;
+        this.resourceInterface = resourceInterface;
 
-        economyList.add(this);
+        resourceList.add(this);
     }
 
-    public Economy(String name, ChatColor chatColor, int rank, boolean automatically, boolean forAllMinigames) {
+    public Resource(String name, ChatColor chatColor, int rank, boolean automatically, boolean forAllMinigames) {
         this.name = name;
         this.chatColor = chatColor;
         this.rank = rank;
         this.automatically = automatically;
         this.forAllMinigames = forAllMinigames;
 
-        economyList.add(this);
+        resourceList.add(this);
     }
 
-    public Economy(String name, String img_char, ChatColor chatColor, int rank, boolean automatically, boolean forAllMinigames) {
+    public Resource(String name, String img_char, ChatColor chatColor, int rank, boolean automatically, boolean forAllMinigames) {
         this.name = name;
         this.img_char = img_char;
         this.chatColor = chatColor;
@@ -72,17 +68,17 @@ public class Economy {
         this.automatically = automatically;
         this.forAllMinigames = forAllMinigames;
 
-        economyList.add(this);
+        resourceList.add(this);
     }
 
     @Getter
     private boolean automatically, forAllMinigames;
 
     /**
-     * @param forAllMinigames If is set to true, all minigames will have a linked economy.
+     * @param forAllMinigames If is set to true, all minigames will have a linked resource.
      *                        If is set to false, the Minigame Table must be assigned before executing this method.
      */
-    public void setEconomyAutomatically(boolean automatically, boolean forAllMinigames){
+    public void setAutomatically(boolean automatically, boolean forAllMinigames){
         this.automatically = automatically;
         this.forAllMinigames = forAllMinigames;
     }
@@ -92,14 +88,14 @@ public class Economy {
         return caps.substring(0, 1).toUpperCase() + caps.substring(1);
     }
 
-    public static List<Economy> getEconomies() {
-        return economyList;
+    public static List<Resource> getResources() {
+        return resourceList;
     }
 
-    public static Economy getEconomyByName(String name){
-        for (Economy economy : getEconomies()){
-            if (economy.getName().equalsIgnoreCase(name)){
-                return economy;
+    public static Resource getResourceByName(String name){
+        for (Resource resource : getResources()){
+            if (resource.getName().equalsIgnoreCase(name)){
+                return resource;
             }
         }
         return null;

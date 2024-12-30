@@ -2,20 +2,12 @@ package cz.johnslovakia.gameapi.game.perk;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.datastorage.Type;
-import cz.johnslovakia.gameapi.economy.Economy;
+import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
-import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 import lombok.Getter;
-import org.bukkit.event.Event;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 @Getter
 public class PerkManager {
@@ -23,11 +15,11 @@ public class PerkManager {
     private final String name;
 
     private final List<Perk> perks = new ArrayList<>();
-    private final Economy economy;
+    private final Resource resource;
 
-    public PerkManager(String name, Economy economy){
+    public PerkManager(String name, Resource resource){
         this.name = name;
-        this.economy = economy;
+        this.resource = resource;
 
         GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "Perks");
     }
@@ -36,10 +28,6 @@ public class PerkManager {
         for (Perk perk : perks) {
             if (!this.perks.contains(perk)) {
                 this.perks.add(perk);
-                for (Trigger<?> t : perk.getTriggers()) {
-                    GameAPI.getInstance().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() {
-                    }, EventPriority.NORMAL, (listener, event) -> onEventCall(perk, event), GameAPI.getInstance());
-                }
             }
         }
     }
@@ -53,60 +41,11 @@ public class PerkManager {
         return null;
     }
 
-    public PerkLevel getNextPlayerPerkLevel(GamePlayer gamePlayer, Perk perk){
-        PerkLevel currentLevel = Objects.requireNonNullElse(gamePlayer.getPlayerData().getPerkLevel(perk), perk.getLevels().get(0));
-        if (perk.getLevels().size() > currentLevel.level()) {
-            return perk.getLevels().get(currentLevel.level());
-        }
-        return null;
-    }
+    public PerkLevel getNextPlayerPerkLevel(GamePlayer gamePlayer, Perk perk) {
+        PerkLevel level = gamePlayer.getPlayerData().getPerkLevel(perk);
 
+        if (level == null) return perk.getLevels().get(0);
 
-    private boolean checkConditions(Perk perk, GamePlayer target) {
-        boolean result = true;
-        boolean alternativeResult = false;
-
-        for(Method method : perk.getClass().getDeclaredMethods()){
-
-            if(!method.isAnnotationPresent(Condition.class)) continue;
-            if(!method.getReturnType().equals(boolean.class))
-                if(method.getParameterCount() > 1) continue;
-            method.setAccessible(true);
-
-            Condition condition = method.getAnnotation(Condition.class);
-
-            boolean invokeResult = false;
-            try {
-                if (method.getParameterCount() == 0) {
-                    invokeResult = (boolean) method.invoke(perk);
-                } else {
-                    invokeResult = (boolean) method.invoke(perk, target);
-                }
-            } catch (InvocationTargetException | IllegalAccessException ignored) {
-            }
-
-            if(!condition.alternative()) {
-                result = (invokeResult == !condition.negate()) && result;
-            } else {
-                alternativeResult = (invokeResult && !condition.negate()) || alternativeResult;
-            }
-        }
-        return result || alternativeResult;
-    }
-
-    private void onEventCall(Perk perk, Event event){
-        for (Trigger<?> trigger : perk.getTriggers()) {
-            Class<? extends Event> clazz = trigger.getEventClass();
-            if (clazz.equals(event.getClass())) {
-                if (!trigger.validate(clazz.cast(event))) continue;
-                //GamePlayer gamePlayer = trigger.compute(clazz.cast(event));
-                for (GamePlayer gamePlayer : trigger.compute(clazz.cast(event))){
-                    if (checkConditions(perk, gamePlayer)) {
-                        trigger.getResponse().accept(gamePlayer);
-                        return;
-                    }
-                }
-            }
-        }
+        return level.level() < perk.getLevels().size() ? perk.getLevels().get(level.level()) : null;
     }
 }

@@ -1,30 +1,43 @@
 package cz.johnslovakia.gameapi.listeners;
 
+import com.cryptomorin.xseries.particles.ParticleDisplay;
+import com.cryptomorin.xseries.particles.XParticle;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.GamePlayerDeathEvent;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
+import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
+import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsCategory;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
+import cz.johnslovakia.gameapi.users.KillMessage;
+import cz.johnslovakia.gameapi.game.team.GameTeam;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.PlayerScore;
+import cz.johnslovakia.gameapi.utils.CharRepo;
 import cz.johnslovakia.gameapi.utils.Sounds;
 import cz.johnslovakia.gameapi.utils.StringUtils;
+import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import lombok.Getter;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.Bukkit;
+import org.bukkit.Particle;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.awt.*;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 @Getter
 public class PlayerDeathListener implements Listener {
@@ -44,6 +57,38 @@ public class PlayerDeathListener implements Listener {
         };
     }
 
+    public void eliminationBanner(GamePlayer killer, GamePlayer dead){
+        Player killerPlayer = killer.getOnlinePlayer();
+        try {
+            int nameWidth = CharRepo.getPixelWidth(dead.getOnlinePlayer().getName()) + /*head pixels + space*/ (8 + 5);
+            int needForName = (nameWidth >= 64 ? nameWidth - 64 : 64 - nameWidth) / 2;
+            String nameSpaces = StringUtils.calculateNegativeSpaces(needForName);
+
+            TextComponent background = new TextComponent("\uDAFF\uDFFB \uDAFF\uDFDDẍ");
+            background.setColor(ChatColor.of("#4e5c24"));
+            background.setFont("gameapi:actionbar_offset");
+
+            BaseComponent[] head = ChatHeadAPI.getInstance().getHead(dead.getOfflinePlayer(), true, ChatHeadAPI.defaultSource);
+
+            TextComponent banner = new TextComponent("\uDAFF\uDFFB \uDAFF\uDF9C\uDAFF\uDFD8Ẍ");
+            banner.setColor(ChatColor.WHITE);
+            banner.addExtra("\uDAFF\uDFCE\uDAFF\uDFF2" + nameSpaces);
+            Arrays.stream(head).toList().forEach(banner::addExtra);
+            banner.addExtra("\uDB00\uDC02§f" + dead.getOnlinePlayer().getName().toUpperCase());
+
+            background.addExtra(banner);
+            killerPlayer.spigot().sendMessage(ChatMessageType.ACTION_BAR, background);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+        //󏾜󏿘 vycentruje banner s background logicky
+        //pak vemu 64 mezery (délka textu elimination!) což zacentruje jméno na konec "elimination!",
+        // pak vemu délku jména a vypočítam kolik zbývá do 64, vydělím /2 zaokrouhlím a přidám výslednou negativní mezeru před jméno, výjde:
+        // /title @a actionbar {"text":"\u1E8D","color":"#4e5c24","font":"minecraft:actionbar_offset","extra":[{"text":"󏾜󏿘\u1E8C󏿗󏿵HUNZEK_","color":"white"}]}
+        ///title @a actionbar {"text":"󏿝\u1E8D","color":"#4e5c24","font":"minecraft:actionbar_offset","extra":[{"text":"󏾜󏿘\u1E8C󏿎󏿲󏿸DAMIANHRAJEEEE","color":"white"}]}
+    }
+
     @EventHandler
     public void onGamePlayerDeath(GamePlayerDeathEvent e) {
         GamePlayer gamePlayer = e.getGamePlayer();
@@ -54,7 +99,7 @@ public class PlayerDeathListener implements Listener {
 
         //TODO: Nějaký nastavení?
         CosmeticsManager cosmeticsManager = GameAPI.getInstance().getCosmeticsManager();
-        //CosmeticsCategory category = cosmeticsManager.getCategoryByName("Kill messages");
+        CosmeticsCategory killMessagesCategory = cosmeticsManager.getCategoryByName("Kill messages");
         //CosmeticsCategory killSoundsCategory = cosmeticsManager.getCategoryByName("Kill Sounds");
         //CosmeticsCategory killEffectCategory = cosmeticsManager.getCategoryByName("Kill Effects");
 
@@ -92,94 +137,25 @@ public class PlayerDeathListener implements Listener {
                 }.runTaskLater(GameAPI.getInstance(), 25 * 20L);
             }
 
-            if (e.getDmgCause().equals(EntityDamageEvent.DamageCause.PROJECTILE)){
-                //if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
-                    MessageManager.get(game.getParticipants(), "chat.kill")
-                            .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
-                            .replace("%killer%", killer.getOnlinePlayer().getName())
-                            .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
-                            .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
-                            .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
-                            .send();
-                //}else{
-                    //Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
-                    /*KillMessage message = Cosmetics.getKillMessage(cosmetic);
-                    if (message != null) {
-                        MessageManager.get(game.getParticipants(), message.getMessageKey(KillMessage.DeadCause.RANGED))
-                                .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
-                                .replace("%killer%", killer.getOnlinePlayer().getName())
-                                .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
-                                .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
-                                .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
-                                .send();
-                    }*/
-                //}
-            }else if (e.getDmgCause().equals(EntityDamageEvent.DamageCause.VOID)){
-                //if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
-                    MessageManager.get(game.getParticipants(), "chat.kill")
-                            .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
-                            .replace("%killer%", killer.getOnlinePlayer().getName())
-                            .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
-                            .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
-                            .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
-                            .send();
-                //}else{
-                    //Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
-                    /*KillMessage message = Cosmetics.getKillMessage(cosmetic);
-                    if (message != null) {
-                        MessageManager.get(game.getParticipants(), message.getMessageKey(KillMessage.DeadCause.VOID))
-                                .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
-                                .replace("%killer%", killer.getOnlinePlayer().getName())
-                                .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
-                                .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
-                                .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
-                                .send();
-                    }*/
-                //}
-            }else if (e.getDmgCause().equals(EntityDamageEvent.DamageCause.FALL)){
-                //if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
-                    MessageManager.get(game.getParticipants(), "chat.kill")
-                            .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
-                            .replace("%killer%", killer.getOnlinePlayer().getName())
-                            .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
-                            .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
-                            .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
-                            .send();
-                //}else{
-                //Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
-                    /*KillMessage message = Cosmetics.getKillMessage(cosmetic);
-                    if (message != null) {
-                        MessageManager.get(game.getParticipants(), message.getMessageKey(KillMessage.DeadCause.FALL))
-                                .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
-                                .replace("%killer%", killer.getOnlinePlayer().getName())
-                                .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
-                                .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
-                                .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
-                                .send();
-                    }*/
-                //}
+            if (cosmeticsManager.getSelectedCosmetic(killMessagesCategory, killer) == null){
+                MessageManager.get(game.getParticipants(), "chat.kill")
+                        .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
+                        .replace("%killer%", killer.getOnlinePlayer().getName())
+                        .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
+                        .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
+                        .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
+                        .send();
             }else{
-                //if (cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer()) == null){
-                    MessageManager.get(game.getParticipants(), "chat.kill")
+                KillMessage message = killer.getPlayerData().getKillMessage();
+                if (message != null) {
+                    MessageManager.get(game.getParticipants(), message.getMessageKey(e.getDmgCause()))
                             .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                             .replace("%killer%", killer.getOnlinePlayer().getName())
                             .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
                             .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
                             .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
                             .send();
-                //}else{
-                //Cosmetic cosmetic = cosmeticsManager.getSelectedCosmetic(category, killer.getOnlinePlayer());
-                    /*KillMessage message = Cosmetics.getKillMessage(cosmetic);
-                    if (message != null) {
-                        MessageManager.get(game.getParticipants(), message.getMessageKey(KillMessage.DeadCause.MELEE))
-                                .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
-                                .replace("%killer%", killer.getOnlinePlayer().getName())
-                                .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
-                                .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
-                                .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
-                                .send();
-                    }*/
-                //}
+                }
             }
 
 
@@ -188,7 +164,6 @@ public class PlayerDeathListener implements Listener {
                     MessageManager.get(gp, "chat.assisted")
                             .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                             .send();
-                    //gp.getScoreByName("Assist").increaseScore();
                 }
             }
 
@@ -206,21 +181,21 @@ public class PlayerDeathListener implements Listener {
 
 
             if (e.isFirstGameKill()){
-                e.getGame().getPlayers().forEach(gp -> gp.getOnlinePlayer().sendMessage(MessageManager.get(gp, "chat.first_blood").replace("%dead%", gamePlayer.getOnlinePlayer().getName()).replace("%killer%", killer.getOnlinePlayer().getName()).getTranslated()));
-                //killer.getScoreByName("FirstBlood").increaseScore();
+                Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), taks -> {
+                                    e.getGame().getPlayers().forEach(gp -> gp.getOnlinePlayer().sendMessage(MessageManager.get(gp, "chat.first_blood")
+                                            .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
+                                            .replace("%killer%", killer.getOnlinePlayer().getName())
+                                            .getTranslated()));
+                                }, 2L);
             }
 
 
             if (killCounter.get(killer) >= 6){
-                //killer.getScoreByName("Kill").increaseScore(false);
                 MessageManager.get(killer, "chat.kill_fast").send(); //TODO: dořešit
-            }//else{
-                //killer.getScoreByName("Kill").increaseScore();
-            //}
+            }
 
-            killer.getOnlinePlayer().playSound(killer.getOnlinePlayer().getLocation(), Sounds.LEVEL_UP.bukkitSound(), 20.0F, 20.0F);
-
-            //e.getGamePlayer().getScoreByName("Death").increaseScore();
+            killer.getOnlinePlayer().playSound(killer.getOnlinePlayer().getLocation(), "custom:good", 1F, 1F);
+            eliminationBanner(killer, gamePlayer);
         }else{
             if (e.getDmgCause() == EntityDamageEvent.DamageCause.VOID){
                 MessageManager.get(game.getParticipants(), "chat.void")
@@ -238,9 +213,19 @@ public class PlayerDeathListener implements Listener {
                         .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
                         .send();
             }
+        }
+
+        gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer().getLocation(), Sounds.ANVIL_LAND.bukkitSound(), 0.8F, 1F);
+        XParticle.sphere(1.5, 12, ParticleDisplay.of(Particle.DUST).withColor(Color.RED, 0.75f).withLocation(gamePlayer.getOnlinePlayer().getLocation().add(0, 0.4, 0)));
 
 
-            //e.getGamePlayer().getScoreByName("Death").increaseScore();
+        if (useTeams){
+            GameTeam gameTeam = gamePlayer.getPlayerData().getTeam();
+            if (gameTeam.getAliveMembers().isEmpty()) {
+                MessageManager.get(game.getParticipants(), "chat.team_eliminated")
+                        .replace("%team", gameTeam.getChatColor() + gameTeam.getName())
+                        .send();
+            }
         }
 
 
@@ -269,7 +254,7 @@ public class PlayerDeathListener implements Listener {
                             if (score.getScore() == 0) {
                                 continue;
                             }
-                            b.append("\n").append("§7" + score.getDisplayName(true) + ": §a" + score.getScore());
+                            b.append("\n").append("§7" + score.getPluralName() + ": §a" + score.getScore());
                         }
 
                         message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));
@@ -288,7 +273,7 @@ public class PlayerDeathListener implements Listener {
                     public void run() {
                         endGame.response().accept(game);
                     }
-                }.runTaskLater(GameAPI.getInstance(), 1L);
+                }.runTaskLater(GameAPI.getInstance(), 2L);
             }
         }
     }

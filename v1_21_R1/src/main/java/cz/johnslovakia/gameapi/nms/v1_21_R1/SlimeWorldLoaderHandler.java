@@ -62,7 +62,6 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
                 SlimeWorld world = asp.readWorld(loader, arenaID, false, properties);
 
                 Bukkit.getScheduler().runTask(bukkitPlugin, () -> {
-                    asp.getLoadedWorlds().forEach(w -> System.out.println("Loaded World: " + w.getName()));
                     if (/*asp.worldLoaded(world)*/ Bukkit.getWorld(arenaID) != null){
                         asp.loadWorld(world.clone(newWorldName), true);
                     }else{

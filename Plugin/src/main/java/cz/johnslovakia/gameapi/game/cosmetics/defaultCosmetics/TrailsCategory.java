@@ -1,14 +1,8 @@
-package cz.johnslovakia.gameapi.game.cosmetics.defaultCosmetics.trails;
+package cz.johnslovakia.gameapi.game.cosmetics.defaultCosmetics;
 
 import cz.johnslovakia.gameapi.GameAPI;
-import cz.johnslovakia.gameapi.game.cosmetics.CTrigger;
-import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
-import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsCategory;
-import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
-import cz.johnslovakia.gameapi.game.cosmetics.defaultCosmetics.trails.cosmetics.GreenSparks;
-import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.game.cosmetics.*;
 import cz.johnslovakia.gameapi.users.PlayerManager;
-import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -23,6 +17,21 @@ import java.util.List;
 import java.util.Set;
 
 public class TrailsCategory implements CosmeticsCategory {
+    private static final List<Cosmetic> predefinedCosmetics;
+
+    static {
+        predefinedCosmetics = new ArrayList<>();
+        
+        Cosmetic greenSparks = new Cosmetic("Green Sparks", new ItemStack(Material.EMERALD), 2500, CosmeticRarity.COMMON)
+                .setLocationConsumer(location -> location.getWorld().spawnParticle(Particle.COMPOSTER, location.getX(), location.getY(), location.getZ(), 2, 0.1, 0.1, 0.1, 1));
+        Cosmetic lava = new Cosmetic("Lava", new ItemStack(Material.LAVA_BUCKET), 2500, CosmeticRarity.COMMON)
+                .setLocationConsumer(location -> location.getWorld().spawnParticle(Particle.LAVA, location.getX(), location.getY(), location.getZ(), 2, 0.1, 0.1, 0.1, 1));
+
+        predefinedCosmetics.add(greenSparks);
+        predefinedCosmetics.add(lava);
+    }
+    
+    
     @Override
     public CosmeticsManager getManager() {
         return GameAPI.getInstance().getCosmeticsManager();
@@ -40,11 +49,7 @@ public class TrailsCategory implements CosmeticsCategory {
 
     @Override
     public List<Cosmetic> getCosmetics() {
-        List<Cosmetic> cosmetics = new ArrayList<>();
-
-        cosmetics.add(new GreenSparks());
-
-        return cosmetics;
+        return predefinedCosmetics;
     }
 
     @Override
@@ -57,6 +62,10 @@ public class TrailsCategory implements CosmeticsCategory {
                 projectileLaunchEvent -> {
                     Player player = (Player) projectileLaunchEvent.getEntity().getShooter();
                     Cosmetic cosmetic = PlayerManager.getGamePlayer(player).getPlayerData().getSelectedCosmetics().get(this);
+                    if (cosmetic == null){
+                        return;
+                    }
+
                     new BukkitRunnable(){
                         @Override
                         public void run() {
@@ -64,10 +73,10 @@ public class TrailsCategory implements CosmeticsCategory {
                                 return;
 
                             Location location = projectileLaunchEvent.getEntity().getLocation();
-                            cosmetic.execute(location);
+                            cosmetic.getLocationConsumer().accept(location);
                         }
                     }.runTaskTimer(GameAPI.getInstance(), 0L, 2L);
-                    cosmetic.execute(projectileLaunchEvent.getLocation());
+                    cosmetic.getLocationConsumer().accept(projectileLaunchEvent.getLocation());
 
                 }); //TODO: někde zavolat onEventCall..
 

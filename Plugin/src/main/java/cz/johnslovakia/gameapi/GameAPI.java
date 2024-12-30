@@ -1,7 +1,10 @@
 package cz.johnslovakia.gameapi;
 
+import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.ListenerPriority;
+import com.comphenix.protocol.events.PacketListener;
 import com.infernalsuite.aswm.loaders.mysql.MysqlLoader;
 import cz.johnslovakia.gameapi.api.Schematic;
 import cz.johnslovakia.gameapi.api.SlimeWorldLoader;
@@ -10,17 +13,21 @@ import cz.johnslovakia.gameapi.api.VersionSupport;
 import cz.johnslovakia.gameapi.datastorage.MinigameTable;
 import cz.johnslovakia.gameapi.datastorage.PlayerTable;
 import cz.johnslovakia.gameapi.datastorage.Type;
-import cz.johnslovakia.gameapi.economy.EconomyInterface;
+import cz.johnslovakia.gameapi.serverManagement.gameData.GameDataManager;
+import cz.johnslovakia.gameapi.users.resources.ResourceInterface;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
 import cz.johnslovakia.gameapi.game.perk.PerkManager;
+import cz.johnslovakia.gameapi.guis.ViewPlayerInventory;
 import cz.johnslovakia.gameapi.listeners.*;
 import cz.johnslovakia.gameapi.messages.Language;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.quests.QuestManager;
+import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.users.stats.StatsManager;
 import cz.johnslovakia.gameapi.utils.InputStreamWithName;
 import cz.johnslovakia.gameapi.utils.Logger;
+import cz.johnslovakia.gameapi.utils.ProtocolTagChanger;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import lombok.Getter;
 import lombok.Setter;
@@ -65,7 +72,7 @@ public class GameAPI extends JavaPlugin {
     private UserInterface userInterface;
     private SlimeWorldLoader slimeWorldLoader;
     private Schematic schematicHandler;
-    public static boolean useDecentHolograms;
+    public boolean useDecentHolograms;
 
     private Chat vaultChat;
     private Permission vaultPerms;
@@ -111,11 +118,17 @@ public class GameAPI extends JavaPlugin {
         pm.registerEvents(new RespawnListener(), this);
         pm.registerEvents(new WorldListener(), this);
         pm.registerEvents(new AntiAFK(), this);
+        pm.registerEvents(new ViewPlayerInventory(), this);
+        pm.registerEvents(new HologramListener(), this);
+
 
         protocolManager = ProtocolLibrary.getProtocolManager();
 
-        ChatHeadAPI.initialize(this);
+        PacketListener listener = new ProtocolTagChanger(this, ListenerPriority.NORMAL, PacketType.Play.Server.BOSS);
+        protocolManager.addPacketListener(listener);
 
+
+        ChatHeadAPI.initialize(this);
 
 
         //VERSION SUPPORT //TODO: opravit pro další verze
@@ -158,7 +171,13 @@ public class GameAPI extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (getMinigame().getServerDataRedis() != null) getMinigame().getServerDataRedis().close();
+
         getMinigame().getDatabase().getConnection().disconnect();
+
+        if (protocolManager != null) {
+            protocolManager.removePacketListeners(this);
+        }
     }
 
 
@@ -244,8 +263,22 @@ public class GameAPI extends JavaPlugin {
             e.printStackTrace();
             somethingwrong = true;
         }
+
+
         minigame.setupPlayerScores();
+
+
+        MinigameTable minigameTable = minigame.getMinigameTable();
+        PlayerTable playerTable = new PlayerTable();
+
         try{
+
+            minigameTable.createTable();
+            playerTable.createTable();
+            if (minigame.getServerDataMySQL() != null){
+                GameDataManager.createTableIfNotExists();
+            }
+
             minigame.setupOther();
         }catch (Exception e){
             Logger.log("Something went wrong when setting up the other necessities for the minigame! The following message is for Developers: ", Logger.LogType.ERROR);
@@ -253,17 +286,17 @@ public class GameAPI extends JavaPlugin {
             somethingwrong = true;
         }
 
-        MinigameTable minigameTable = minigame.getMinigameTable();
-        PlayerTable playerTable = new PlayerTable();
 
-        for (cz.johnslovakia.gameapi.economy.Economy economy : minigame.getEconomies()){
-            if (economy.isAutomatically()){
-                SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
-                if (!economy.isForAllMinigames()){
 
-                    minigameTable.createNewColumn(Type.INT ,economy.getName());
+        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
 
-                    economy.setEconomyInterface(new EconomyInterface() {
+        for (Resource resource : minigame.getEconomies()){
+            if (resource.isAutomatically()){
+                if (!resource.isForAllMinigames()){
+
+                    minigameTable.createNewColumn(Type.INT , resource.getName());
+
+                    resource.setResourceInterface(new ResourceInterface() {
                         @Override
                         public void deposit(GamePlayer gamePlayer, int amount) {
                             Optional<Row> result = connection.select()
@@ -273,7 +306,7 @@ public class GameAPI extends JavaPlugin {
 
                             connection.update()
                                     .table(minigameTable.getTableName())
-                                    .set(economy.getName(), result.get().getInt(economy.getName()) + amount)
+                                    .set(resource.getName(), result.get().getInt(resource.getName()) + amount)
                                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                                     .execute();
                         }
@@ -287,7 +320,7 @@ public class GameAPI extends JavaPlugin {
 
                             connection.update()
                                     .table(minigameTable.getTableName())
-                                    .set(economy.getName(), result.get().getInt(economy.getName()) - amount)
+                                    .set(resource.getName(), result.get().getInt(resource.getName()) - amount)
                                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                                     .execute();
                         }
@@ -296,7 +329,7 @@ public class GameAPI extends JavaPlugin {
                         public void setBalance(GamePlayer gamePlayer, int balance) {
                             connection.update()
                                     .table(minigameTable.getTableName())
-                                    .set(economy.getName(), balance)
+                                    .set(resource.getName(), balance)
                                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                                     .execute();
                         }
@@ -309,17 +342,17 @@ public class GameAPI extends JavaPlugin {
                                     .obtainOne();
 
                             if (result.isPresent()){
-                                if (result.get().get(economy.getName()) != null) {
-                                    return result.get().getInt(economy.getName());
+                                if (result.get().get(resource.getName()) != null) {
+                                    return result.get().getInt(resource.getName());
                                 }
                             }
                             return 0;
                         }
                     });
                 }else{
-                    playerTable.createNewColumn(Type.INT, economy.getName());
+                    playerTable.createNewColumn(Type.INT, resource.getName());
 
-                    economy.setEconomyInterface(new EconomyInterface() {
+                    resource.setResourceInterface(new ResourceInterface() {
                         @Override
                         public void deposit(GamePlayer gamePlayer, int amount) {
                             Optional<Row> result = connection.select()
@@ -329,7 +362,7 @@ public class GameAPI extends JavaPlugin {
 
                             connection.update()
                                     .table(PlayerTable.TABLE_NAME)
-                                    .set(economy.getName(), result.get().getInt(economy.getName()) + amount)
+                                    .set(resource.getName(), result.get().getInt(resource.getName()) + amount)
                                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                                     .execute();
                         }
@@ -343,7 +376,7 @@ public class GameAPI extends JavaPlugin {
 
                             connection.update()
                                     .table(PlayerTable.TABLE_NAME)
-                                    .set(economy.getName(), result.get().getInt(economy.getName()) - amount)
+                                    .set(resource.getName(), result.get().getInt(resource.getName()) - amount)
                                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                                     .execute();
                         }
@@ -352,7 +385,7 @@ public class GameAPI extends JavaPlugin {
                         public void setBalance(GamePlayer gamePlayer, int balance) {
                             connection.update()
                                     .table(PlayerTable.TABLE_NAME)
-                                    .set(economy.getName(), balance)
+                                    .set(resource.getName(), balance)
                                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                                     .execute();
                         }
@@ -365,8 +398,8 @@ public class GameAPI extends JavaPlugin {
                                     .obtainOne();
 
                             if (result.isPresent()){
-                                if (result.get().get(economy.getName()) != null) {
-                                    return result.get().getInt(economy.getName());
+                                if (result.get().get(resource.getName()) != null) {
+                                    return result.get().getInt(resource.getName());
                                 }
                             }
                             return 0;
@@ -380,10 +413,6 @@ public class GameAPI extends JavaPlugin {
         if (somethingwrong) {
             Logger.log("I can't register the minigame due to previous problems!", Logger.LogType.ERROR);
         }else{
-
-            minigameTable.createTable();
-            playerTable.createTable();
-
             Logger.log("Minigame successfully registered!", Logger.LogType.INFO);
         }
 
@@ -437,7 +466,7 @@ public class GameAPI extends JavaPlugin {
         }
     }
 
-    public static boolean useDecentHolograms() {
+    public boolean useDecentHolograms() {
         return useDecentHolograms;
     }
 

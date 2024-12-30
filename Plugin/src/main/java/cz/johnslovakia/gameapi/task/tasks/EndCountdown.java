@@ -16,22 +16,27 @@ import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class EndCountdown implements TaskInterface {
 
+    private  void createBossBar(GamePlayer gamePlayer, Task task){
+        BossBar bossBar = Bukkit.createBossBar("Game starting in:", BarColor.WHITE,BarStyle.SOLID);
 
-    private BossBar bossBar;
+        bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.finding_new_game_in")
+                .replace("%time%", Utils.getDurationString(task.getCounter()))
+                .getFontTextComponentJSON("gameapi:bossbar_offset"));
 
+        bossBar.setVisible(true);
+        bossBar.addPlayer(gamePlayer.getOnlinePlayer());
+        gamePlayer.getPlayerData().setCurrentBossBar(bossBar);
+    }
+    
     @Override
     public void onStart(Task task) {
-        this.bossBar = Bukkit.createBossBar("Game starting in:", BarColor.YELLOW ,BarStyle.SOLID);
-
-        for (GamePlayer gamePlayer : task.getGame().getPlayers()){
-            bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.finding_new_game_in")
-                    .replace("%time%", Utils.getDurationString(task.getCounter()))
-                    .getTranslated());
-            bossBar.setProgress(task.getCounter() / (double) task.getStartCounter());
-            bossBar.setVisible(true);
-            bossBar.addPlayer(gamePlayer.getOnlinePlayer());
+        for (GamePlayer gamePlayer : task.getGame().getParticipants()){
+            createBossBar(gamePlayer, task);
         }
     }
 
@@ -39,11 +44,16 @@ public class EndCountdown implements TaskInterface {
     public void onCount(Task task) {
         Game game = task.getGame();
 
-        for (GamePlayer gamePlayer : game.getPlayers()) {
+        for (GamePlayer gamePlayer : game.getParticipants()) {
+            BossBar bossBar = gamePlayer.getPlayerData().getCurrentBossBar();
+            if(bossBar == null){
+                createBossBar(gamePlayer, task);
+                bossBar = gamePlayer.getPlayerData().getCurrentBossBar();
+            }
             bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.finding_new_game_in")
                     .replace("%time%", Utils.getDurationString(task.getCounter()))
-                    .getTranslated());
-            bossBar.setProgress(task.getCounter() / (double) task.getStartCounter());
+                    .getFontTextComponentJSON("gameapi:bossbar_offset"));
+            
         }
     }
 
@@ -51,7 +61,12 @@ public class EndCountdown implements TaskInterface {
     public void onEnd(Task task) {
         Game game = task.getGame();
 
-        bossBar.removeAll();
+        for (GamePlayer gamePlayer : game.getParticipants()) {
+            BossBar bossBar = gamePlayer.getPlayerData().getCurrentBossBar();
+            if (bossBar != null) {
+                bossBar.removeAll();
+            }
+        }
 
         GameManager.resetGame(game);
         Task.cancelAll(game);
@@ -59,6 +74,11 @@ public class EndCountdown implements TaskInterface {
 
     @Override
     public void onCancel(Task task) {
-        bossBar.removeAll();
+        for (GamePlayer gamePlayer : task.getGame().getParticipants()) {
+            BossBar bossBar = gamePlayer.getPlayerData().getCurrentBossBar();
+            if (bossBar != null) {
+                bossBar.removeAll();
+            }
+        }
     }
 }

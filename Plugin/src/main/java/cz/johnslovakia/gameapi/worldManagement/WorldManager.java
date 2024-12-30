@@ -3,6 +3,7 @@ package cz.johnslovakia.gameapi.worldManagement;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.map.GameMap;
+import cz.johnslovakia.gameapi.utils.FileManager;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
 import org.bukkit.World;
@@ -30,11 +31,10 @@ public class WorldManager {
 
 
 
-        /*File sourceWorldFolder = new File(GameAPI.getPlugin().getDataFolder() + "/maps/", arena.getID());
+        File sourceWorldFolder = new File(GameAPI.getInstance().getMinigame().getPlugin().getDataFolder() + "/maps/", arena.getName());
         if (sourceWorldFolder.exists()) {
-            File activeWorldFolder = new File(Bukkit.getWorldContainer().getParentFile(), sourceWorldFolder.getName() + "_" + game.getID());
             if (activeWorldFolder.exists()) FileManager.deleteFile(activeWorldFolder);
-        }*/
+        }
 
         arena.setWorld(null);
     }

@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.utils;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.messages.Language;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
@@ -173,7 +174,6 @@ public class AbilityItem implements Listener {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         ItemStack item = e.getItem();
 
-
         if (item == null || item.getItemMeta() == null){
             return;
         }
@@ -182,14 +182,20 @@ public class AbilityItem implements Listener {
         || !item.getItemMeta().getLore().equals(getFinalItemStack(gamePlayer).getItemMeta().getLore())){
             return;
         }
+        if (gamePlayer.getPlayerData().getGame().getState() != GameState.INGAME){
+            e.setCancelled(true);
+            return;
+        }
 
 
         for (Action action : actions.keySet()){
 
-            if (action.equals(Action.LEFT_CLICK) && !(e.getAction().equals(org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) || e.getAction().equals(org.bukkit.event.block.Action.LEFT_CLICK_AIR))){
-                continue;
-            }else if (action.equals(Action.RIGHT_CLICK) && !(e.getAction().equals(org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) || e.getAction().equals(org.bukkit.event.block.Action.RIGHT_CLICK_AIR))){
-                continue;
+            if (!action.equals(Action.DEFAULT)) {
+                if (action.equals(Action.LEFT_CLICK) && !(e.getAction().equals(org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) || e.getAction().equals(org.bukkit.event.block.Action.LEFT_CLICK_AIR))) {
+                    continue;
+                } else if (action.equals(Action.RIGHT_CLICK) && !(e.getAction().equals(org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) || e.getAction().equals(org.bukkit.event.block.Action.RIGHT_CLICK_AIR))) {
+                    continue;
+                }
             }
 
             /*if (!e.getAction().equals(action)){
@@ -204,7 +210,10 @@ public class AbilityItem implements Listener {
                 }
             }
 
-            e.setCancelled(true);
+            if (!action.equals(Action.DEFAULT)) {
+                e.setCancelled(true);
+            }
+
 
             Cooldown cooldown = null;
             if (!cooldowns.isEmpty() && cooldowns.get(action) != null){
@@ -213,8 +222,11 @@ public class AbilityItem implements Listener {
             if (cooldown != null && cooldown.contains(gamePlayer)){
                 String roundedDouble = String.valueOf(Math.round(cooldown.getCountdown(gamePlayer) * 100.0) / 100.0);
                 MessageManager.get(player, "chat.delay").replace("%countdown%", roundedDouble).send();
+                e.setCancelled(true);
                 return;
             }
+
+
             actions.get(action).accept(gamePlayer);
             if (consumable && e.getHand() != null){
                 if (item.getAmount() > 1) {

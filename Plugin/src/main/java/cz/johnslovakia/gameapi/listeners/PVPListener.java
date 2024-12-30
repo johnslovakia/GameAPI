@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.listeners;
 
+import com.comphenix.protocol.PacketType;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.events.GamePlayerDeathEvent;
 import cz.johnslovakia.gameapi.events.PlayerDamageByPlayerEvent;
@@ -9,6 +10,7 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.GamePlayerType;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.Logger;
+import cz.johnslovakia.gameapi.utils.Utils;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -21,7 +23,9 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 
 import java.util.*;
 
@@ -93,8 +97,7 @@ public class PVPListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent e) {
-        if (e.getEntity() instanceof Player && ((e.getDamager() instanceof Projectile ||
-                e.getDamager() instanceof Player))) {
+        if (e.getEntity() instanceof Player) {
             GamePlayer player = PlayerManager.getGamePlayer((Player) e.getEntity());
 
             Optional.ofNullable(player.getPlayerData().getGame()).ifPresent(game -> {
@@ -104,36 +107,56 @@ public class PVPListener implements Listener {
                     if (e.getDamager() instanceof Player){
                         damager = PlayerManager.getGamePlayer((Player) e.getDamager());
                     }else if (e.getDamager() instanceof Arrow projectile) {
-                        if (projectile.getShooter() instanceof Player) {
-                            damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
+                        if (projectile.getShooter() instanceof Player shooter) {
+                            damager = PlayerManager.getGamePlayer(shooter);
                         }
                     }else if (e.getDamager() instanceof Fireball projectile) {
-                        if (projectile.getShooter() instanceof Player) {
-                            damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
+                        if (projectile.getShooter() instanceof Player shooter) {
+                            damager = PlayerManager.getGamePlayer(shooter);
                         }
                     }else if (e.getDamager() instanceof Egg projectile) {
-                        if (projectile.getShooter() instanceof Player) {
-                            damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
+                        if (projectile.getShooter() instanceof Player shooter) {
+                            damager = PlayerManager.getGamePlayer(shooter);
+
+                            e.setCancelled(true);
+                            player.getOnlinePlayer().setVelocity(player.getOnlinePlayer().getVelocity().add(new Vector(0.8, 0, 0.8)));
+                            Utils.damagePlayer(player.getOnlinePlayer(), 0.3);
                         }
                     }else if (e.getDamager() instanceof Snowball projectile) {
-                        if (projectile.getShooter() instanceof Player) {
-                            damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
+                        if (projectile.getShooter() instanceof Player shooter) {
+                            damager = PlayerManager.getGamePlayer(shooter);
+
+                            e.setCancelled(true);
+                            player.getOnlinePlayer().setVelocity(player.getOnlinePlayer().getVelocity().add(new Vector(0.8, 0, 0.8)));
+                            Utils.damagePlayer(player.getOnlinePlayer(), 0.3);
                         }
                     }else if (e.getDamager() instanceof LightningStrike projectile) {
                         if (projectile.getCausingPlayer() != null) {
                             damager = PlayerManager.getGamePlayer(projectile.getCausingPlayer());
                         }
-                    }else if (e.getDamager() instanceof FishHook) {
-                        FishHook projectile = (FishHook) e.getDamager();
-                        if (projectile.getShooter() instanceof Player) {
-                            damager = PlayerManager.getGamePlayer((Player) projectile.getShooter());
+                    }else if (e.getDamager() instanceof FishHook projectile) {
+                        if (projectile.getShooter() instanceof Player shooter) {
+                            damager = PlayerManager.getGamePlayer(shooter);
+                        }
+                    }else if (e.getDamager() instanceof TNTPrimed tntPrimed) {
+                        Player metadataSource = (Player) ((MetadataValue)tntPrimed.getMetadata("Source").get(0)).value();
+                        if (metadataSource != null) {
+                            damager = PlayerManager.getGamePlayer(metadataSource);
+                        }else {
+                            if (tntPrimed.getSource() instanceof Player source) {
+                                damager = PlayerManager.getGamePlayer(source);
+                            }
                         }
                     }
 
-                    if (damager == null)return;
+                    if (damager == null) return;
 
                     if (damager.isSpectator()){
                         e.setCancelled(true);
+                        return;
+                    }
+                    if (player.equals(damager)) {
+                        //e.setCancelled(true);
                         return;
                     }
 
@@ -155,11 +178,6 @@ public class PVPListener implements Listener {
                             }
                         }
 
-                        if (player.equals(damager)) {
-                            e.setCancelled(true);
-                            return;
-                        }
-
                         if (!player.isEnabledPVP()) {
                             e.setCancelled(true);
                             return;
@@ -168,7 +186,6 @@ public class PVPListener implements Listener {
                         PlayerDamageByPlayerEvent ev = new PlayerDamageByPlayerEvent(damager.getPlayerData().getGame(), damager, player, e.getCause());
                         Bukkit.getPluginManager().callEvent(ev);
                         e.setCancelled(ev.isCancelled());
-
                     }
 
                 } else {
@@ -185,7 +202,7 @@ public class PVPListener implements Listener {
             GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
             Game game = gamePlayer.getPlayerData().getGame();
             if (game != null && game.getState() == GameState.INGAME) {
-                if (gamePlayer.isSpectator()){
+                if (gamePlayer.isSpectator() && e.getCause().equals(EntityDamageEvent.DamageCause.VOID)){
                     player.teleport(RespawnListener.getNonRespawnLocation(game));
                     e.setCancelled(true);
                     return;

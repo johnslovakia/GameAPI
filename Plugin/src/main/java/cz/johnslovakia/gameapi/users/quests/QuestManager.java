@@ -106,7 +106,7 @@ public class QuestManager {
         LocalDate now = LocalDate.now();
 
         if (questData.getCompletionDate() == null){
-            return false;
+            return true;
         }
 
         if (questData.getQuest().getType().equals(QuestType.DAILY)){

@@ -23,9 +23,10 @@ public class StatsHolograms {
     public static void createPlayerStatisticsHologram(StatsManager manager, Location location, Player player){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
+
+
         List<String> lines = new ArrayList<>();
-        //lines.add("§2§lYour Lifetime stats in " + GameAPI.getMinigameName());
-        lines.add(MessageManager.get(gamePlayer, "hologram.lifetime_stats").replace("%minigame_name%", GameAPI.getInstance().getMinigame().getMinigameName()).getTranslated());
+        lines.add(MessageManager.get(gamePlayer, "hologram.lifetime_stats").replace("%minigame_name%", GameAPI.getInstance().getMinigame().getName()).getTranslated());
         for (Stat stat : manager.getStats()){
             PlayerStat playerStat = stat.getPlayerStat(gamePlayer);
             if (MessageManager.existMessage("hologram.lifetime_stats.score_line")){
@@ -33,7 +34,6 @@ public class StatsHolograms {
             }else {
                 lines.add("§f" + stat.getTranslated(gamePlayer) + ": §a" + playerStat.getStatScore());
             }
-            //DHAPI.addHologramLine(hologram, "§f" + stat.getName() + ": §a" + playerStat.getStatScore());
         }
 
 
@@ -51,16 +51,6 @@ public class StatsHolograms {
 
     public static void createTOPStatisticsHologram(StatsManager manager, Location location, Player player){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-
-
-        /*List<String> lines = new ArrayList<>();
-        lines.add(MessageManager.get(gamePlayer, "hologram.top_stats").replace("%minigame_name%", GameAPI.getMinigameName()).getTranslated());
-        for (Stat stat : getStats()){
-            PlayerStat playerStat = stat.getPlayerStat(gamePlayer);
-            lines.add("§f" + stat.getName() + ": §a" + playerStat.getStatScore());
-            //DHAPI.addHologramLine(hologram, "§f" + stat.getName() + ": §a" + playerStat.getStatScore());
-        }
-*/
 
         if (DHAPI.getHologram("topStats_" + player.getName()) != null){
             return;

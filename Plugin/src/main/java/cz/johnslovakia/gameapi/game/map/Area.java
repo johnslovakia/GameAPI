@@ -151,7 +151,7 @@ public class Area {
      * @return Location object.
      */
     public Location getLocation1(){
-        return loc1.getLocation(loc1.getWorld(map));
+        return loc1.getLocation();
     }
 
     /**
@@ -167,7 +167,7 @@ public class Area {
      * @return Location object.
      */
     public Location getLocation2(){
-        return loc2.getLocation(loc2.getWorld(map));
+        return loc2.getLocation();
     }
 
     public boolean isBorder() {

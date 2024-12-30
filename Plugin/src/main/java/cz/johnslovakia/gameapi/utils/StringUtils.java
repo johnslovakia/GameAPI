@@ -1,13 +1,143 @@
 package cz.johnslovakia.gameapi.utils;
 
+import cz.johnslovakia.gameapi.messages.MessageManager;
+import cz.johnslovakia.gameapi.users.GamePlayer;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.chat.ComponentSerializer;
+import org.apache.commons.lang.WordUtils;
 import org.bukkit.ChatColor;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import java.awt.*;
-import java.util.Random;
+import java.text.NumberFormat;
+import java.util.*;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 public class StringUtils {
+
+    public static String stylizeText(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        return text.substring(0, 1).toUpperCase() + text.substring(1).toLowerCase();
+    }
+
+    public static String betterNumberFormat(long number) {
+        NumberFormat numberFormat = NumberFormat.getInstance(Locale.US);
+        return numberFormat.format(number);
+    }
+
+    public static String getFontTextComponentJSON(String text, String font){
+        BaseComponent textComponent = new TextComponent(text);
+        textComponent.setFont((font.contains(":") ? font : "gameapi:" + font));
+
+        return ComponentSerializer.toString(textComponent);
+    }
+
+    public static String formatItemStackName(GamePlayer gamePlayer, ItemStack item){
+        if (item == null) return "§cItemStack is null!";
+
+        String formatedName = null;
+        if (item.hasItemMeta()){
+            if (item.getItemMeta().hasDisplayName()){
+                formatedName = ChatColor.stripColor(item.getItemMeta().getDisplayName());
+            }
+        }
+        if (formatedName == null){
+            formatedName = WordUtils.capitalize(item.getType().name().toLowerCase().replaceAll("_", " "));
+        }
+
+        formatedName = (item.getAmount() > 1 ? item.getAmount() + "x " : "") + formatedName;
+        int maxLoreLength = 35;
+
+
+        if (!item.getEnchantments().isEmpty()){
+            StringBuilder stringBuilder = new StringBuilder("(");
+            int i = 1;
+            for (Enchantment enchantment : item.getEnchantments().keySet()){
+                String formatedEnchantment = WordUtils.capitalize(item.getType().name().toLowerCase().replaceAll("_", " "));
+                formatedEnchantment += " " + numeral(item.getEnchantmentLevel(enchantment));
+                stringBuilder.append(formatedEnchantment);
+                if (item.getEnchantments().size() > i){
+                    stringBuilder.append(",");
+                }
+                if (formatedName.length() + formatedEnchantment.length() >= maxLoreLength){
+                    stringBuilder.append("\n ");
+                }
+                i++;
+            }
+            formatedName += stringBuilder;
+        }
+        if (Utils.isPotion(item)){
+            StringBuilder stringBuilder = new StringBuilder();
+
+            PotionMeta potionMeta = (PotionMeta) item.getItemMeta();
+            if (potionMeta == null) return formatedName;
+
+            List<PotionEffect> list = new ArrayList<>();
+            if (potionMeta.hasCustomEffects()){
+                list.addAll(potionMeta.getCustomEffects());
+            }else{
+                list.addAll(Objects.requireNonNull(potionMeta.getBasePotionType()).getPotionEffects());
+            }
+
+            int i = 1;
+            for (PotionEffect effect : list) {
+                PotionEffectType effectType = effect.getType();
+                int duration = effect.getDuration();
+
+                String formatedPotion = WordUtils.capitalize(effectType.getKey().getKey().toLowerCase().replaceAll("_", " ")) + " " + numeral(effect.getAmplifier());
+                formatedPotion += " " + getDurationString(duration);
+                stringBuilder.append(formatedPotion);
+                if (item.getEnchantments().size() > i){
+                    stringBuilder.append(",");
+                }
+                if (formatedName.length() + formatedPotion.length() >= maxLoreLength){
+                    stringBuilder.append("\n ");
+                }
+                i++;
+            }
+
+            formatedName = stringBuilder.toString();
+        }
+
+        if (item.hasItemMeta()) {
+            Damageable damageable = (Damageable) item.getItemMeta();
+            if (damageable != null) {
+                if (damageable.getDamage() != 0) {
+                    String duration = item.getType().getMaxDurability() - damageable.getDamage() + " " + MessageManager.get(gamePlayer, "word.uses").getTranslated();
+                    if (formatedName.contains("(")) {
+                        if (formatedName.length() >= maxLoreLength) {
+                            formatedName += ",\n";
+                        } else {
+                            formatedName += ", ";
+                        }
+
+                        formatedName += duration + ")";
+                    } else {
+                        formatedName += " (" + duration + ")";
+                    }
+                }
+            }
+        }
+
+        if (formatedName.contains("(") && !formatedName.contains(")")){
+            formatedName += ")";
+        }
+
+        return formatedName;
+    }
+
+
 
     public static String randomString(int length, boolean numeric,
                                       boolean alphabetical, boolean symbolic) {
@@ -59,6 +189,17 @@ public class StringUtils {
             matcher = pattern.matcher(message);
         }
         return ChatColor.translateAlternateColorCodes('&', message);
+    }
+
+    public static String colorize(String str) {
+        Pattern HEX_PATTERN = Pattern.compile("&(#\\w{6})");
+        Matcher matcher = HEX_PATTERN.matcher(ChatColor.translateAlternateColorCodes('&', str));
+        StringBuffer buffer = new StringBuffer();
+
+        while (matcher.find())
+            matcher.appendReplacement(buffer, net.md_5.bungee.api.ChatColor.of(matcher.group(1)).toString());
+
+        return matcher.appendTail(buffer).toString();
     }
 
     private final static int CENTER_PX = 154;
@@ -126,6 +267,7 @@ public class StringUtils {
 
         return String.valueOf(number);
     }
+
 
 
     //Source: SirSpoodles on Spigot
@@ -313,5 +455,139 @@ public class StringUtils {
             }
         }
         return 0;
+    }
+
+    private static final Map<String, Integer> advances = new HashMap<>();
+
+    static {
+        advances.put("\uDAFF\uDF6A", -150);
+        advances.put("\uDAFF\uDF9C", -100);
+        advances.put("\uDAFF\uDFCE", -50);
+        advances.put("\uDAFF\uDFCF", -49);
+        advances.put("\uDAFF\uDFD0", -48);
+        advances.put("\uDAFF\uDFD1", -47);
+        advances.put("\uDAFF\uDFD2", -46);
+        advances.put("\uDAFF\uDFD3", -45);
+        advances.put("\uDAFF\uDFD4", -44);
+        advances.put("\uDAFF\uDFD5", -43);
+        advances.put("\uDAFF\uDFD6", -42);
+        advances.put("\uDAFF\uDFD7", -41);
+        advances.put("\uDAFF\uDFD8", -40);
+        advances.put("\uDAFF\uDFD9", -39);
+        advances.put("\uDAFF\uDFDA", -38);
+        advances.put("\uDAFF\uDFDB", -37);
+        advances.put("\uDAFF\uDFDC", -36);
+        advances.put("\uDAFF\uDFDD", -35);
+        advances.put("\uDAFF\uDFDE", -34);
+        advances.put("\uDAFF\uDFDF", -33);
+        advances.put("\uDAFF\uDFE0", -32);
+        advances.put("\uDAFF\uDFE1", -31);
+        advances.put("\uDAFF\uDFE2", -30);
+        advances.put("\uDAFF\uDFE3", -29);
+        advances.put("\uDAFF\uDFE4", -28);
+        advances.put("\uDAFF\uDFE5", -27);
+        advances.put("\uDAFF\uDFE6", -26);
+        advances.put("\uDAFF\uDFE7", -25);
+        advances.put("\uDAFF\uDFE8", -24);
+        advances.put("\uDAFF\uDFE9", -23);
+        advances.put("\uDAFF\uDFEA", -22);
+        advances.put("\uDAFF\uDFEB", -21);
+        advances.put("\uDAFF\uDFEC", -20);
+        advances.put("\uDAFF\uDFED", -19);
+        advances.put("\uDAFF\uDFEE", -18);
+        advances.put("\uDAFF\uDFEF", -17);
+        advances.put("\uDAFF\uDFF0", -16);
+        advances.put("\uDAFF\uDFF1", -15);
+        advances.put("\uDAFF\uDFF2", -14);
+        advances.put("\uDAFF\uDFF3", -13);
+        advances.put("\uDAFF\uDFF4", -12);
+        advances.put("\uDAFF\uDFF5", -11);
+        advances.put("\uDAFF\uDFF6", -10);
+        advances.put("\uDAFF\uDFF7", -9);
+        advances.put("\uDAFF\uDFF8", -8);
+        advances.put("\uDAFF\uDFF9", -7);
+        advances.put("\uDAFF\uDFFA", -6);
+        advances.put("\uDAFF\uDFFB", -5);
+        advances.put("\uDAFF\uDFFC", -4);
+        advances.put("\uDAFF\uDFFD", -3);
+        advances.put("\uDAFF\uDFFE", -2);
+        advances.put("\uDAFF\uDFFF", -1);
+        advances.put("\uDB00\uDC00", 0);
+        advances.put("\uDB00\uDC01", 1);
+        advances.put("\uDB00\uDC02", 2);
+        advances.put("\uDB00\uDC03", 3);
+        advances.put("\uDB00\uDC04", 4);
+        advances.put("\uDB00\uDC05", 5);
+        advances.put("\uDB00\uDC06", 6);
+        advances.put("\uDB00\uDC07", 7);
+        advances.put("\uDB00\uDC08", 8);
+        advances.put("\uDB00\uDC09", 9);
+        advances.put("\uDB00\uDC0A", 10);
+        advances.put("\uDB00\uDC0B", 11);
+        advances.put("\uDB00\uDC0C", 12);
+        advances.put("\uDB00\uDC0D", 13);
+        advances.put("\uDB00\uDC0E", 14);
+        advances.put("\uDB00\uDC0F", 15);
+        advances.put("\uDB00\uDC10", 16);
+        advances.put("\uDB00\uDC11", 17);
+        advances.put("\uDB00\uDC12", 18);
+        advances.put("\uDB00\uDC13", 19);
+        advances.put("\uDB00\uDC14", 20);
+        advances.put("\uDB00\uDC15", 21);
+        advances.put("\uDB00\uDC16", 22);
+        advances.put("\uDB00\uDC17", 23);
+        advances.put("\uDB00\uDC18", 24);
+        advances.put("\uDB00\uDC19", 25);
+        advances.put("\uDB00\uDC1A", 26);
+        advances.put("\uDB00\uDC1B", 27);
+        advances.put("\uDB00\uDC1C", 28);
+        advances.put("\uDB00\uDC1D", 29);
+        advances.put("\uDB00\uDC1E", 30);
+        advances.put("\uDB00\uDC1F", 31);
+        advances.put("\uDB00\uDC20", 32);
+        advances.put("\uDB00\uDC21", 33);
+        advances.put("\uDB00\uDC22", 34);
+        advances.put("\uDB00\uDC23", 35);
+        advances.put("\uDB00\uDC24", 36);
+        advances.put("\uDB00\uDC25", 37);
+        advances.put("\uDB00\uDC26", 38);
+        advances.put("\uDB00\uDC27", 39);
+        advances.put("\uDB00\uDC28", 40);
+        advances.put("\uDB00\uDC29", 41);
+        advances.put("\uDB00\uDC2A", 42);
+        advances.put("\uDB00\uDC2B", 43);
+        advances.put("\uDB00\uDC2C", 44);
+        advances.put("\uDB00\uDC2D", 45);
+        advances.put("\uDB00\uDC2E", 46);
+        advances.put("\uDB00\uDC2F", 47);
+        advances.put("\uDB00\uDC30", 48);
+        advances.put("\uDB00\uDC31", 49);
+        advances.put("\uDB00\uDC32", 50);
+        advances.put("\uDB00\uDC64", 100);
+        advances.put("\uDB00\uDC96", 150);
+    }
+
+    public static String calculateNegativeSpaces(int value) {
+        StringBuilder result = new StringBuilder();
+
+        for (String symbol : advances.keySet()) {
+            int advanceValue = advances.get(symbol);
+
+            if (advanceValue != 0) {
+                if (advanceValue <= value) {
+                    int times = value / advanceValue;
+                    result.append(String.valueOf(symbol).repeat(Math.max(0, times)));
+                    value -= times * advanceValue;
+                }
+            } else {
+                System.out.println("Warning: advanceValue is zero for symbol: " + symbol);
+            }
+        }
+
+        if (result.isEmpty()) {
+            return "Žádný symbol neodpovídá";
+        }
+
+        return result.toString();
     }
 }

@@ -1,8 +1,8 @@
-package cz.johnslovakia.gameapi.economy;
+package cz.johnslovakia.gameapi.users.resources;
 
 import cz.johnslovakia.gameapi.users.GamePlayer;
 
-public interface EconomyInterface {
+public interface ResourceInterface {
 
     void deposit(GamePlayer gamePlayer, int amount);
     void withdraw(GamePlayer gamePlayer, int amount);

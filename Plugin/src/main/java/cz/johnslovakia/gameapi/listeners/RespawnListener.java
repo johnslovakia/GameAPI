@@ -24,7 +24,7 @@ public class RespawnListener implements Listener {
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         Game game = PlayerManager.getGamePlayer(player).getPlayerData().getGame();
-        GameMap playingMap = game.getPlayingMap();
+        GameMap playingMap = game.getCurrentMap();
 
         player.setFireTicks(0);
         player.setVisualFire(false);
@@ -49,7 +49,7 @@ public class RespawnListener implements Listener {
                         @Override
                         public void run() {
                             if (second == 0) {
-                                e.setRespawnLocation(playingMap.getPlayerToLocation(gamePlayer));
+                                player.teleport(playingMap.getPlayerToLocation(gamePlayer));
                             }else{
                                 MessageManager.get(gamePlayer, "title.respawn")
                                         .replace("%time%", "" + second)
@@ -70,7 +70,7 @@ public class RespawnListener implements Listener {
     }
 
     public static Location getNonRespawnLocation(Game game){
-        GameMap playingMap = game.getPlayingMap();
+        GameMap playingMap = game.getCurrentMap();
         MapLocation spectatorSpawn = playingMap.getSpectatorSpawn();
 
         if (spectatorSpawn == null){
@@ -80,6 +80,6 @@ public class RespawnListener implements Listener {
             }
             return center;
         }
-        return spectatorSpawn.getLocationForMap(playingMap);
+        return spectatorSpawn.getLocation();
     }
 }

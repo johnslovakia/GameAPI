@@ -3,17 +3,16 @@ package cz.johnslovakia.gameapi.utils;
 
 import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GameAPI;
+import org.apache.commons.lang.Validate;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.EnchantmentStorageMeta;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.inventory.meta.*;
 import org.bukkit.material.Wool;
+import org.bukkit.potion.PotionType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -106,7 +105,15 @@ public class ItemBuilder {
     }
     public ItemBuilder setCustomModelData(int data){
         ItemMeta im = is.getItemMeta();
+        Validate.notNull(im);
         im.setCustomModelData(data);
+        is.setItemMeta(im);
+        return this;
+    }
+    public ItemBuilder setBasePotionType(PotionType potionType){
+        PotionMeta im = (PotionMeta) is.getItemMeta();
+        Validate.notNull(im);
+        im.setBasePotionType(potionType);
         is.setItemMeta(im);
         return this;
     }

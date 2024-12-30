@@ -1,8 +1,9 @@
 package cz.johnslovakia.gameapi.users;
 
-import cz.johnslovakia.gameapi.economy.Economy;
+import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.users.stats.Stat;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
+import cz.johnslovakia.gameapi.utils.rewards.Reward;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.OfflinePlayer;
@@ -111,7 +112,7 @@ public class PlayerManager {
     public static class Score{
 
         private String name, pluralName, displayName;
-        private Map<Economy, Integer> rewardTypes = new HashMap<>();
+        private Reward reward;
         private boolean message = true;
 
         private boolean scoreRanking = false;
@@ -128,13 +129,6 @@ public class PlayerManager {
                 return name;
             }
             return displayName;
-        }
-
-        public void setEconomyReward(Economy economy, Integer reward){
-            if (!rewardTypes.containsKey(economy)){
-                rewardTypes.put(economy, reward);
-            }
-
         }
 
         public void setAllowedMessage(boolean message) {

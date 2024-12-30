@@ -7,6 +7,7 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
+import cz.johnslovakia.gameapi.utils.Sounds;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
@@ -41,7 +42,8 @@ public class KitInventoryEditor implements Listener {
         if (containsArmor(kit.getContent().getContents())){
             gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", !containsArmor(inventoryItems));
             //gamePlayer.getOnlinePlayer().sendMessage(containsArmor(kit.getContent().getContents()) + " " + !containsArmor(currentKitInventory.getStorageContents()));
-
+        }else{
+            gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", true);
         }
 
         openGUI(gamePlayer, kit);
@@ -63,7 +65,7 @@ public class KitInventoryEditor implements Listener {
         Inventory gui = Bukkit.createInventory(null, 54, "§f七七七七七七七七ㆾ");
 
         for (int i = 27; i <= 35; i++){
-            gui.setItem(i, new ItemBuilder(XMaterial.GRAY_STAINED_GLASS_PANE.parseItem()).setName("").setLore(MessageManager.get(gamePlayer.getOnlinePlayer(), "inventory.set_kit_inventory.item.info").getTranslated()).toItemStack());
+            gui.setItem(i, new ItemBuilder(XMaterial.GRAY_STAINED_GLASS_PANE.parseItem()).setName(" ").setLore(MessageManager.get(gamePlayer.getOnlinePlayer(), "inventory.set_kit_inventory.item.info").getTranslated()).toItemStack());
         }
 
         Inventory currentKitInventory = gamePlayer.getPlayerData().getKitInventory(kit);
@@ -95,7 +97,7 @@ public class KitInventoryEditor implements Listener {
                     .addToItemLore(kitItem);
         }
 
-        ItemBuilder back = new ItemBuilder(Material.ARROW).setName(MessageManager.get(gamePlayer, "inventory.item.go_back").getTranslated());
+        ItemBuilder back = new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1016).setName(MessageManager.get(gamePlayer, "inventory.item.go_back").getTranslated());
 
         ItemBuilder invisibleItem = new ItemBuilder(Material.MAP).setName("").setCustomModelData(1010).hideAllFlags();
         for (int i = 45; i <= 53; i++){
@@ -162,7 +164,7 @@ public class KitInventoryEditor implements Listener {
 
         int slot = event.getSlot();
 
-        if (!((slot >= 0 && slot <= 26) || (slot >= 36 && slot <= 44))) {
+        if (!((slot >= 0 && slot <= 26) || (slot >= 36 && slot < 44))) { //<= 44
             event.setCancelled(true);
         }
         if ((event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && event.getAction() == InventoryAction.PICKUP_ALL
@@ -177,10 +179,12 @@ public class KitInventoryEditor implements Listener {
 
         switch (event.getSlot()) {
             case 45:
+                player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 1F, 1F);
                 gamePlayer.getMetadata().put("set_kit_inventory.check_closing", false);
                 KitInventory.openKitInventory(gamePlayer);
                 break;
             case 46:
+                player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 1F, 1F);
                 gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", true);
 
                 Inventory kitInventory = kit.getContent().getInventory();
@@ -195,6 +199,8 @@ public class KitInventoryEditor implements Listener {
                 }
                 break;
             case 52:
+                player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 1F, 1F);
+
                 if (event.getCurrentItem() != null && event.getCurrentItem().getType().equals(Material.LEATHER_CHESTPLATE)) {
                     if ((boolean) gamePlayer.getMetadata().get("set_kit_inventory.autoArmor")) {
                         gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", false);
@@ -208,6 +214,7 @@ public class KitInventoryEditor implements Listener {
 
                 break;
             case 53:
+                player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 1F, 1F);
                 gamePlayer.getMetadata().put("set_kit_inventory.check_closing", false);
                 player.closeInventory();
                 KitInventory.openKitInventory(gamePlayer);
@@ -217,7 +224,7 @@ public class KitInventoryEditor implements Listener {
     }
 
     private int findEmptySlot(Inventory gui) {
-        for (int i = 36; i <= 44; i++) {
+        for (int i = 36; i < 44; i++) { //<=
             if (gui.getItem(i) == null || gui.getItem(i).getType() == Material.AIR) {
                 return i;
             }

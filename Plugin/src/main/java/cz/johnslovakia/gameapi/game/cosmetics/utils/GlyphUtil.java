@@ -57,11 +57,7 @@ public class GlyphUtil
         packet.getFloat().write(6, 1.0f);
 
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-            try {
-                ProtocolLibrary.getProtocolManager().sendServerPacket(onlinePlayer, packet);
-            } catch (InvocationTargetException e) {
-                throw new RuntimeException(e);
-            }
+            ProtocolLibrary.getProtocolManager().sendServerPacket(onlinePlayer, packet);
         }
     }
 
@@ -76,10 +72,6 @@ public class GlyphUtil
         packet.getFloat().write(5, (float) color.getBlue() / 255);
         packet.getFloat().write(6, 1.0f);
 
-        try {
-            ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
-        } catch (InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
+        ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
     }
 }

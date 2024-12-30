@@ -1,7 +1,7 @@
 package cz.johnslovakia.gameapi.game.kit;
 
 import cz.johnslovakia.gameapi.GameAPI;
-import cz.johnslovakia.gameapi.economy.Economy;
+import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.events.KitSelectEvent;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
@@ -19,6 +19,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;
@@ -27,6 +28,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 @Getter
 public class Kit implements Listener{
 
+    @Setter
+    private KitManager kitManager;
     private final String name;
     private final ItemStack icon;
     private final int price;
@@ -39,6 +42,7 @@ public class Kit implements Listener{
     public Kit(String name, ItemStack icon, int price) {
         this.name = name;
         this.icon = icon;
+        icon.setAmount(1);
         this.price = price;
     }
 
@@ -65,9 +69,9 @@ public class Kit implements Listener{
 
         Player player = gamePlayer.getOnlinePlayer();
         Game game = gamePlayer.getPlayerData().getGame();
-        Economy economy = kitManager.getEconomy();
+        Resource resource = kitManager.getResource();
         PlayerData data = gamePlayer.getPlayerData();
-        int balance = data.getBalance(economy);
+        int balance = data.getBalance(resource);
 
 
         if (game.getState() != GameState.INGAME) {
@@ -75,6 +79,16 @@ public class Kit implements Listener{
         }
 
         player.getInventory().setContents(data.getKitInventories().get(this) != null ? data.getKitInventories().get(this).getContents() : getContent().getInventory().getContents());
+
+        if (gamePlayer.getMetadata().get("edited_kit_inventory") != null){
+            boolean edited = (boolean) gamePlayer.getMetadata().get("edited_kit_inventory");
+            if (edited){
+                gamePlayer.getPlayerData().setKitInventory(this, player.getInventory());
+                Bukkit.getScheduler().runTaskAsynchronously(GameAPI.getInstance(), task -> data.saveKitInventories());
+            }
+            gamePlayer.getMetadata().remove("edited_kit_inventory");
+        }
+
         Utils.colorizeArmor(gamePlayer);
 
         if (kitManager.getDefaultKit() != this) {
@@ -88,23 +102,23 @@ public class Kit implements Listener{
                         MessageManager.get(player, "chat.kit.activated_vip")
                                 .replace("%kit%", getName())
                                 .replace("%saved%", "" + getPrice())
-                                .replace("%economy_name%", economy.getName())
+                                .replace("%economy_name%", resource.getName())
                                 .send();
                     }else{
                         MessageManager.get(player, "chat.kit.activated")
                                 .replace("%kit%", getName())
                                 .replace("%price%", "" + getPrice())
-                                .replace("%economy_name%", economy.getName())
+                                .replace("%economy_name%", resource.getName())
                                 .send();
                         MessageManager.get(player, "chat.current_balance")
                                 .replace("%kit%", getName())
                                 .replace("%balance%", "" + balance)
-                                .replace("%economy_name%", economy.getName())
+                                .replace("%economy_name%", resource.getName())
                                 .send();
                         new BukkitRunnable(){
                             @Override
                             public void run() {
-                                gamePlayer.getPlayerData().withdraw(economy, getPrice());
+                                gamePlayer.getPlayerData().withdraw(resource, getPrice());
                             }
                         }.runTaskAsynchronously(GameAPI.getInstance());
                     }
@@ -133,8 +147,8 @@ public class Kit implements Listener{
         KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
 
         Player player = gamePlayer.getOnlinePlayer();
-        Economy economy = kitManager.getEconomy();
-        int balance = gamePlayer.getPlayerData().getBalance(economy);
+        Resource resource = kitManager.getResource();
+        int balance = gamePlayer.getPlayerData().getBalance(resource);
 
 
         if (balance >= getPrice()|| kitManager.hasKitPermission(gamePlayer, this) || gamePlayer.getPlayerData().getPurchasedKitsThisGame().contains(this)) {
@@ -162,7 +176,7 @@ public class Kit implements Listener{
             }
             MessageManager.get(player, "chat.dont_have_enough")
                     .replace("%need_more%", "" + (getPrice() - balance))
-                    .replace("%economy_name%", economy.getName())
+                    .replace("%economy_name%", resource.getName())
                     .send();
         }
     }
@@ -193,6 +207,16 @@ public class Kit implements Listener{
         }
     }
 
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent e) {
+        if (e.getWhoClicked() instanceof Player player) {
+            GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+            Game game = gamePlayer.getPlayerData().getGame();
+            if (game.getRunningMainTask().getId().equalsIgnoreCase("PreparationTask")){
+                gamePlayer.getMetadata().put("edited_kit_inventory", true);
+            }
+        }
+    }
 
     public String getTranslationKey(){
         return "perk." + getName().toLowerCase().replace(" ", "_");

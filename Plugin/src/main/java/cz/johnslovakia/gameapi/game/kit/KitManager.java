@@ -2,8 +2,9 @@ package cz.johnslovakia.gameapi.game.kit;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.datastorage.Type;
-import cz.johnslovakia.gameapi.economy.Economy;
+import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.game.Game;
+import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.guis.KitInventoryEditor;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import lombok.Getter;
@@ -41,21 +42,29 @@ public class KitManager implements Listener {
         return kitManagers.get(0);
     }
 
+    public static KitManager getKitManager(GameMap gameMap){
+        for (KitManager kitManager : kitManagers.stream().filter(kitManager -> (kitManager.getGameMap() != null || kitManager.getGame() != null)).toList()){
+            if (kitManager.getGameMap().equals(gameMap) || kitManager.getGame().getCurrentMap().equals(gameMap)){
+                return kitManager;
+            }
+        }
+        return kitManagers.get(0);
+    }
+
 
     private Game game;
-    private final Economy economy;
+    private GameMap gameMap;
+    private final Resource resource;
 
     private final List<Kit> kits = new ArrayList<>();
     @Setter
     private Kit defaultKit;
 
     private final boolean purchaseKitForever;
-    private final boolean giveAfterDeath;
 
-    public KitManager(Economy economy, boolean buyingForever, boolean giveAfterDeath) {
-        this.economy = economy;
+    public KitManager(Resource resource, boolean buyingForever) {
+        this.resource = resource;
         this.purchaseKitForever = buyingForever;
-        this.giveAfterDeath = giveAfterDeath;
 
         GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
         GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
@@ -63,11 +72,22 @@ public class KitManager implements Listener {
         addKitManager(this);
     }
 
-    public KitManager(Game game, Economy economy, boolean buyingForever, boolean giveAfterDeath) {
+    public KitManager(Game game, Resource resource, boolean buyingForever) {
         this.game = game;
-        this.economy = economy;
+        this.resource = resource;
         this.purchaseKitForever = buyingForever;
-        this.giveAfterDeath = giveAfterDeath;
+
+        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
+        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
+
+        addKitManager(this);
+    }
+
+    public KitManager(GameMap gameMap, Resource resource, boolean buyingForever) {
+        this.gameMap = gameMap;
+        this.game = gameMap.getGame();
+        this.resource = resource;
+        this.purchaseKitForever = buyingForever;
 
         GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
         GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
@@ -83,17 +103,19 @@ public class KitManager implements Listener {
     }
 
 
-
     public void registerKit(Kit... kits) {
         for (Kit kit : kits) {
             if (getKit(kit.getName()) != null) {
                 continue;
             }
+            kit.setKitManager(this);
             this.kits.add(kit);
         }
     }
     public void unregisterKit(String kitName) {
-        if (getKit(kitName) != null) {
+        Kit kit = getKit(kitName);
+        if (kit != null) {
+            kit.setKitManager(null);
             kits.remove(getKit(kitName));
         }
     }
@@ -108,12 +130,13 @@ public class KitManager implements Listener {
     }
 
     public Kit getKit(String name){
-        for (Kit kit : kits){
-            if (kit.getName().equals(name)){
-                return kit;
-            }
-        }
-        return null;
+        if (kits.stream().filter(kit -> kit.getName().equals(name)).count() > 1)
+            throw new IllegalArgumentException("There are multiple kits with the same name (" + name + "), so I can't determine which one you mean!");
+
+        return kits.stream()
+                .filter(kit -> kit.getName().equals(name))
+                .findFirst()
+                .orElse(null);
     }
 
 }

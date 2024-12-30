@@ -1,7 +1,7 @@
 package cz.johnslovakia.gameapi.guis;
 
 import com.cryptomorin.xseries.XEnchantment;
-import cz.johnslovakia.gameapi.economy.Economy;
+import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.game.kit.Kit;
@@ -11,11 +11,16 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.Sounds;
+import cz.johnslovakia.gameapi.utils.StringUtils;
 import me.zort.containr.Component;
 import me.zort.containr.Element;
 import me.zort.containr.GUI;
 import org.bukkit.Material;
 import org.bukkit.event.Listener;
+import org.bukkit.inventory.ItemStack;
+
+import java.util.Arrays;
+import java.util.Objects;
 
 public class KitInventory implements Listener {
 
@@ -28,17 +33,17 @@ public class KitInventory implements Listener {
                     Game game = playerData.getGame();
                     KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
 
-                    Economy economy = kitManager.getEconomy();
-                    int balance = playerData.getBalance(economy);
+                    Resource resource = kitManager.getResource();
+                    int balance = playerData.getBalance(resource);
 
-                    ItemBuilder close = new ItemBuilder(Material.MAP);
-                    close.setCustomModelData(1010);
+                    ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
+                    close.setCustomModelData(1017);
                     close.hideAllFlags();
                     close.setName(MessageManager.get(player, "inventory.item.close")
                             .getTranslated());
 
-                    ItemBuilder info = new ItemBuilder(Material.MAP);
-                    info.setCustomModelData(1010);
+                    ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
+                    info.setCustomModelData(1018);
                     info.hideAllFlags();
                     info.setName(MessageManager.get(player, "inventory.info_item.kit_inventory.name")
                             .getTranslated());
@@ -56,7 +61,10 @@ public class KitInventory implements Listener {
 
 
 
-                    gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> gui.close(player)).build());
+                    gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> {
+                        gui.close(player);
+                        player.playSound(player, Sounds.CLICK.bukkitSound(), 1F, 1F);
+                    }).build());
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
 
                     gui.setContainer(20, Component.staticContainer()
@@ -98,24 +106,35 @@ public class KitInventory implements Listener {
                                         MessageManager.get(player, translateKey)
                                                 .addToItemLore(item);
                                         item.addLoreLine("");
+                                    }else{
+                                        if (kit.getContent() != null) {
+                                            if (kit.getContent().getContents() != null) {
+                                                for (ItemStack kitItem : Arrays.stream(kit.getContent().getContents()).filter(Objects::nonNull).toList()) {
+                                                    if (kitItem.getType().isAir()) continue;
+                                                    item.addLoreLine("§7" + StringUtils.formatItemStackName(gamePlayer, kitItem));
+                                                }
+                                                item.addLoreLine("");
+                                            }
+                                        }
                                     }
 
 
                                     if (player.hasPermission("kits.free")) {
                                         MessageManager.get(player, "inventory.kit.saved")
                                                 .replace("%price%", "" + kit.getPrice())
-                                                .replace("%economy_name%", economy.getName())
+                                                .replace("%economy_name%", resource.getName())
                                                 .addToItemLore(item);
                                     } else if ((playerData.getGame().getSettings().isEnabledChangingKitAfterStart() /*&& kitManager.getPurchasedThisGame().contains(gamePlayer)*/) //TODO: purchasedThisGame
                                             || (kitManager.isPurchaseKitForever() && kitManager.hasKitPermission(gamePlayer, kit))) {
                                         MessageManager.get(player, "inventory.kit.purchased_for")
-                                                .replace("%price%", (kit.getPrice() == 0 ? "" + 0 : "" + kit.getPrice()))
-                                                .replace("%economy_name%", economy.getName())
+                                                .replace("%price%", StringUtils.betterNumberFormat(kit.getPrice()))
+                                                .replace("%economy_name%", resource.getName())
                                                 .addToItemLore(item);
                                     } else {
                                         MessageManager.get(player, "inventory.kit.price")
-                                                .replace("%price%", (kit.getPrice() == 0 ? "" + 0 : "" + kit.getPrice()))
-                                                .replace("%economy_name%", economy.getName())
+                                                .replace("%balance%", (balance >= kit.getPrice() ? "§a" : "§c") + StringUtils.betterNumberFormat(balance))
+                                                .replace("%price%", StringUtils.betterNumberFormat(kit.getPrice()))
+                                                .replace("%economy_name%", resource.getName())
                                                 .addToItemLore(item);
                                     }
 
@@ -132,7 +151,7 @@ public class KitInventory implements Listener {
                                         MessageManager.get(player, "inventory.kit.select")
                                                 .addToItemLore(item);
                                     } else {
-                                        item.addLoreLine(((kit.getPrice() == 0 || kitManager.hasKitPermission(gamePlayer, kit) || balance >= kit.getPrice()) ? MessageManager.get(player, "inventory.kit.purchase").getTranslated() : MessageManager.get(player, "inventory.kit.dont_have_enough").replace("%economy_name%", economy.getName()).getTranslated()));
+                                        item.addLoreLine(((kit.getPrice() == 0 || kitManager.hasKitPermission(gamePlayer, kit) || balance >= kit.getPrice()) ? MessageManager.get(player, "inventory.kit.purchase").getTranslated() : MessageManager.get(player, "inventory.kit.dont_have_enough").replace("%economy_name%", resource.getName()).getTranslated()));
                                     }
 
 

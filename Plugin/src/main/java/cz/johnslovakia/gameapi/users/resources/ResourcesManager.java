@@ -1,17 +1,17 @@
-package cz.johnslovakia.gameapi.economy;
+package cz.johnslovakia.gameapi.users.resources;
 
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerScore;
+import cz.johnslovakia.gameapi.utils.rewards.Reward;
+import cz.johnslovakia.gameapi.utils.rewards.RewardItem;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class RewardsManager {
+public class ResourcesManager {
 
-
-
-    public static Integer getEarned(GamePlayer gamePlayer, Economy rewardType){
+    public static Integer getEarned(GamePlayer gamePlayer, Resource rewardType){
         int earned = 0;
 
         for (PlayerScore score : PlayerManager.getScoresByPlayer(gamePlayer)) {
@@ -22,10 +22,11 @@ public class RewardsManager {
 
     public static boolean earnedSomething(GamePlayer gamePlayer){
         for (PlayerScore score : PlayerManager.getScoresByPlayer(gamePlayer)) {
-            if (score.getRewardTypes() != null) {
-                if (!score.getRewardTypes().isEmpty()) {
-                    for (Economy type : score.getRewardTypes().keySet()) {
-                        if (score.getEarned(type) != 0){
+            Reward reward = score.getReward();
+            if (reward != null) {
+                if (!reward.getRewardItems().isEmpty()) {
+                    for (RewardItem item : reward.getRewardItems()) {
+                        if (score.getEarned(item.getResource()) != 0){
                             return true;
                         }
                     }
@@ -35,8 +36,8 @@ public class RewardsManager {
         return false;
     }
 
-    public static Map<Economy, Integer> rewardToHashMap(Economy rewardType, Integer reward){
-        Map<Economy, Integer> map = new HashMap<>();
+    public static Map<Resource, Integer> rewardToHashMap(Resource rewardType, Integer reward){
+        Map<Resource, Integer> map = new HashMap<>();
         map.put(rewardType, reward);
         return map;
     }

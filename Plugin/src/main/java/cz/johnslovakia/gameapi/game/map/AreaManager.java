@@ -71,9 +71,9 @@ public class AreaManager {
         if (gamePlayer.isLimited()) return getLimitedSettings();
         if (game == null) return null;
         if (game.getState() != GameState.INGAME) return getLimitedSettings();
-        if (game.getPlayingMap() == null) return null;
+        if (game.getCurrentMap() == null) return null;
         if (gamePlayer.isSpectator()) return getLimitedSettings();
-        if (gamePlayer.getAreas().isEmpty()) return game.getPlayingMap().getSettings();
+        if (gamePlayer.getAreas().isEmpty()) return game.getCurrentMap().getSettings();
 
         AreaSettings settings = null;
         int topPriority = -1;
@@ -85,7 +85,7 @@ public class AreaManager {
             }
         }
 
-        return (settings == null ? game.getPlayingMap().getSettings() : settings);
+        return (settings == null ? game.getCurrentMap().getSettings() : settings);
     }
 
 
@@ -99,13 +99,11 @@ public class AreaManager {
         List<AreaSettings> settings = new ArrayList<AreaSettings>();
 
         for(Game game : GameManager.getGames()) {
-            if (game.getPlayingMap() == null) {
-                continue;
+            if (game.getState() != GameState.INGAME || game.getCurrentMap() == null) continue;
+            if (game.getCurrentMap().getWorld().getName().equals(Objects.requireNonNull(location.getWorld()).getName())) {
+                settings.add(game.getCurrentMap().getSettings());
             }
-            if (game.getPlayingMap().getWorld().getName().equals(Objects.requireNonNull(location.getWorld()).getName())) {
-                settings.add(game.getPlayingMap().getSettings());
-            }
-            for (Area area : game.getPlayingMap().getAreas()) {
+            for (Area area : game.getCurrentMap().getAreas()) {
                 if (area.isInArea(location)){
                     settings.add(area.getSettings());
                 }

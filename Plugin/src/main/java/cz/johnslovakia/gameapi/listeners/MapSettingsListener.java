@@ -5,6 +5,7 @@ import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
+import cz.johnslovakia.gameapi.game.map.Area;
 import cz.johnslovakia.gameapi.game.map.AreaSettings;
 import cz.johnslovakia.gameapi.game.map.AreaManager;
 import cz.johnslovakia.gameapi.users.PlayerManager;
@@ -187,7 +188,7 @@ public class MapSettingsListener implements Listener {
                 e.setCancelled(true);
                 if (e.getEntity() instanceof Player) {
                     if (e.getCause() == EntityDamageEvent.DamageCause.VOID) {
-                        if (game.getState() == GameState.ENDING && game.getSettings().teleportPlayersAfterEnd()) {
+                        if (game.getState() == GameState.ENDING && !game.getSettings().teleportPlayersAfterEnd()) {
                             player.teleport(RespawnListener.getNonRespawnLocation(game));
                         }else{
                             e.getEntity().teleport(game.getLobbyPoint());
@@ -416,7 +417,7 @@ public class MapSettingsListener implements Listener {
     public void onInventoryClick(InventoryClickEvent e){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer((Player) e.getWhoClicked());
 
-        if (e.getView().getTitle().equalsIgnoreCase("Inventory Editor") || gamePlayer.getPlayerData().getCurrentInventory().getName().equalsIgnoreCase("Set Kit Inventory")){
+        if (e.getView().getTitle().equalsIgnoreCase("Inventory Editor") || e.getView().getTitle().contains("ㆾ") || gamePlayer.getPlayerData().getCurrentInventory().getName().equalsIgnoreCase("Set Kit Inventory")){
             return;
         }
 
@@ -473,11 +474,16 @@ public class MapSettingsListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void playerDamagePlayer(EntityDamageByEntityEvent e){
-        if (e.getDamager() instanceof Player){
+        if (e.getDamager() instanceof Player) {
             GamePlayer damager = PlayerManager.getGamePlayer((Player) e.getDamager());
-            if (damager.isSpectator()){
+            Game game = damager.getPlayerData().getGame();
+            ;
+            if (damager.isSpectator()) {
                 e.setCancelled(true);
                 return;
+            }
+            if (game.getState() != GameState.INGAME){
+                e.setCancelled(true);
             }
         }
 
@@ -556,6 +562,33 @@ public class MapSettingsListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent e) {
+        Player player = e.getPlayer();
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        Game game = PlayerManager.getGamePlayer(player).getPlayerData().getGame();
+
+        if (game == null || game.getState() != GameState.INGAME) return;
+        if (e.getTo() == null) return;
+
+        AreaSettings settings = AreaManager.getActiveSettings(gamePlayer);
+        if(settings != null) {
+            Area borderArea =  game.getCurrentMap().getMainArea();
+            if (settings.isAllowedInstantVoidKill() && borderArea != null || gamePlayer.isSpectator()) {
+                if (gamePlayer.isSpectator()){
+                    player.teleport(RespawnListener.getNonRespawnLocation(game));
+                    return;
+                }
+                double lowestAreaY = borderArea.getLocation1().getY();
+                if (borderArea.getLocation2().getY() < lowestAreaY){
+                    lowestAreaY = borderArea.getLocation2().getY();
+                }
+                if (e.getTo().getY() < lowestAreaY - 15){
+                    player.damage(player.getHealth());
+                }
+            }
+        }
+    }
 
     @EventHandler
     public void onPlayerPickupItem(PlayerPickupItemEvent e) {

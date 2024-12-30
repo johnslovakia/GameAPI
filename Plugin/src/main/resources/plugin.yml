@@ -6,6 +6,7 @@ author: Hunzek_
 description: MinigameAPI developed by john.slovakia (Hunzek_)
 website: linktree.com/john.slovakia
 softdepend: [Parties, PartyAndFriends, FriendSystem-Spigot-API]
+depend: [ProtocolLib]
 commands:
   saveinventory:
 

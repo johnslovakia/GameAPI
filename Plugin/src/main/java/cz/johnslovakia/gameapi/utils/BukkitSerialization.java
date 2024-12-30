@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.utils;
 
 
 import org.bukkit.Bukkit;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -12,6 +13,7 @@ import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 public class BukkitSerialization {
     /**
@@ -21,13 +23,24 @@ public class BukkitSerialization {
      * @return Array of strings: [ main content, armor content ]
      * @throws IllegalStateException
      */
-    public static String[] playerInventoryToBase64(PlayerInventory playerInventory) throws IllegalStateException {
+    public static String playerInventoryToBase64(PlayerInventory playerInventory) throws IllegalStateException {
         //get the main content part, this doesn't return the armor
-        String content = toBase64(playerInventory);
-        String armor = itemStackArrayToBase64(playerInventory.getArmorContents());
+        //String content = toBase64(playerInventory);
+        //String armor = itemStackArrayToBase64(playerInventory.getArmorContents());
 
-        return new String[] { content };
+        //return new String[] { content, armor};
+
+        return itemStackArrayToBase64(playerInventory.getContents());
     }
+
+    public static Inventory playerInventoryFromBase64(String data) throws IllegalStateException, IOException {
+        ItemStack[] content = itemStackArrayFromBase64(data);
+        Inventory inventory = Bukkit.createInventory(null, InventoryType.PLAYER);
+        inventory.setContents(content);
+
+        return inventory;
+    }
+
 
     /**
      *

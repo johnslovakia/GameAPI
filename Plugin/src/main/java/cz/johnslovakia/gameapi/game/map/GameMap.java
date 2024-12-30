@@ -3,6 +3,8 @@ package cz.johnslovakia.gameapi.game.map;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
+import cz.johnslovakia.gameapi.game.team.GameTeam;
+import cz.johnslovakia.gameapi.game.team.TeamManager;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
@@ -38,11 +40,8 @@ public class GameMap {
     @Setter
     private int votes = 0;
 
-    @Setter
-    private boolean playing = false;
+    @Getter
     private boolean winned = false;
-    @Setter
-    private boolean voting = true;
     @Setter
     private boolean played = false;
     @Setter
@@ -55,7 +54,7 @@ public class GameMap {
 
     public GameMap(Game game, String name, String authors) {
         this.game = game;
-        this.name = name;
+        this.name = name.replaceAll("_", " ");
         this.authors = authors;
         this.settings = new AreaSettings();
     }
@@ -119,54 +118,69 @@ public class GameMap {
 
     public Location getSpawn(String id){
         Location finalLocation = null;
-        for (MapLocation spawn : getSpawns()){
-            if (spawn.getId().equals(id)){
-                finalLocation = new Location(this.world, spawn.getX(), spawn.getY(), spawn.getZ(), spawn.getYaw(), spawn.getPitch());
+        for (MapLocation spawn : getSpawns()) {
+            if (spawn.getId().equals(id)) {
+                finalLocation = spawn.getLocation();
             }
         }
-        if (finalLocation == null) Logger.log("Something went wrong when trying to get the spawn " + id + " The following message is for Developers: Location 'finalLocation' is null!", Logger.LogType.ERROR);
+        if (finalLocation == null) Logger.log("Something went wrong when trying to get the spawn " + id + ". The following message is for Developers: Location 'finalLocation' is null!", Logger.LogType.ERROR);
         return finalLocation;
     }
 
+    public List<MapLocation> getSpawns(String id){
+        return getSpawns().stream().filter(spawn -> spawn.getId().equals(id)).toList();
+    }
+
     public void teleport() {
-        int spawn = 0;
-
-        for (GamePlayer gamePlayer : game.getPlayers()) {
-            if (!gamePlayer.isOnline()) {
-                return;
-            }
-
-            Player player = gamePlayer.getOnlinePlayer();
-            if (game.getSettings().isUseTeams()) {
-                try {
-                    Location location = getSpawn(gamePlayer.getPlayerData().getTeam().getName());
-                    if (location == null){
-                        continue;
+        if (game.getSettings().isUseTeams()) {
+            for (GameTeam gameTeam : TeamManager.getTeams(game)){
+                int spawn = 0;
+                for (GamePlayer gamePlayer : gameTeam.getMembers()){
+                    if (!gamePlayer.isOnline()) {
+                        return;
                     }
-                    location.setWorld(getWorld());
-                    player.teleport(location);
-                    getPlayerToLocation().put(gamePlayer, location);
+                    Player player = gamePlayer.getOnlinePlayer();
 
-                } catch (Exception ex) {
-                    Logger.log("Something went wrong when teleporting " + player.getName() + " to map spawn! Team:" + gamePlayer.getPlayerData().getTeam().getName() + " GameID:" + game.getID(), Logger.LogType.ERROR);
-                    Logger.log("The following message is for Developers: " + ex.getCause().getMessage(), Logger.LogType.ERROR);
+                    try {
+                        List<MapLocation> locations = getSpawns(gamePlayer.getPlayerData().getTeam().getName());
+                        if (locations.isEmpty()){
+                            continue;
+                        }
+                        Location location = (locations.get(spawn) != null ? locations.get(spawn).getLocation() : locations.get(spawn - 1).getLocation());
+                        if (location == null) {
+                            continue;
+                        }
+                        player.teleport(location);
+                        getPlayerToLocation().put(gamePlayer, location);
+                    } catch (Exception ex) {
+                        Logger.log("Something went wrong when teleporting " + player.getName() + " to map spawn! Team:" + gamePlayer.getPlayerData().getTeam().getName() + " GameID:" + game.getID(), Logger.LogType.ERROR);
+                        //Logger.log("The following message is for Developers: " + ex.getCause().getMessage(), Logger.LogType.ERROR);
+                        ex.fillInStackTrace();
+                    }
+                    spawn++;
                 }
-            } else {
+            }
+        }else {
+            int spawn = 0;
+            for (GamePlayer gamePlayer : game.getPlayers()) {
+                if (!gamePlayer.isOnline()) {
+                    return;
+                }
+                Player player = gamePlayer.getOnlinePlayer();
+
                 try {
-                    //String s = (spawns.get(spawn) == null ? (spawns.get(spawn - 1) != null ? spawns.get(spawn - 1).getId() : spawns.get(0).getId()) : spawns.get(spawn).getId());
                     String s = ((spawns.size() - 1) >= spawn ? spawns.get(spawn).getId() : spawns.get((spawn - 1)).getId());
                     Location location = getSpawn(s);
                     if (location == null) {
                         continue;
                     }
-                    location.setWorld(getWorld());
                     player.teleport(location);
                     getPlayerToLocation().put(gamePlayer, location);
-                }catch (Exception ex) {
+                } catch (Exception ex) {
                     Logger.log("Something went wrong when teleporting " + player.getName() + " to map spawn! GameID:" + game.getID(), Logger.LogType.ERROR);
-                    Logger.log("The following message is for Developers: " + ex.getCause().getMessage(), Logger.LogType.ERROR);
+                    //Logger.log("The following message is for Developers: " + ex.getCause().getMessage(), Logger.LogType.ERROR);
+                    ex.fillInStackTrace();
                 }
-
                 spawn++;
             }
         }
@@ -174,6 +188,9 @@ public class GameMap {
 
     public void setWinned(boolean winned){
         this.winned = winned;
+        if (game.getServerDataManager() != null) {
+            game.getServerDataManager().getJSONProperty("Map").update(game, getName());
+        }
         if (winned){
             setGame(game);
 
@@ -190,6 +207,10 @@ public class GameMap {
                 }
             }
         }
+    }
+
+    public boolean isPlaying(){
+        return game.getState().equals(GameState.INGAME) && isWinned() && !isPlayed();
     }
 
     public void addVote(){

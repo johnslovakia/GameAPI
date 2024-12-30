@@ -2,27 +2,20 @@ package cz.johnslovakia.gameapi.game.cosmetics;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.datastorage.Type;
-import cz.johnslovakia.gameapi.economy.Economy;
-import cz.johnslovakia.gameapi.game.perk.Perk;
+import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.users.PlayerManager;
-import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
-import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 public class CosmeticsManager implements Listener{
 
@@ -30,11 +23,11 @@ public class CosmeticsManager implements Listener{
     private List<CosmeticsCategory> categories = new ArrayList<>();
     private Inventory inv;
 
-    private Economy economy;
+    private Resource resource;
 
-    public CosmeticsManager(String name, Economy economy) {
+    public CosmeticsManager(String name, Resource resource) {
         this.name = name;
-        this.economy = economy;
+        this.resource = resource;
 
         GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "Cosmetics");
     }
@@ -50,6 +43,10 @@ public class CosmeticsManager implements Listener{
 
     public Cosmetic getCosmetic(String categoryName, String name){
         CosmeticsCategory category = getCategoryByName(categoryName);
+        return getCosmetic(category, name);
+    }
+
+    public Cosmetic getCosmetic(CosmeticsCategory category, String name){
         if (category != null){
             return category.getCosmetics().stream().filter(cosmetic -> cosmetic.getName().equalsIgnoreCase(name)).toList().get(0);
         }
@@ -79,8 +76,8 @@ public class CosmeticsManager implements Listener{
         return null;
     }
 
-    public Cosmetic getSelectedCosmetic(CosmeticsCategory category, Player player){
-        return PlayerManager.getGamePlayer(player).getPlayerData().getSelectedCosmetics().get(category);
+    public Cosmetic getSelectedCosmetic(CosmeticsCategory category, GamePlayer gamePlayer){
+        return gamePlayer.getPlayerData().getSelectedCosmetics().get(category);
     }
 
     public String getName() {
@@ -102,8 +99,8 @@ public class CosmeticsManager implements Listener{
         //TODO: registrace category, automaticky to udělat?
     }
 
-    public Economy getEconomy() {
-        return economy;
+    public Resource getEconomy() {
+        return resource;
     }
 
 

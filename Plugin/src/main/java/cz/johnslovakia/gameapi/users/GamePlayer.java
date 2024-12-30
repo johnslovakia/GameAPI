@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.users;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.game.Game;
+import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.game.Winner;
 import cz.johnslovakia.gameapi.game.map.Area;
 import cz.johnslovakia.gameapi.game.team.GameTeam;
@@ -134,7 +135,7 @@ public class GamePlayer extends Winner {
 
             getOnlinePlayer().setGameMode(GameMode.ADVENTURE);
             getOnlinePlayer().setAllowFlight(true);
-            getOnlinePlayer().setInvulnerable(true);
+            getOnlinePlayer().setFlying(true);
             getOnlinePlayer().addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
 
             for (GamePlayer alivePlayer : game.getPlayers()) {
@@ -144,10 +145,12 @@ public class GamePlayer extends Winner {
                 GameAPI.getInstance().getVersionSupport().showPlayer(GameAPI.getInstance(), otherSpectator.getOnlinePlayer(), getOnlinePlayer());
             }
 
-            if (teamSelector){
-                getPlayerData().getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().give(getOnlinePlayer());
-            }else{
-                getPlayerData().getGame().getSpectatorManager().getInventoryManager().give(getOnlinePlayer());
+            if (game.getState().equals(GameState.INGAME)) {
+                if (teamSelector) {
+                    getPlayerData().getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().give(getOnlinePlayer());
+                } else {
+                    getPlayerData().getGame().getSpectatorManager().getInventoryManager().give(getOnlinePlayer());
+                }
             }
 
             MessageManager.get(this, "title.spectator")
@@ -173,7 +176,6 @@ public class GamePlayer extends Winner {
 
             getOnlinePlayer().setAllowFlight(false);
             getOnlinePlayer().setFlying(false);
-            getOnlinePlayer().setInvulnerable(false);
             for (PotionEffect potionEffect : getOnlinePlayer().getActivePotionEffects()){
                 getOnlinePlayer().removePotionEffect(potionEffect.getType());
             }
@@ -203,6 +205,7 @@ public class GamePlayer extends Winner {
         getOnlinePlayer().setFlying(false);
         getOnlinePlayer().setFireTicks(0);
         getOnlinePlayer().setGameMode(GameMode.SURVIVAL);
+        getOnlinePlayer().setInvulnerable(false);
         for(PotionEffect effect : getOnlinePlayer().getActivePotionEffects()){
             if (effect.getType().equals(PotionEffectType.BLINDNESS)){
                 continue;
@@ -242,10 +245,10 @@ public class GamePlayer extends Winner {
     public List<Area> getAreas(){
         if(!isInGame()) return null;
         if(!isOnline()) return null;
-        if (getPlayerData().getGame().getPlayingMap() == null) return null;
+        if (getPlayerData().getGame().getCurrentMap() == null) return null;
 
         List<Area> areas = new ArrayList<>();
-        for(Area area : getPlayerData().getGame().getPlayingMap().getAreas()){
+        for(Area area : getPlayerData().getGame().getCurrentMap().getAreas()){
             if(area.isInArea(getOnlinePlayer().getLocation())) {
                 areas.add(area);
             }

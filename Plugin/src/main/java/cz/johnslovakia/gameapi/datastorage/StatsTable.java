@@ -21,15 +21,21 @@ public class StatsTable {
 
     public StatsTable() {
         this.minigame = GameAPI.getInstance().getMinigame();
-        this.TABLE_NAME = GameAPI.getInstance().getMinigame().getMinigameName() + "_stats";
+        this.TABLE_NAME = GameAPI.getInstance().getMinigame().getName() + "_stats";
     }
     public void createTable() {
         StringBuilder stats_s = new StringBuilder("`id` INT AUTO_INCREMENT PRIMARY KEY, `Nickname` VARCHAR(32) NOT NULL");
 
         List<String> stats = new ArrayList<>();
         for (Stat stat : GameAPI.getInstance().getStatsManager().getStats()){
-            stats.add(stat.getName());
+            if (stat.getName().equalsIgnoreCase("Winstreak")){
+                continue;
+            }
+            stats.add(stat.getName().replace(" ", "_"));
         }
+
+        stats.add("Winstreak");
+
 
         for (String s : stats) {
             stats_s.append(", `").append(s).append("` int DEFAULT 0");
@@ -92,6 +98,7 @@ public class StatsTable {
 
 
     public void setStat(String nick, String statName, int count) {
+        statName = statName.replace(" ", "_");
         minigame.getDatabase().getConnection().update()
                 .table(TABLE_NAME)
                 .set(statName, count)
@@ -100,10 +107,12 @@ public class StatsTable {
     }
 
     public void addStat(String nick, String statName, int count) {
+        statName = statName.replace(" ", "_");
         setStat(nick, statName, getStat(nick, statName) + 1);
     }
 
     public void removeStat(String nick, String statName, int count) {
+        statName = statName.replace(" ", "_");
         int i = getStat(nick, statName);
         if (i <= 0) {
             return;
@@ -115,6 +124,7 @@ public class StatsTable {
     }
 
     public int getStat(String nick, String statName) {
+        statName = statName.replace(" ", "_");
         Optional<Row> result = minigame.getDatabase().getConnection().select()
                 .from(TABLE_NAME)
                 .where().isEqual("Nickname", nick)
@@ -133,7 +143,7 @@ public class StatsTable {
 
         List<String> stats2 = new ArrayList<>();
         for (Stat stat : GameAPI.getInstance().getStatsManager().getStats()){
-            stats2.add(stat.getName());
+            stats2.add(stat.getName().replace(" ", "_"));
         }
 
 

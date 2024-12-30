@@ -7,13 +7,12 @@ import lombok.Setter;
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
+@Getter @Setter
 public class MapManager {
 
-    private final Game game;
+    private Game game;
     private final List<GameMap> maps = new ArrayList<>();
 
-    @Setter
     private boolean voting = true;
 
     public MapManager(Game game) {

@@ -64,7 +64,7 @@ public class ChatListener implements Listener {
 
                 return;
             }
-            if (game.getState() == GameState.INGAME || game.getState() == GameState.PREPARATION) {
+            if (game.getState() == GameState.INGAME) {
 
                 if (game.getSettings().isUseTeams() && game.getSettings().getMaxTeamPlayers() > 1) {
                     if (team != null) {

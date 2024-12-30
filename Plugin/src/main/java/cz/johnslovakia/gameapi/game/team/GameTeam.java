@@ -58,7 +58,6 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
         if (game != null) {
             if (game.getState() == GameState.WAITING
                     || game.getState() == GameState.STARTING
-                    || game.getState() == GameState.PREPARATION
                     || game.getSettings().isAllowedJoiningAfterStart()
                     || cause.equals(TeamJoinCause.REJOIN)) {
 
@@ -130,9 +129,11 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
 
                     player.setPlayerListName(getChatColor() + player.getName());
                     player.setDisplayName(getChatColor() + player.getName());
-                    MessageManager.get(gamePlayer, "chat.team.join")
-                            .replace("%team%", getChatColor() + getName())
-                            .send();
+                    if (!cause.equals(TeamJoinCause.AUTO)) {
+                        MessageManager.get(gamePlayer, "chat.team.join")
+                                .replace("%team%", getChatColor() + getName())
+                                .send();
+                    }
 
                     if (cause.equals(TeamJoinCause.PARTY)){
                         MessageManager.get(gamePlayer, "chat.party.team_join")
@@ -167,7 +168,7 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
     }
 
     public Location getSpawn(){
-        GameMap map = game.getPlayingMap();
+        GameMap map = game.getCurrentMap();
         return map.getSpawn(getName());
     }
 

@@ -21,12 +21,12 @@ public class MinigameTable {
     public MinigameTable(Minigame minigame, Map<Type, List<String>> rows) {
         this.minigame = minigame;
         this.rows = rows;
-        this.TABLE_NAME = minigame.getMinigameName();
+        this.TABLE_NAME = minigame.getName();
     }
 
     public MinigameTable(Minigame minigame) {
         this.minigame = minigame;
-        this.TABLE_NAME = minigame.getMinigameName();
+        this.TABLE_NAME = minigame.getName();
     }
 
     public MinigameTable addColumn(Type type, String name){
@@ -47,7 +47,7 @@ public class MinigameTable {
         if (connection != null) {
             QueryResult result = connection.exec(() ->
                     "ALTER TABLE " + TABLE_NAME +
-                            " ADD IF NOT EXISTS " + name + " " + type.getB());
+                            " ADD IF NOT EXISTS " + name + " " + type.getB() + (type.equals(Type.INT) ? " DEFAULT 0" : ""));
 
             if (!result.isSuccessful()) {
                 Logger.log("Failed to add new column " + TABLE_NAME + " table!", Logger.LogType.ERROR);

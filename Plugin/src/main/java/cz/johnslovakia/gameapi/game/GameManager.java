@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.game;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.events.GameResetEvent;
 import cz.johnslovakia.gameapi.events.NewArenaEvent;
 import cz.johnslovakia.gameapi.game.map.GameMap;
@@ -26,13 +27,17 @@ public class GameManager {
     private static final List<String> ids = new ArrayList<>();
 
     public static void registerGame(Game game){
-        if (games.contains(game)){
-            return;
-        }
-        Logger.log("Added Game " + game.getID(), Logger.LogType.INFO);
-        games.add(game);
-    }
+        if (games.contains(game)) return;
 
+        games.add(game);
+        game.finishSetup();
+        Logger.log("Added Game " + game.getID(), Logger.LogType.INFO);
+
+        if (games.size() > 1 && GameAPI.getInstance().getMinigame().getDatabase() != null){
+            GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.VARCHAR128, "game");
+        }
+
+    }
 
     public static void newArena(Player player, boolean sendToLobbyIfNoArena) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
@@ -40,9 +45,7 @@ public class GameManager {
         NewArenaEvent ev = new NewArenaEvent(PlayerManager.getGamePlayer(player));
         Bukkit.getPluginManager().callEvent(ev);
 
-        if (ev.isCancelled()){
-            return;
-        }
+        if (ev.isCancelled()) return;
 
         Game game = getHighestGame();
         if (gamePlayer.getParty().isInParty()){
@@ -69,9 +72,7 @@ public class GameManager {
     public static Game getHighestGame() {
         Game highest = null;
 
-        if (GameManager.getGames().isEmpty()){
-            return null;
-        }
+        if (GameManager.getGames().isEmpty()) return null;
 
         for(Game game : GameManager.getGames()) {
             if (game.getState() != GameState.WAITING && game.getState() != GameState.STARTING) {
@@ -79,9 +80,7 @@ public class GameManager {
                     continue;
                 }
             }
-            if (game.getPlayers().size() >= game.getSettings().getMaxPlayers()){
-                continue;
-            }
+            if (game.getPlayers().size() >= game.getSettings().getMaxPlayers()) continue;
 
             if (highest == null || game.getPlayers().size() > highest.getPlayers().size()) {
                 highest = game;
@@ -109,10 +108,18 @@ public class GameManager {
 
 
         Game newGame = new Game(game.getName(), game.getLobbyInventory(), game.getLobbyPoint());
-        newGame.setMapManager(game.getMapManager());
         TeamManager.resetTeamsAndRegisterForNewGame(game, newGame);
 
-        newGame.getMapManager().getMaps().forEach(a -> a.setGame(newGame));
+        newGame.setMapManager(game.getMapManager());
+        game.getMapManager().setVoting(true);
+        game.getMapManager().setGame(newGame);
+        for (GameMap map : newGame.getMapManager().getMaps()) {
+            map.setGame(newGame);
+            map.setVotes(0);
+            map.setPlayed(false);
+            map.setWinned(false);
+            map.setWorld(null);
+        }
 
 
         List<Player> players = new ArrayList<>();
@@ -134,13 +141,6 @@ public class GameManager {
         GameResetEvent ev = new GameResetEvent(game, newGame);
         Bukkit.getPluginManager().callEvent(ev);
 
-        for (GameMap map : newGame.getMapManager().getMaps()) {
-            map.setVotes(0);
-            map.setPlayed(false);
-            map.setPlaying(false);
-            map.setWinned(false);
-            map.setWorld(null);
-        }
 
         if (!players.isEmpty()) {
             for (Player player : players) {

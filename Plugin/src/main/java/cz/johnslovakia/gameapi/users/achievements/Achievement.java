@@ -1,6 +1,6 @@
 package cz.johnslovakia.gameapi.users.achievements;
 
-import cz.johnslovakia.gameapi.economy.Economy;
+import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.users.quests.QuestType;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 
@@ -11,7 +11,7 @@ public interface Achievement {
 
     QuestType getType();
     String getName();
-    Map<Economy, Integer> getRewards();
+    Map<Resource, Integer> getRewards();
     Set<Trigger<?>> getTriggers();
 
 }

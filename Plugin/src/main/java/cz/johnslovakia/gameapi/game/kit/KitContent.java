@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.game.kit;
 
 import lombok.Getter;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -9,14 +10,19 @@ import org.bukkit.inventory.ItemStack;
 @Getter
 public class KitContent {
 
-    private Inventory inventory = Bukkit.createInventory(null, InventoryType.PLAYER);
+    private final Inventory inventory;
 
     public KitContent(Inventory inventory) {
         this.inventory = inventory;
     }
 
     public KitContent(ItemStack... items) {
+        this.inventory = Bukkit.createInventory(null, InventoryType.PLAYER);
         addItem(items);
+    }
+
+    public KitContent() {
+        this.inventory = Bukkit.createInventory(null, InventoryType.PLAYER);
     }
 
     public void addItem(ItemStack... items){

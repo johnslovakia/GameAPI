@@ -1,10 +1,10 @@
-package cz.johnslovakia.gameapi.economy;
+package cz.johnslovakia.gameapi.users.resources;
 
 import java.util.Comparator;
 
-public class RewardTypeComparator implements Comparator<Economy> {
+public class ResourceComparator implements Comparator<Resource> {
 
-    public int compare(Economy rt1, Economy rt2) {
+    public int compare(Resource rt1, Resource rt2) {
 
         int rank1 = rt1.getRank();
         int rank2 = rt2.getRank();

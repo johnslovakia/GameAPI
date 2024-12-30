@@ -3,7 +3,7 @@ package cz.johnslovakia.gameapi.users;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.datastorage.*;
-import cz.johnslovakia.gameapi.economy.Economy;
+import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsCategory;
@@ -28,6 +28,7 @@ import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
 import org.bukkit.Bukkit;
+import org.bukkit.boss.BossBar;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.json.JSONArray;
@@ -48,6 +49,8 @@ public class PlayerData {
     private Kit kit;
     private String prefix;
     private Language language;
+    private BossBar currentBossBar;
+    private KillMessage killMessage;
 
     private List<GameMap> votesForMaps = new ArrayList<>();
 
@@ -67,6 +70,18 @@ public class PlayerData {
         this.gamePlayer = gamePlayer;
         this.playerTable = new PlayerTable(gamePlayer);
 
+        new BukkitRunnable(){
+            @Override
+            public void run() {
+                gamePlayer.getPlayerData().getPlayerTable().newUser(gamePlayer);
+                GameAPI.getInstance().getMinigame().getMinigameTable().newUser(gamePlayer);
+                GameAPI.getInstance().getStatsManager().getStatsTable().newUser(gamePlayer);
+                loadData();
+            }
+        }.runTaskAsynchronously(GameAPI.getInstance());
+
+
+
         try {
             Optional<Row> result = GameAPI.getInstance().getMinigame().getDatabase().getConnection().select()
                     .from(PlayerTable.TABLE_NAME)
@@ -84,7 +99,10 @@ public class PlayerData {
             e.printStackTrace();
         }
 
+    }
 
+
+    public void loadData(){
         new BukkitRunnable(){
             @Override
             public void run() {
@@ -215,10 +233,9 @@ public class PlayerData {
                         QuestType type = QuestType.valueOf(questObject.getString("type").toUpperCase());
                         PlayerQuestData.Status status = PlayerQuestData.Status.valueOf(questObject.getString("status").toUpperCase());  // "NOT_STARTED", "IN_PROGRESS", "COMPLETED"
                         int progress = questObject.getInt("progress");
-                        String completionDateString = questObject.optString("completion_date", null);
                         LocalDate completionDate = null;
-                        if (completionDateString != null) {
-                            completionDate = LocalDate.parse(questObject.optString("completion_date", null));
+                        if (questObject.get("completion_date") != null) {
+                            completionDate = LocalDate.parse(questObject.getString("completion_date"));
                         }
 
                         Quest quest = GameAPI.getInstance().getQuestManager().getQuest(type, name);
@@ -231,7 +248,7 @@ public class PlayerData {
                         }else{
                             questData = new PlayerQuestData(quest, gamePlayer);
                         }
-                        if (progress >= quest.getCompletionGoal()){
+                        if (progress >= quest.getCompletionGoal() && status != PlayerQuestData.Status.COMPLETED){
                             Bukkit.getLogger().log(Level.WARNING, "Quest data is incorrectly stored in the database. Status: " + status.name() + " Progress: " + progress + " Completion goal: " + quest.getCompletionGoal() + " Quest Name: " + quest.getDisplayName());
                             questData.setStatus(PlayerQuestData.Status.COMPLETED);
                         }
@@ -307,6 +324,9 @@ public class PlayerData {
     }
 
     private void loadKits(){
+        if (game == null){
+            return;
+        }
         KitManager kitManager = KitManager.getKitManager(game);
         if (kitManager == null){
             return;
@@ -345,12 +365,18 @@ public class PlayerData {
 
                     for (int i = 0; i < inventoriesArray.length(); i++) {
                         JSONObject kitObject = inventoriesArray.getJSONObject(i);
+
+                        if (kitManager.getGameMap() != null){
+                            if (kitObject.get("map") == null) continue;
+                            if (!kitObject.getString("map").equalsIgnoreCase(kitManager.getGameMap().getName())) continue;
+                        }
+
                         String name = kitObject.getString("name");
                         String inventory = kitObject.getString("inventory");
                         Kit k = kitManager.getKit(name);
 
                         if (k != null) {
-                            kitInventories.put(k, BukkitSerialization.fromBase64(inventory));
+                            kitInventories.put(k, BukkitSerialization.playerInventoryFromBase64(inventory));
                         }
                     }
                 }
@@ -370,39 +396,11 @@ public class PlayerData {
 
     public void saveAll(){
         Minigame minigame = GameAPI.getInstance().getMinigame();
-        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
-        QueryResult cosmeticResult = connection.update()
-                .table(minigame.getMinigameTable().getTableName())
-                .set("Cosmetics", CosmeticsStorage.toJSON(getGamePlayer()).toString())
-                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
-                .execute();
-        if (!cosmeticResult.isSuccessful()) {
-            Logger.log("Something went wrong when saving cosmetics data! The following message is for Developers: ", Logger.LogType.ERROR);
-            Logger.log(cosmeticResult.getRejectMessage(), Logger.LogType.ERROR);
-        }
-
-
-        QueryResult questsResult = connection.update()
-                .table(minigame.getMinigameTable().getTableName())
-                .set("Quests", QuestsStorage.toJSON(getGamePlayer()).toString())
-                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
-                .execute();
-        if (!questsResult.isSuccessful()) {
-            Logger.log("Something went wrong when saving quests data! The following message is for Developers: ", Logger.LogType.ERROR);
-            Logger.log(questsResult.getRejectMessage(), Logger.LogType.ERROR);
-        }
-
-
-        QueryResult kitInventoriesResult = connection.update()
-                .table(minigame.getMinigameTable().getTableName())
-                .set("KitInventories", KitsStorage.inventoriesToJSON(getGamePlayer()).toString())
-                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
-                .execute();
-        if (!kitInventoriesResult.isSuccessful()) {
-            Logger.log("Something went wrong when saving kits data! The following message is for Developers: ", Logger.LogType.ERROR);
-            Logger.log(cosmeticResult.getRejectMessage(), Logger.LogType.ERROR);
-        }
+        saveCosmetics();
+        saveQuests();
+        savePerks();
+        saveKitInventories();
 
         for (Stat stat : GameAPI.getInstance().getStatsManager().getStats()){
             PlayerStat playerStat = stat.getPlayerStat(gamePlayer);
@@ -411,6 +409,74 @@ public class PlayerData {
             }
         }
     }
+
+    public void saveKitInventories(){
+        Minigame minigame = GameAPI.getInstance().getMinigame();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
+
+        QueryResult kitInventoriesResult = connection.update()
+                .table(minigame.getMinigameTable().getTableName())
+                .set("KitInventories", KitsStorage.inventoriesToJSON(getGamePlayer()).toString())
+                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                .execute();
+        if (!kitInventoriesResult.isSuccessful()) {
+            Logger.log("Something went wrong when saving kits data! The following message is for Developers: ", Logger.LogType.ERROR);
+            Logger.log(kitInventoriesResult.getRejectMessage(), Logger.LogType.ERROR);
+        }
+    }
+
+    public void savePerks(){
+        Minigame minigame = GameAPI.getInstance().getMinigame();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
+
+        if (GameAPI.getInstance().getPerkManager() != null) {
+            QueryResult perksResult = connection.update()
+                    .table(minigame.getMinigameTable().getTableName())
+                    .set("Perks", PerksStorage.perksToJSON(getGamePlayer()).toString())
+                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .execute();
+            if (!perksResult.isSuccessful()) {
+                Logger.log("Something went wrong when saving perks data! The following message is for Developers: ", Logger.LogType.ERROR);
+                Logger.log(perksResult.getRejectMessage(), Logger.LogType.ERROR);
+            }
+        }
+    }
+
+    public void saveQuests(){
+        Minigame minigame = GameAPI.getInstance().getMinigame();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
+
+        if (GameAPI.getInstance().getQuestManager() != null) {
+            QueryResult questsResult = connection.update()
+                    .table(minigame.getMinigameTable().getTableName())
+                    .set("Quests", QuestsStorage.toJSON(getGamePlayer()).toString())
+                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .execute();
+            if (!questsResult.isSuccessful()) {
+                Logger.log("Something went wrong when saving quests data! The following message is for Developers: ", Logger.LogType.ERROR);
+                Logger.log(questsResult.getRejectMessage(), Logger.LogType.ERROR);
+            }
+        }
+    }
+
+    public void saveCosmetics(){
+        Minigame minigame = GameAPI.getInstance().getMinigame();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
+
+        if (GameAPI.getInstance().getCosmeticsManager() != null) {
+            QueryResult cosmeticResult = connection.update()
+                    .table(minigame.getMinigameTable().getTableName())
+                    .set("Cosmetics", CosmeticsStorage.toJSON(getGamePlayer()).toString())
+                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .execute();
+            if (!cosmeticResult.isSuccessful()) {
+                Logger.log("Something went wrong when saving cosmetics data! The following message is for Developers: ", Logger.LogType.ERROR);
+                Logger.log(cosmeticResult.getRejectMessage(), Logger.LogType.ERROR);
+            }
+        }
+    }
+
+
 
     private void loadCosmetics(){
         Minigame minigame = GameAPI.getInstance().getMinigame();
@@ -479,21 +545,21 @@ public class PlayerData {
     }
 
 
-    public void deposit(Economy economy, int amount) {
-        if (economy != null) {
-            economy.getEconomyInterface().deposit(gamePlayer, amount);
+    public void deposit(Resource resource, int amount) {
+        if (resource != null) {
+            resource.getResourceInterface().deposit(gamePlayer, amount);
         }
     }
 
-    public void withdraw(Economy economy, int amount) {
-        if (economy != null) {
-            economy.getEconomyInterface().withdraw(gamePlayer, amount);
+    public void withdraw(Resource resource, int amount) {
+        if (resource != null) {
+            resource.getResourceInterface().withdraw(gamePlayer, amount);
         }
     }
 
-    public int getBalance(Economy economy) {
-        if (economy != null) {
-            return economy.getEconomyInterface().getBalance(gamePlayer);
+    public int getBalance(Resource resource) {
+        if (resource != null) {
+            return resource.getResourceInterface().getBalance(gamePlayer);
         }
         return 0;
     }

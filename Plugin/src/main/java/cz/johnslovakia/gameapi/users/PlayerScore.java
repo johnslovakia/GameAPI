@@ -1,16 +1,16 @@
 package cz.johnslovakia.gameapi.users;
 
 import cz.johnslovakia.gameapi.GameAPI;
-import cz.johnslovakia.gameapi.economy.Economy;
-import cz.johnslovakia.gameapi.economy.RewardTypeComparator;
+import cz.johnslovakia.gameapi.users.resources.Resource;
+import cz.johnslovakia.gameapi.users.resources.ResourceComparator;
 import cz.johnslovakia.gameapi.events.PlayerScoreEvent;
 import cz.johnslovakia.gameapi.game.Game;
-import cz.johnslovakia.gameapi.messages.Message;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.stats.Stat;
-import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
+import cz.johnslovakia.gameapi.utils.rewards.Reward;
+import cz.johnslovakia.gameapi.utils.rewards.RewardItem;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;
@@ -35,8 +35,8 @@ public class PlayerScore implements Comparable<PlayerScore> {
     private final int rewardLimit;
     private Stat stat;
 
-    private final Map<Economy, Integer> earned = new HashMap<>();
-    private Map<Economy, Integer> rewardTypes = new HashMap<>();
+    private final Map<Resource, Integer> earned = new HashMap<>();
+    private final Reward reward;
     private Set<Trigger<?>> triggers = new HashSet<>();;
 
     private boolean allowedMessage;
@@ -47,11 +47,15 @@ public class PlayerScore implements Comparable<PlayerScore> {
         this.name = builder.getName();
         this.displayName = builder.getDisplayName();
         this.pluralName = builder.getPluralName();
-        this.rewardTypes = builder.getRewardTypes();
+        this.reward = builder.getReward();
         this.allowedMessage = builder.isMessage();
         this.scoreRanking = builder.isScoreRanking();
         this.stat = builder.getStat();
         this.rewardLimit = builder.getLimit();
+
+        if (reward != null) {
+            reward.setConsumer(item -> addEarning(item.getResource(), item.getAmount()));
+        }
 
 
         if (builder.getTriggers() != null){
@@ -59,61 +63,6 @@ public class PlayerScore implements Comparable<PlayerScore> {
 
             for(Trigger<?> t : getTriggers()){
                 GameAPI.getInstance().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() { }, EventPriority.NORMAL, (listener, event) -> onEventCall(event), GameAPI.getInstance());
-            }
-        }
-    }
-
-    public void reward(){
-        if (getRewardTypes() == null){
-            return;
-        }
-
-        List<Economy> list =  new ArrayList<>(getRewardTypes().keySet());
-
-        RewardTypeComparator comparator = new RewardTypeComparator();
-        list.sort(comparator);
-
-        StringBuilder text = new StringBuilder();
-
-        if (!getRewardTypes().isEmpty()/* && (score == 0 || score < rewardLimit)*/) {
-            int i = 0;
-            for (Economy economy : list) {
-                int reward = getRewardTypes().get(economy);
-                addEarning(economy, reward);
-
-                Game game = getGamePlayer().getPlayerData().getGame();
-
-                if (game != null){
-                    if (isAllowedMessage()) {
-                        if (i >= 1){
-                            text.append("§7, ");
-                        }
-                        text.append(economy.getChatColor() + "+" + reward + " " + economy.getName());
-                    }
-                }
-                /*if (economy.getEconomyInterface() != null) {
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            economy.getEconomyInterface().deposit(gamePlayer, reward);
-                        }
-                    }.runTaskAsynchronously(GameAPI.getInstance());
-                }*/
-
-                i++;
-            }
-
-            if (isAllowedMessage()) {
-                MessageManager.get(getGamePlayer(), "chat.economy.reward")
-                        .replace("%reward%", text.toString())
-                        .replace("%gameplayerscore%", getDisplayName())
-                        .send();
-
-                if ((score + 1) == rewardLimit){
-                    MessageManager.get(gamePlayer, "chat.economy.reward.limit")
-                            .replace("%score%", getDisplayName(true))
-                            .send();
-                }
             }
         }
     }
@@ -130,8 +79,8 @@ public class PlayerScore implements Comparable<PlayerScore> {
         if (getStat() != null) {
             getStat().getPlayerStat(getGamePlayer()).increase();
         }
-        if (reward) {
-            reward();
+        if (reward && this.reward != null) {
+            getReward().applyReward(gamePlayer, isAllowedMessage());
         }
     }
 
@@ -156,8 +105,9 @@ public class PlayerScore implements Comparable<PlayerScore> {
                 getStat().getPlayerStat(getGamePlayer()).increase();
             }
 
-
-            reward();
+            if (this.reward != null){
+                getReward().applyReward(gamePlayer, isAllowedMessage());
+            }
         }
     }
 
@@ -167,11 +117,11 @@ public class PlayerScore implements Comparable<PlayerScore> {
         Bukkit.getPluginManager().callEvent(event);
     }
 
-    public void addEarning(Economy rewardType, Integer reward){
+    public void addEarning(Resource rewardType, Integer reward){
         getEarned().put(rewardType, (getEarned().get(rewardType) != null ? getEarned().get(rewardType) : 0) + reward);
     }
 
-    public int getEarned(Economy rewardType){
+    public int getEarned(Resource rewardType){
         if (!getEarned().containsKey(rewardType)){
             return 0;
         }
@@ -204,11 +154,6 @@ public class PlayerScore implements Comparable<PlayerScore> {
     }
     public PlayerScore setDisplayName(String displayName) {
         this.displayName = displayName;
-        return this;
-    }
-
-    public PlayerScore setRewardTypes(Map<Economy, Integer> rewardTypes) {
-        this.rewardTypes = rewardTypes;
         return this;
     }
 
@@ -282,11 +227,14 @@ public class PlayerScore implements Comparable<PlayerScore> {
 
 
     public static Builder builder() { return new Builder(); }
+    public static Builder builder(String name) { return new Builder(name); }
+    public static Builder builder(String name, String pluralName) { return new Builder(name, pluralName); }
 
     public static final class Builder {
 
-        private String name, pluralName, displayName;
-        private Map<Economy, Integer> rewardTypes = new HashMap<>();
+        private String name, pluralName, displayName, linkRewardMessageKey;
+        @Setter
+        private Reward reward;
         private boolean message = true;
 
         private boolean scoreRanking = false;
@@ -295,8 +243,16 @@ public class PlayerScore implements Comparable<PlayerScore> {
         @Getter
         private Set<Trigger<?>> triggers = new HashSet<>();
 
+        public Builder() {}
 
-        private Builder() {}
+        private Builder(String name) {
+            this.name = name;
+            this.pluralName = name;
+        }
+        private Builder(String name, String pluralName) {
+            this.name = name;
+            this.pluralName = pluralName;
+        }
 
         public Builder setName(String name) {
             this.name = name;
@@ -308,6 +264,46 @@ public class PlayerScore implements Comparable<PlayerScore> {
             this.pluralName = pluralName;
             return this;
         }
+        public Builder addReward(RewardItem... rewardItems){
+            if (reward == null) reward = new Reward();
+            for (RewardItem item : rewardItems){
+                reward.addRewardItem(item);
+            }
+            return this;
+        }
+        public Builder addReward(String forWhat, RewardItem... rewardItems){
+            if (reward == null) reward = new Reward();
+            reward.setForWhat(forWhat);
+            for (RewardItem item : rewardItems){
+                reward.addRewardItem(item);
+            }
+            return this;
+        }
+
+        public Builder setLinkRewardMessageKey(String linkRewardMessageKey) {
+            this.linkRewardMessageKey = linkRewardMessageKey;
+            return this;
+        }
+
+        public Builder addReward(Resource resource, int amount){
+            addReward(RewardItem.builder(resource).setAmount(amount).build());
+            return this;
+        }
+
+        public Builder addReward(String forWhat, Resource resource, int amount){
+            addReward(forWhat, RewardItem.builder(resource).setAmount(amount).build());
+            return this;
+        }
+
+        public Builder addReward(String resourceName, int amount){
+            addReward(Resource.getResourceByName(resourceName), amount);
+            return this;
+        }
+
+        public Builder addReward(String forWhat, String resourceName, int amount){
+            addReward(forWhat, Resource.getResourceByName(resourceName), amount);
+            return this;
+        }
 
         public Builder setDisplayName(String displayName) {
             this.displayName = displayName;
@@ -317,18 +313,6 @@ public class PlayerScore implements Comparable<PlayerScore> {
         public Builder setDisplayName(String displayName, String pluralName) {
             this.displayName = displayName;
             this.pluralName = pluralName;
-            return this;
-        }
-
-        public Builder setRewardTypes(Map<Economy, Integer> rewardTypes) {
-            this.rewardTypes = rewardTypes;
-            return this;
-        }
-
-        public Builder setEconomyReward(Economy economy, Integer reward){
-            if (!rewardTypes.containsKey(economy)){
-                rewardTypes.put(economy, reward);
-            }
             return this;
         }
 
@@ -379,12 +363,16 @@ public class PlayerScore implements Comparable<PlayerScore> {
             score.setName(this.name);
             score.setDisplayName((this.displayName != null ? this.displayName : this.name));
             score.setPluralName(this.pluralName);
-            score.setRewardTypes(this.rewardTypes);
+            score.setReward(this.reward);
             score.setAllowedMessage(this.message);
             score.setScoreRanking(this.scoreRanking);
             score.setStat(this.stat);
             score.setTriggers(this.triggers);
             score.setLimit(limit);
+
+            if (linkRewardMessageKey != null){
+                MessageManager.addLinkedRewardMessage(linkRewardMessageKey, reward);
+            }
 
             return score;
         }

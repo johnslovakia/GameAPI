@@ -1,11 +1,12 @@
 package cz.johnslovakia.gameapi.users.quests;
 
 import cz.johnslovakia.gameapi.GameAPI;
-import cz.johnslovakia.gameapi.economy.Economy;
+import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
+import cz.johnslovakia.gameapi.utils.rewards.Reward;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -20,7 +21,7 @@ public interface Quest {
     default String getDisplayName(){
         return getName();
     }
-    Map<Economy, Integer> getRewards();
+    Reward getReward();
     int getCompletionGoal();
     Set<Trigger<?>> getTriggers();
 
@@ -31,22 +32,14 @@ public interface Quest {
             @Override
             public void run() {
                 gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "custom:completed", 20.0F, 20.0F);
-                player.sendMessage("");
                 player.sendMessage(MessageManager.get(player, "chat.quests.completed")
                         .replace("%type%", MessageManager.get(player, "quest_type." + getType().toString().toLowerCase()).getTranslated())
                         .replace("%quest_name%", getName())
                         .replace("%description%", MessageManager.get(player, getTranslationKey()).getTranslated())
                         .getTranslated());
-                for (Economy economy : getRewards().keySet()){
-                    player.sendMessage(" " + economy.getChatColor() + "+" + getRewards().get(economy) + " §7" + economy.getName());
-                }
-                player.sendMessage("");
-
-                for (Economy economy : getRewards().keySet()) {
-                    economy.getEconomyInterface().deposit(gamePlayer, getRewards().get(economy));
-                }
+                getReward().applyReward(gamePlayer);
             }
-        }.runTaskLater(GameAPI.getInstance(), 15L);
+        }.runTaskLater(GameAPI.getInstance(), 10L);
 
         gamePlayer.getPlayerData().getQuestData(this).setStatus(PlayerQuestData.Status.COMPLETED);
         gamePlayer.getPlayerData().getQuestData(this).setCompletionDate(LocalDate.now());

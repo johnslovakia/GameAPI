@@ -4,6 +4,7 @@ import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
+import cz.johnslovakia.gameapi.utils.Sounds;
 import me.zort.containr.Component;
 import me.zort.containr.Element;
 import me.zort.containr.GUI;
@@ -40,8 +41,14 @@ public class VotingInventory {
                     .addToItemLore(item);
         }else if (gamePlayer.getPlayerData().getVotesForMaps().size() < getPlayersFreeVotes(gamePlayer)) {
             item.addLoreLine("");
-            MessageManager.get(gamePlayer, "inventory.map.vote")
-                    .addToItemLore(item);
+            if (getPlayersFreeVotes(gamePlayer) > 1){
+                MessageManager.get(gamePlayer, "inventory.map.vote.more_votes")
+                        .replace("%votes_left%", "" + getPlayersFreeVotes(gamePlayer))
+                        .addToItemLore(item);
+            }else {
+                MessageManager.get(gamePlayer, "inventory.map.vote")
+                        .addToItemLore(item);
+            }
         }else{
             item.addLoreLine("");
             MessageManager.get(gamePlayer, "inventory.map.voted")
@@ -55,20 +62,23 @@ public class VotingInventory {
                 .title("§f七七七七七七七七ㆽ")
                 .rows(2)
                 .prepare((gui, player) -> {
-                    ItemBuilder close = new ItemBuilder(Material.MAP);
-                    close.setCustomModelData(1010);
+                    ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
+                    close.setCustomModelData(1017);
                     close.hideAllFlags();
                     close.setName(MessageManager.get(player, "inventory.item.close")
                             .getTranslated());
 
-                    ItemBuilder info = new ItemBuilder(Material.MAP);
-                    info.setCustomModelData(1010);
+                    ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
+                    info.setCustomModelData(1018);
                     info.hideAllFlags();
                     info.setName(MessageManager.get(player, "inventory.info_item.voting_inventory.name")
                             .getTranslated());
                     info.setLore(MessageManager.get(player, "inventory.info_item.voting_inventory.lore").getTranslated());
 
-                    gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> gui.close(player)).build());
+                    gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> {
+                        gui.close(player);
+                        player.playSound(player, Sounds.CLICK.bukkitSound(), 1F, 1F);
+                    }).build());
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
 
                     gui.setContainer(9, Component.staticContainer()

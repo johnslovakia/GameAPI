@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.messages;
 
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.utils.rewards.Reward;
 import lombok.Getter;
 import org.bukkit.entity.Player;
 
@@ -11,6 +12,8 @@ public class MessageManager {
 
     @Getter
     private static Map<String, Map<Language, String>> messages = new HashMap<>();
+    @Getter
+    public static Map<String, Reward> linkedRewardMessages = new HashMap<>();
 
     public static void addMessage(String name, Language language, String message){
         if (messages.containsKey(name)){
@@ -19,6 +22,12 @@ public class MessageManager {
             Map<Language, String> map = new HashMap<>();
             map.put(language, message);
             messages.put(name, map);
+        }
+    }
+
+    public static void addLinkedRewardMessage(String key, Reward reward){
+        if (!messages.containsKey(key)){
+            linkedRewardMessages.put(key, reward);
         }
     }
 
@@ -43,7 +52,7 @@ public class MessageManager {
     }
 
     public static String get(Language language, String key){
-        if (!existMessage(key) && messages.get(key).get(language) == null){
+        if (!existMessage(key) || messages.get(key).get(language) == null){
             return "§cNo translation found for message key: " + key + " (Language: " + language.getName() + ")";
         }else{
             return messages.get(key).get(language);
