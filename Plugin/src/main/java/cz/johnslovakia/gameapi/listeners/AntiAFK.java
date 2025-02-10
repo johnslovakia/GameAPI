@@ -77,7 +77,7 @@ public class AntiAFK implements Listener {
     }
 
     @EventHandler
-    public void onPlayerJoin(GameStartEvent event) {
+    public void onGameStart(GameStartEvent event) {
         for (GamePlayer gamePlayer : event.getGame().getParticipants()) {
             Player player = gamePlayer.getOnlinePlayer();
 

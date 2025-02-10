@@ -16,6 +16,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.util.Vector;
 
 public class AreaListener implements Listener {
 
@@ -87,8 +88,12 @@ public class AreaListener implements Listener {
 
             Area borderArea =  game.getCurrentMap().getMainArea();
             if (t != null) {
-                if (borderArea.isBorder() && !borderArea.isInArea(t, 10) && f.getY() <= t.getY()) {
-                    gamePlayer.getOnlinePlayer().teleport(f.subtract(0.5, 0, 0.5));
+                if (borderArea.isBorder() && !borderArea.isInArea(t, 12) && f.getY() <= t.getY()) {
+                    //gamePlayer.getOnlinePlayer().teleport(f);
+                    Vector direction = borderArea.getCenter().clone().subtract(f).toVector();
+                    direction.normalize().multiply(0.5);
+
+                    gamePlayer.getOnlinePlayer().teleport(f.clone().add(direction));
                     MessageManager.get(gamePlayer, "chat.move_border").send();
                 }
             }

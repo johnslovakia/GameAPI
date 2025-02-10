@@ -4,6 +4,7 @@ import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.cosmetics.*;
+import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.KillMessage;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.Utils;
@@ -22,11 +23,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class KillMessagesCategory implements CosmeticsCategory {
-    private static final List<Cosmetic> predefinedCosmetics;
+public class KillMessagesCategory extends CosmeticsCategory {
 
-    static {
-        predefinedCosmetics = new ArrayList<>();
+    public KillMessagesCategory() {
+        super("Kill Messages", new ItemStack(Material.OAK_SIGN));
+
 
         FileConfiguration config = GameAPI.getInstance().getMinigame().getPlugin().getConfig();
 
@@ -146,41 +147,29 @@ public class KillMessagesCategory implements CosmeticsCategory {
                     gamePlayer.getPlayerData().setKillMessage(killMessage);
                 });
 
-        predefinedCosmetics.add(greekMythology);
-        predefinedCosmetics.add(dragon);
-        predefinedCosmetics.add(toilet);
-        predefinedCosmetics.add(glorious);
-        predefinedCosmetics.add(wizard);
-        predefinedCosmetics.add(ninja);
-        predefinedCosmetics.add(genAlpha);
-        predefinedCosmetics.add(enchanted);
-        predefinedCosmetics.add(dramatic);
-        predefinedCosmetics.add(swiftie);
-    }
-    
-    
-    @Override
-    public CosmeticsManager getManager() {
-        return GameAPI.getInstance().getCosmeticsManager();
+        greekMythology.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), greekMythology));
+        dragon.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), dragon));
+        toilet.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), toilet));
+        glorious.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), glorious));
+        wizard.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), wizard));
+        ninja.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), ninja));
+        genAlpha.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), genAlpha));
+        enchanted.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), enchanted));
+        dramatic.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), dramatic));
+        swiftie.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), swiftie));
+
+        addCosmetic(greekMythology, dragon, toilet, glorious, wizard, ninja, genAlpha, enchanted, dramatic, swiftie);
     }
 
-    @Override
-    public String getName() {
-        return "Kill Messages";
-    }
+    private static void sendKillMessagePreview(Player player, Cosmetic cosmetic){
+        String messageName = cosmetic.getName().toLowerCase().replaceAll(" ", "_");
 
-    @Override
-    public ItemStack getIcon() {
-        return new ItemStack(Material.OAK_SIGN);
-    }
-
-    @Override
-    public List<Cosmetic> getCosmetics() {
-        return predefinedCosmetics;
-    }
-
-    @Override
-    public Set<CTrigger<?>> getTriggers() {
-        return Set.of();
+        player.sendMessage("");
+        player.sendMessage("§fKill Messages §7- §a" + cosmetic.getName() + " §8(Chat Messages)");
+        player.sendMessage(" §aMelee Kill: " + MessageManager.get(player, "chat.kill_message." + messageName + ".melee").replace("%player_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated());
+        player.sendMessage(" §aFall Damage Kill: " + MessageManager.get(player, "chat.kill_message." + messageName + ".fall").replace("%player_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated());
+        player.sendMessage(" §aVoid Kill: " + MessageManager.get(player, "chat.kill_message." + messageName + ".void").replace("%player_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated());
+        player.sendMessage(" §aRanged Kill: " + MessageManager.get(player, "chat.kill_message." + messageName + ".ranged").replace("%player_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated());
+        player.sendMessage("");
     }
 }

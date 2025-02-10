@@ -46,7 +46,7 @@ public abstract class Minigame {
     public Minigame(Plugin plugin, String name) {
         this.plugin = plugin;
         this.name = name;
-        this.updateChecker = new UpdateChecker(plugin, "https://web-wx7tjn7.hstnw.eu/" + name + ".json");
+        this.updateChecker = new UpdateChecker(this, "https://raw.githubusercontent.com/johnslovakia/GameAPI/master/updateChecker/" + name + ".json");
     }
 
     public void addEconomy(Resource... economies){

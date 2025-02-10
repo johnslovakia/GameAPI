@@ -6,6 +6,7 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.task.Task;
 import cz.johnslovakia.gameapi.task.TaskInterface;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
@@ -20,8 +21,10 @@ public class StartCountdownCommand implements TaskInterface {
     private void createBossBar(GamePlayer gamePlayer, Task task){
         BossBar bossBar = Bukkit.createBossBar("Game starting in:", BarColor.WHITE, BarStyle.SOLID);
 
-        ((BossBar)gamePlayer.getMetadata().get("bossbar.waiting_for_players")).removeAll();
-        gamePlayer.getMetadata().remove("bossbar.waiting_for_players");
+        if (gamePlayer.getMetadata().get("bossbar.waiting_for_players") != null) {
+            ((BossBar) gamePlayer.getMetadata().get("bossbar.waiting_for_players")).removeAll();
+            gamePlayer.getMetadata().remove("bossbar.waiting_for_players");
+        }
 
         bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.game_starting_in")
                 .replace("%time%", Utils.getDurationString(task.getCounter()))

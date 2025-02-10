@@ -2,10 +2,12 @@ package cz.johnslovakia.gameapi.game.cosmetics;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.datastorage.Type;
+import cz.johnslovakia.gameapi.game.cosmetics.defaultCosmetics.*;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
+import lombok.Getter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
@@ -17,11 +19,11 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class CosmeticsManager implements Listener{
 
-    private String name;
+    private final String name;
     private List<CosmeticsCategory> categories = new ArrayList<>();
-    private Inventory inv;
 
     private Resource resource;
 
@@ -30,6 +32,12 @@ public class CosmeticsManager implements Listener{
         this.resource = resource;
 
         GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "Cosmetics");
+
+        addCategory(new KillMessagesCategory());
+        addCategory(new KillSoundsCategory());
+        addCategory(new KillEffectsCategory());
+        addCategory(new TrailsCategory());
+        addCategory(new HatsCategory());
     }
 
     public CosmeticsCategory getCategoryByName(String name){
@@ -53,20 +61,6 @@ public class CosmeticsManager implements Listener{
         return null;
     }
 
-    public boolean hasPurchased(GamePlayer gamePlayer, Cosmetic cosmetic){
-        return gamePlayer.getPlayerData().getPurchasedCosmetics().contains(cosmetic);
-    }
-
-    public boolean hasSelected(GamePlayer gamePlayer, Cosmetic cosmetic){
-        return gamePlayer.getPlayerData().getSelectedCosmetics().containsValue(cosmetic);
-    }
-
-    public boolean hasPlayer(GamePlayer gamePlayer, Cosmetic cosmetic){
-        return hasPurchased(gamePlayer, cosmetic)
-                || hasSelected(gamePlayer, cosmetic)
-                || gamePlayer.getOnlinePlayer().hasPermission("cosmetics.free");
-    }
-
     public CosmeticsCategory getCategory(Cosmetic cosmetic){
         for (CosmeticsCategory category : categories){
             if (category.getCosmetics().contains(cosmetic)){
@@ -76,16 +70,8 @@ public class CosmeticsManager implements Listener{
         return null;
     }
 
-    public Cosmetic getSelectedCosmetic(CosmeticsCategory category, GamePlayer gamePlayer){
-        return gamePlayer.getPlayerData().getSelectedCosmetics().get(category);
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public List<CosmeticsCategory> getCategories() {
-        return categories;
+    public Cosmetic getSelectedCosmetic(GamePlayer gamePlayer, CosmeticsCategory category){
+        return category.getSelectedCosmetic(gamePlayer);
     }
 
     public void addCategory(CosmeticsCategory category){
@@ -93,10 +79,13 @@ public class CosmeticsManager implements Listener{
             return;
         }
         categories.add(category);
-        for(CTrigger<?> t : category.getTriggers()){
-            GameAPI.getInstance().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() { }, EventPriority.NORMAL, (listener, event) -> onEventCall(category, event), GameAPI.getInstance());
+        category.setManager(this);
+        if (category.getTriggers() != null) {
+            for (CTrigger<?> t : category.getTriggers()) {
+                GameAPI.getInstance().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() {
+                }, EventPriority.NORMAL, (listener, event) -> onEventCall(category, event), GameAPI.getInstance());
+            }
         }
-        //TODO: registrace category, automaticky to udělat?
     }
 
     public Resource getEconomy() {

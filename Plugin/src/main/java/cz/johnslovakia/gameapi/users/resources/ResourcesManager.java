@@ -22,14 +22,9 @@ public class ResourcesManager {
 
     public static boolean earnedSomething(GamePlayer gamePlayer){
         for (PlayerScore score : PlayerManager.getScoresByPlayer(gamePlayer)) {
-            Reward reward = score.getReward();
-            if (reward != null) {
-                if (!reward.getRewardItems().isEmpty()) {
-                    for (RewardItem item : reward.getRewardItems()) {
-                        if (score.getEarned(item.getResource()) != 0){
-                            return true;
-                        }
-                    }
+            for (Resource resource : score.getEarned().keySet()){
+                if (score.getEarned(resource) != 0){
+                    return true;
                 }
             }
         }

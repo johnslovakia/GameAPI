@@ -5,6 +5,8 @@ import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.events.GameResetEvent;
 import cz.johnslovakia.gameapi.events.NewArenaEvent;
 import cz.johnslovakia.gameapi.game.map.GameMap;
+import cz.johnslovakia.gameapi.serverManagement.IGame;
+import cz.johnslovakia.gameapi.serverManagement.gameData.GameDataManager;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.game.team.TeamManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
@@ -61,6 +63,12 @@ public class GameManager {
             }
             game.joinPlayer(player);
             return;
+        }else if (GameAPI.getInstance().getMinigame().getDataManager() != null){
+            IGame bestArena = GameAPI.getInstance().getMinigame().getDataManager().getBestServer();
+            if ((GameAPI.getInstance().getMinigame().getServerDataMySQL() != null || GameAPI.getInstance().getMinigame().getServerDataRedis() != null) && bestArena != null) {
+                bestArena.sendPlayerToServer(gamePlayer);
+                return;
+            }
         }
 
         MessageManager.get(gamePlayer, "chat.no_arena_found").send();

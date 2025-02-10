@@ -41,9 +41,9 @@ public class VotingInventory {
                     .addToItemLore(item);
         }else if (gamePlayer.getPlayerData().getVotesForMaps().size() < getPlayersFreeVotes(gamePlayer)) {
             item.addLoreLine("");
-            if (getPlayersFreeVotes(gamePlayer) > 1){
+            if (getPlayersFreeVotes(gamePlayer) - gamePlayer.getPlayerData().getVotesForMaps().size() > 1){
                 MessageManager.get(gamePlayer, "inventory.map.vote.more_votes")
-                        .replace("%votes_left%", "" + getPlayersFreeVotes(gamePlayer))
+                        .replace("%votes_left%", "" + (getPlayersFreeVotes(gamePlayer) - gamePlayer.getPlayerData().getVotesForMaps().size()))
                         .addToItemLore(item);
             }else {
                 MessageManager.get(gamePlayer, "inventory.map.vote")

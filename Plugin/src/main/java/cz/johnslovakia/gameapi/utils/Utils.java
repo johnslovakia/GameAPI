@@ -17,6 +17,8 @@ import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.FireworkMeta;
@@ -37,11 +39,6 @@ public class Utils {
     public static int getPrice(FileConfiguration config, String path, int defaultPrice){
         int price = config.getInt(path);
         return (price != 0 ? price : defaultPrice);
-    }
-
-    public static int getRandom(int lower, int upper) {
-        Random random = new Random();
-        return random.nextInt((upper - lower) + 1) + lower;
     }
 
     public static void spawnFireworks(Location location, int amount, Color color, FireworkEffect.Type type){
@@ -81,6 +78,20 @@ public class Utils {
         return potion;
     }
 
+    public static Inventory copyPlayerInventory(Player player) {
+        Inventory original = player.getInventory();
+        Inventory copy = Bukkit.createInventory(null, InventoryType.PLAYER);
+
+        for (int i = 0; i < original.getSize(); i++) {
+            ItemStack item = original.getItem(i);
+            if (item != null) {
+                copy.setItem(i, item.clone());
+            }
+        }
+
+        return copy;
+    }
+
     public static String getDurationString(int seconds) {
 
         int hours = seconds / 3600;
@@ -94,7 +105,6 @@ public class Utils {
     }
 
     private static String twoDigitString(int number) {
-
         if (number == 0) {
             return "00";
         }

@@ -6,12 +6,11 @@ public class FileManager {
 
     public static void copyFolder(File src, File destination) throws IOException {
         if (src.isDirectory()) {
-
             if (!destination.exists()) {
                 destination.mkdir();
             }
 
-            String files[] = src.list();
+            String[] files = src.list();
 
             if (files != null) {
                 for (String file : files) {
@@ -22,19 +21,16 @@ public class FileManager {
                 }
             }
         } else {
-            InputStream in = new FileInputStream(src);
-            OutputStream out = new FileOutputStream(destination);
+            try (InputStream in = new FileInputStream(src);
+                 OutputStream out = new FileOutputStream(destination)) {
 
-            byte[] buffer = new byte[1024];
+                byte[] buffer = new byte[1024];
+                int length;
 
-            int length;
-
-            while ((length = in.read(buffer)) > 0){
-                out.write(buffer, 0, length);
+                while ((length = in.read(buffer)) > 0) {
+                    out.write(buffer, 0, length);
+                }
             }
-
-            in.close();
-            out.close();
         }
     }
 

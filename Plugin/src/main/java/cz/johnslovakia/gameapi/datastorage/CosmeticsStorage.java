@@ -30,7 +30,7 @@ public class CosmeticsStorage {
         for (Cosmetic cosmetic : cosmetics) {
             JSONObject cosmeticJson = new JSONObject();
             cosmeticJson.put("name", cosmetic.getName());
-            cosmeticJson.put("category", GameAPI.getInstance().getCosmeticsManager().getCategory(cosmetic));
+            cosmeticJson.put("category", GameAPI.getInstance().getCosmeticsManager().getCategory(cosmetic).getName());
             jsonArray.put(cosmeticJson);
         }
         return jsonArray;
@@ -43,7 +43,7 @@ public class CosmeticsStorage {
 
             JSONObject cosmeticJson = new JSONObject();
             cosmeticJson.put("name", cosmetic.getName());
-            cosmeticJson.put("category", category);
+            cosmeticJson.put("category", category.getName());
             jsonArray.put(cosmeticJson);
         }
         return jsonArray;

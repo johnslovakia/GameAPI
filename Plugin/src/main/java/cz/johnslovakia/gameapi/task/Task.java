@@ -114,10 +114,13 @@ public class Task {
                 
                 if (taskInterface != null) {
                     if (counter == 0){
+                        cancelRunnable(true);
                         taskInterface.onEnd(getThisTask());
                     }else{
                         taskInterface.onCount(getThisTask());
                     }
+                }else if (counter == 0){
+                    cancelRunnable(true);
                 }
 
                 TaskEvent ev = new TaskEvent(task);
@@ -125,7 +128,6 @@ public class Task {
                 
                 if (counter == 0) {
                     counter = startCounter;
-                    cancelRunnable(true);
                 }
             }
         }.runTaskTimer(this.plugin, 0, 20L);

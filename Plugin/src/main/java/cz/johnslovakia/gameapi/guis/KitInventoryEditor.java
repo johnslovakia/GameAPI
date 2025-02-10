@@ -69,13 +69,13 @@ public class KitInventoryEditor implements Listener {
         }
 
         Inventory currentKitInventory = gamePlayer.getPlayerData().getKitInventory(kit);
-        ItemStack[] hotbarItems = Arrays.copyOfRange(currentKitInventory.getContents(), 0, 8);
-        ItemStack[] topInventoryItems = Arrays.copyOfRange(currentKitInventory.getContents(), 9, 35);
+        ItemStack[] hotbarItems = Arrays.copyOfRange(currentKitInventory.getContents(), 0, 9);
+        ItemStack[] topInventoryItems = Arrays.copyOfRange(currentKitInventory.getContents(), 9, 36);
 
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i <= 8; i++) { //<
             gui.setItem(i + 36, hotbarItems[i]); // Hotbar
         }
-        for (int i = 0; i < 26; i++) {
+        for (int i = 0; i <= 26; i++) { //<
             gui.setItem(i, topInventoryItems[i]); // Top inventory
         }
 
@@ -99,7 +99,7 @@ public class KitInventoryEditor implements Listener {
 
         ItemBuilder back = new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1016).setName(MessageManager.get(gamePlayer, "inventory.item.go_back").getTranslated());
 
-        ItemBuilder invisibleItem = new ItemBuilder(Material.MAP).setName("").setCustomModelData(1010).hideAllFlags();
+        ItemBuilder invisibleItem = new ItemBuilder(Material.MAP).setName(" ").setCustomModelData(1010).hideAllFlags();
         for (int i = 45; i <= 53; i++){
             gui.setItem(i, invisibleItem.toItemStack());
         }
@@ -164,7 +164,7 @@ public class KitInventoryEditor implements Listener {
 
         int slot = event.getSlot();
 
-        if (!((slot >= 0 && slot <= 26) || (slot >= 36 && slot < 44))) { //<= 44
+        if (!((slot >= 0 && slot <= 26) || (slot >= 36 && slot <= 44))) { //<= 44, 26
             event.setCancelled(true);
         }
         if ((event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && event.getAction() == InventoryAction.PICKUP_ALL
@@ -188,13 +188,13 @@ public class KitInventoryEditor implements Listener {
                 gamePlayer.getMetadata().put("set_kit_inventory.autoArmor", true);
 
                 Inventory kitInventory = kit.getContent().getInventory();
-                ItemStack[] hotbarItems = Arrays.copyOfRange(kitInventory.getContents(), 0, 8);
-                ItemStack[] topInventoryItems = Arrays.copyOfRange(kitInventory.getContents(), 9, 35);
+                ItemStack[] hotbarItems = Arrays.copyOfRange(kitInventory.getContents(), 0, 9);
+                ItemStack[] topInventoryItems = Arrays.copyOfRange(kitInventory.getContents(), 9, 36);
 
-                for (int i = 0; i < 8; i++) {
+                for (int i = 0; i <= 8; i++) {
                     gui.setItem(i + 36, hotbarItems[i]); // Hotbar
                 }
-                for (int i = 0; i < 26; i++) {
+                for (int i = 0; i <= 26; i++) {
                     gui.setItem(i, topInventoryItems[i]); // Top inventory
                 }
                 break;
@@ -224,12 +224,12 @@ public class KitInventoryEditor implements Listener {
     }
 
     private int findEmptySlot(Inventory gui) {
-        for (int i = 36; i < 44; i++) { //<=
+        for (int i = 36; i <= 44; i++) { //<= 44
             if (gui.getItem(i) == null || gui.getItem(i).getType() == Material.AIR) {
                 return i;
             }
         }
-        for (int i = 0; i <= 26; i++) {
+        for (int i = 0; i <= 26; i++) { //<= 26
             if (gui.getItem(i) == null || gui.getItem(i).getType() == Material.AIR) {
                 return i;
             }
@@ -296,10 +296,10 @@ public class KitInventoryEditor implements Listener {
     private static Inventory getCopyOfInventory(Inventory inventory, Kit kit, boolean autoArmor) {
         Inventory finalInventory = Bukkit.createInventory(null, InventoryType.PLAYER);
 
-        for (int i = 36; i < 45; i++){
+        for (int i = 36; i <= 45; i++){
             finalInventory.setItem(i - 36, inventory.getItem(i));
         }
-        for (int i = 9; i < 35; i++){
+        for (int i = 9; i <= 35; i++){
             finalInventory.setItem(i, inventory.getItem(i - 9));
         }
 

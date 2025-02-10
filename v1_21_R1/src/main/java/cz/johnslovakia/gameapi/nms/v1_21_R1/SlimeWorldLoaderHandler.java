@@ -43,6 +43,10 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
 
         try {
             if (!loader.worldExists(arenaID)){
+                if (arenaID.contains(" ")){
+                    cloneSlimeArenaWorld(bukkitPlugin, arenaID.replaceAll(" ", "_"), gameID);
+                    return true;
+                }
                 Bukkit.getLogger().warning("I can't upload a World: " + arenaID + " using Slime World Manager because the world is not imported! I'll try to load the world in a different way.");
                 //TODO: ClassicWorldLoader.loadClassicArenaWorld(arena, game);
                 return false;
@@ -54,7 +58,7 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
 
 
         SlimePropertyMap properties = new SlimePropertyMap();
-        properties.setValue(SlimeProperties.DIFFICULTY, "normal");
+        properties.setValue(SlimeProperties.DIFFICULTY, "hard");
         properties.setValue(SlimeProperties.PVP, true);
 
         Bukkit.getScheduler().runTaskAsynchronously(bukkitPlugin, () -> {
@@ -110,7 +114,7 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
 
 
         SlimePropertyMap properties = new SlimePropertyMap();
-        properties.setValue(SlimeProperties.DIFFICULTY, "normal");
+        properties.setValue(SlimeProperties.DIFFICULTY, "hard");
 
         Bukkit.getScheduler().runTaskAsynchronously(bukkitPlugin, () -> {
             try {
@@ -162,7 +166,7 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
 
 
         SlimePropertyMap properties = new SlimePropertyMap();
-        properties.setValue(SlimeProperties.DIFFICULTY, "normal");
+        properties.setValue(SlimeProperties.DIFFICULTY, "hard");
 
         Bukkit.getScheduler().runTaskAsynchronously(bukkitPlugin, () -> {
             try {

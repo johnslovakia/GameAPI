@@ -75,8 +75,11 @@ public class ClassicWorldLoader {
 
     public static World loadClassicArenaWorld(GameMap arena, Game game){
         File sourceWorldFolder = new File(GameAPI.getInstance().getMinigameDataFolder() + "/maps/", arena.getName());
-        if (!sourceWorldFolder.exists()){
-            sourceWorldFolder = Bukkit.getWorldContainer();
+        if (!sourceWorldFolder.exists() && new File(Bukkit.getWorldContainer() + "/", arena.getName()).exists()){
+            sourceWorldFolder = new File(Bukkit.getWorldContainer() + "/", arena.getName());
+        }else{
+            Logger.log("Can't load Classic Arena World! No map file!", Logger.LogType.ERROR);
+            return null;
         }
 
         String worldName = sourceWorldFolder.getName() + "_" + game.getID();

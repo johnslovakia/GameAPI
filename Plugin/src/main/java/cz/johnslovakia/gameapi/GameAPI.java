@@ -13,6 +13,7 @@ import cz.johnslovakia.gameapi.api.VersionSupport;
 import cz.johnslovakia.gameapi.datastorage.MinigameTable;
 import cz.johnslovakia.gameapi.datastorage.PlayerTable;
 import cz.johnslovakia.gameapi.datastorage.Type;
+import cz.johnslovakia.gameapi.guis.KitInventoryEditor;
 import cz.johnslovakia.gameapi.serverManagement.gameData.GameDataManager;
 import cz.johnslovakia.gameapi.users.resources.ResourceInterface;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
@@ -26,6 +27,7 @@ import cz.johnslovakia.gameapi.users.quests.QuestManager;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.users.stats.StatsManager;
 import cz.johnslovakia.gameapi.utils.InputStreamWithName;
+import cz.johnslovakia.gameapi.utils.ItemUtils;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.ProtocolTagChanger;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
@@ -120,6 +122,11 @@ public class GameAPI extends JavaPlugin {
         pm.registerEvents(new AntiAFK(), this);
         pm.registerEvents(new ViewPlayerInventory(), this);
         pm.registerEvents(new HologramListener(), this);
+        pm.registerEvents(new ItemPickupListener(), this);
+
+        new ItemUtils(this);
+
+        Bukkit.getPluginManager().registerEvents(new KitInventoryEditor(), GameAPI.getInstance());
 
 
         protocolManager = ProtocolLibrary.getProtocolManager();

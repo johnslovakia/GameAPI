@@ -11,7 +11,12 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.stats.StatsHolograms;
 import cz.johnslovakia.gameapi.utils.ConfigAPI;
+import cz.johnslovakia.gameapi.utils.UpdateChecker;
 import me.zort.sqllib.api.data.Row;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -21,6 +26,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
 
 public class JoinQuitListener implements Listener {
 
@@ -33,6 +39,8 @@ public class JoinQuitListener implements Listener {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         gamePlayer.setPlayer(e.getPlayer());
 
+        Minigame minigame = GameAPI.getInstance().getMinigame();
+
         if (GameManager.getGames().isEmpty()){
             player.sendMessage("");
             player.sendMessage("§cI can't find any game... set up a map or look for an error message in the console.");
@@ -41,23 +49,22 @@ public class JoinQuitListener implements Listener {
         }
 
         if (GameManager.getGames().size() > 1) {
-            Minigame minigame = GameAPI.getInstance().getMinigame();
             if (minigame.getDataManager() != null) {
-                String gameName;
+                String gameIdentifier;
 
                 if (minigame.useRedisForServerData()) {
                     String key = "player:" + player.getName() + ":game";
-                    gameName = minigame.getServerDataRedis().getPool().getResource().get(key);
+                    gameIdentifier = minigame.getServerDataRedis().getPool().getResource().get(key);
                 }else {
                     Optional<Row> result = minigame.getDatabase().getConnection().select()
                             .from(minigame.getMinigameTable().getTableName())
                             .where().isEqual("Nickname", player.getName())
                             .obtainOne();
-                    gameName = result.map(row -> row.getString("game")).orElse(null);
+                    gameIdentifier = result.map(row -> row.getString("game")).orElse(null);
                 }
 
-                if (gameName != null) {
-                    List<Game> game = GameManager.getGames().stream().filter(g -> g.getName().substring(g.getName().length() - 1).equals(gameName) && (g.getState().equals(GameState.WAITING) || g.getState().equals(GameState.STARTING))).toList();
+                if (gameIdentifier != null) {
+                    List<Game> game = GameManager.getGames().stream().filter(g -> g.getName().substring(g.getName().length() - 1).equals(gameIdentifier) && (g.getState().equals(GameState.WAITING) || g.getState().equals(GameState.STARTING))).toList();
                     if (!game.isEmpty()) game.get(0).joinPlayer(player);
                     return;
                 }
@@ -77,6 +84,27 @@ public class JoinQuitListener implements Listener {
                 GameManager.newArena(player, true);
             }
         }
+
+
+
+        Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> {
+            UpdateChecker updateChecker = minigame.getUpdateChecker();
+            if (updateChecker.isOutdated() && (player.hasPermission(minigame.getName() + ".admin") || player.hasPermission(minigame.getName().toLowerCase() + ".admin") || player.isOp())){
+                TextComponent message = new TextComponent("§c[!] §fYour version of the §a" + minigame.getName() + " §fplugin is §coutdated! §fUpdating to the latest version is §arecommended! §7(hover for more)");
+
+                ComponentBuilder b = new ComponentBuilder("§fLatest Version: §a" + updateChecker.getLatestVersion());
+                b.append("\n§fYour Current Version: §a" + updateChecker.getCurrentVersion());
+                if (updateChecker.getUpdateMessage() != null) {
+                    b.append("\n");
+                    b.append("\n§fUpdate Message:\n");
+                    b.append("§7 " + updateChecker.getUpdateMessage());
+                }
+
+                message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));
+
+                player.spigot().sendMessage(message);
+            }
+        }, 15L);
     }
 
     @EventHandler

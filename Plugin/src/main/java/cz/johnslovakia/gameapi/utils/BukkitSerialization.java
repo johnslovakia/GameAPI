@@ -24,12 +24,6 @@ public class BukkitSerialization {
      * @throws IllegalStateException
      */
     public static String playerInventoryToBase64(PlayerInventory playerInventory) throws IllegalStateException {
-        //get the main content part, this doesn't return the armor
-        //String content = toBase64(playerInventory);
-        //String armor = itemStackArrayToBase64(playerInventory.getArmorContents());
-
-        //return new String[] { content, armor};
-
         return itemStackArrayToBase64(playerInventory.getContents());
     }
 

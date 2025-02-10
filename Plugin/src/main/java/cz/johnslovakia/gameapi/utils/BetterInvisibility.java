@@ -138,33 +138,27 @@ public class BetterInvisibility implements Listener {
         }
     }
 
-    /*@EventHandler
+    @EventHandler
     public void onPotionEffect(EntityPotionEffectEvent event) {
-        if (isEffectAddedByPlugin) {
-            isEffectAddedByPlugin = false;
-            return;
-        }
         Entity entity = event.getEntity();
         if (entity instanceof Player) {
             Player player = (Player) entity;
             if (event.getNewEffect() != null && event.getNewEffect().getType() != null && event.getNewEffect().getType().equals(PotionEffectType.INVISIBILITY)) {
                 // Schedule a task to remove all armor when player becomes invisible
-                if(config.getBoolean("hide.potionParticles")) {
+                if(hidePotionParticles) {
                     PotionEffect potion = event.getNewEffect();
                     PotionEffect newEffect = new PotionEffect(PotionEffectType.INVISIBILITY, potion.getDuration(), potion.getAmplifier(), potion.isAmbient(), false);
                     player.removePotionEffect(PotionEffectType.INVISIBILITY);
-                    isEffectAddedByPlugin = true;
                     player.addPotionEffect(newEffect);
-                    isEffectAddedByPlugin = true;
                 }
-                Bukkit.getScheduler().runTaskTimer(this, () -> removeAllArmor(player), 0L, 1L);
+                Bukkit.getScheduler().runTaskTimer(GameAPI.getInstance(), () -> removeAllArmor(player), 0L, 1L);
 
             } else if (event.getOldEffect() != null && event.getOldEffect().getType() != null && event.getOldEffect().getType().equals(PotionEffectType.INVISIBILITY)) {
                 // Schedule a task to restore player's armor when invisibility effect is removed
-                Bukkit.getScheduler().runTaskTimer(this, () -> restoreArmor(player), 0L, 1L);
+                Bukkit.getScheduler().runTaskTimer(GameAPI.getInstance(), () -> restoreArmor(player), 0L, 1L);
             }
         }
-    }*/
+    }
 
 
     public void restoreArmor(Player player) {

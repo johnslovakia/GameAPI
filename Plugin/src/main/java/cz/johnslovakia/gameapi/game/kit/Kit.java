@@ -21,6 +21,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -44,6 +45,9 @@ public class Kit implements Listener{
         this.icon = icon;
         icon.setAmount(1);
         this.price = price;
+
+        PluginManager pm = Bukkit.getServer().getPluginManager();
+        pm.registerEvents(this, GameAPI.getInstance());
     }
 
     public void addItem(ItemStack... items){
@@ -78,16 +82,8 @@ public class Kit implements Listener{
             player.getInventory().clear();
         }
 
-        player.getInventory().setContents(data.getKitInventories().get(this) != null ? data.getKitInventories().get(this).getContents() : getContent().getInventory().getContents());
-
-        if (gamePlayer.getMetadata().get("edited_kit_inventory") != null){
-            boolean edited = (boolean) gamePlayer.getMetadata().get("edited_kit_inventory");
-            if (edited){
-                gamePlayer.getPlayerData().setKitInventory(this, player.getInventory());
-                Bukkit.getScheduler().runTaskAsynchronously(GameAPI.getInstance(), task -> data.saveKitInventories());
-            }
-            gamePlayer.getMetadata().remove("edited_kit_inventory");
-        }
+        Inventory inventory = data.getKitInventory(this);
+        player.getInventory().setContents(inventory.getContents());
 
         Utils.colorizeArmor(gamePlayer);
 
@@ -151,22 +147,21 @@ public class Kit implements Listener{
         int balance = gamePlayer.getPlayerData().getBalance(resource);
 
 
-        if (balance >= getPrice()|| kitManager.hasKitPermission(gamePlayer, this) || gamePlayer.getPlayerData().getPurchasedKitsThisGame().contains(this)) {
+        if ((kitManager.getDefaultKit() != null && kitManager.getDefaultKit().equals(this)) || balance >= getPrice() || kitManager.hasKitPermission(gamePlayer, this) || gamePlayer.getPlayerData().getPurchasedKitsThisGame().contains(this)) {
             if (gamePlayer.hasKit()){
                 if (gamePlayer.getPlayerData().getKit().equals(this)){
                     MessageManager.get(gamePlayer, "chat.kit.already_selected")
                             .send();
                     return;
                 }
-
-                gamePlayer.getPlayerData().setKit(null);
             }
             if (kitManager.getDefaultKit() != this) {
                 MessageManager.get(player, "chat.kit.selected")
                         .replace("%kit%", getName())
                         .send();
-                gamePlayer.getPlayerData().setKit(this);
             }
+
+            gamePlayer.getPlayerData().setKit(this);
 
             KitSelectEvent ev = new KitSelectEvent(gamePlayer, this);
             Bukkit.getPluginManager().callEvent(ev);
@@ -212,7 +207,7 @@ public class Kit implements Listener{
         if (e.getWhoClicked() instanceof Player player) {
             GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
             Game game = gamePlayer.getPlayerData().getGame();
-            if (game.getRunningMainTask().getId().equalsIgnoreCase("PreparationTask")){
+            if (game.isPreparation()){
                 gamePlayer.getMetadata().put("edited_kit_inventory", true);
             }
         }

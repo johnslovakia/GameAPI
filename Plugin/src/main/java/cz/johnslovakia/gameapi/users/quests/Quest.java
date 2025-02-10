@@ -28,6 +28,9 @@ public interface Quest {
     default void complete(GamePlayer gamePlayer){
         Player player = gamePlayer.getOnlinePlayer();
 
+        gamePlayer.getPlayerData().getQuestData(this).setStatus(PlayerQuestData.Status.COMPLETED);
+        gamePlayer.getPlayerData().getQuestData(this).setCompletionDate(LocalDate.now());
+
         new BukkitRunnable(){
             @Override
             public void run() {
@@ -39,18 +42,16 @@ public interface Quest {
                         .getTranslated());
                 getReward().applyReward(gamePlayer);
             }
-        }.runTaskLater(GameAPI.getInstance(), 10L);
-
-        gamePlayer.getPlayerData().getQuestData(this).setStatus(PlayerQuestData.Status.COMPLETED);
-        gamePlayer.getPlayerData().getQuestData(this).setCompletionDate(LocalDate.now());
+        }.runTaskLater(GameAPI.getInstance(), 1L);
     }
 
     default void addProgress(GamePlayer gamePlayer){
         PlayerData playerData = gamePlayer.getPlayerData();
-        if (playerData.getQuestData(this).isCompleted()){
+        PlayerQuestData questData = playerData.getQuestData(this);
+
+        questData.increaseProgress();
+        if (questData.getProgress() >= getCompletionGoal()){
             complete(gamePlayer);
-        }else{
-            playerData.addQuestProgress(this);
         }
     }
 

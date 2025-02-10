@@ -12,7 +12,7 @@ import java.util.Objects;
 
 public class AreaManager {
 
-    public static AreaSettings getLimitedSettings(){
+    public static AreaSettings getLimitedSettings(GamePlayer gamePlayer){
         AreaSettings settings = new AreaSettings();
 
         settings.setPriority(100);
@@ -29,7 +29,9 @@ public class AreaManager {
         settings.setAllowPlayerSleep(false);
         settings.setAllowFoodLevelChange(false);
         settings.setAllowDurabilityChange(false);
-        settings.setAllowInventoryChange(false);
+        if (!gamePlayer.getPlayerData().getGame().isPreparation()) {
+            settings.setAllowInventoryChange(false);
+        }
         settings.setAllowItemPicking(false);
         settings.setAllowPlayerInteract(false);
 
@@ -68,11 +70,11 @@ public class AreaManager {
     public static AreaSettings getActiveSettings(GamePlayer gamePlayer) {
         Game game = gamePlayer.getPlayerData().getGame();
 
-        if (gamePlayer.isLimited()) return getLimitedSettings();
+        if (gamePlayer.isLimited()) return getLimitedSettings(gamePlayer);
         if (game == null) return null;
-        if (game.getState() != GameState.INGAME) return getLimitedSettings();
+        if (game.getState() != GameState.INGAME) return getLimitedSettings(gamePlayer);
         if (game.getCurrentMap() == null) return null;
-        if (gamePlayer.isSpectator()) return getLimitedSettings();
+        if (gamePlayer.isSpectator()) return getLimitedSettings(gamePlayer);
         if (gamePlayer.getAreas().isEmpty()) return game.getCurrentMap().getSettings();
 
         AreaSettings settings = null;

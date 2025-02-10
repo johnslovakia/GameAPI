@@ -118,7 +118,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
     }
 
     public void addEarning(Resource rewardType, Integer reward){
-        getEarned().put(rewardType, (getEarned().get(rewardType) != null ? getEarned().get(rewardType) : 0) + reward);
+        getEarned().put(rewardType, getEarned().getOrDefault(rewardType, 0) + reward);
     }
 
     public int getEarned(Resource rewardType){
@@ -267,7 +267,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
         public Builder addReward(RewardItem... rewardItems){
             if (reward == null) reward = new Reward();
             for (RewardItem item : rewardItems){
-                reward.addRewardItem(item);
+                reward.addRewardItem(item);;
             }
             return this;
         }
@@ -370,9 +370,12 @@ public class PlayerScore implements Comparable<PlayerScore> {
             score.setTriggers(this.triggers);
             score.setLimit(limit);
 
-            if (linkRewardMessageKey != null){
+            //TODO: nefunguje
+            /*if (linkRewardMessageKey != null){
                 MessageManager.addLinkedRewardMessage(linkRewardMessageKey, reward);
-            }
+            }*/
+            if (reward != null)
+                reward.setForWhat(score.getDisplayName());
 
             return score;
         }

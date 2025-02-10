@@ -3,6 +3,7 @@ package cz.johnslovakia.gameapi.serverManagement;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.GameState;
+import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Utils;
@@ -70,20 +71,26 @@ public class IGame {
             @Override
             public void run() {
                 if (isMultiArena()) {
-                    if (GameAPI.getInstance().getMinigame().useRedisForServerData()) {
-                        String key = "player:" + gamePlayer.getOnlinePlayer().getName() + ":game";
-                        minigame.getServerDataRedis().getPool().getResource().setex(key, 60, getArenaID());
-                    } else {
-                        QueryResult perksResult = minigame.getDatabase().getConnection().update()
-                                .table(minigame.getMinigameTable().getTableName())
-                                .set("game", getArenaID())
-                                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
-                                .execute();
-                        if (!perksResult.isSuccessful()) {
-                            Logger.log(perksResult.getRejectMessage(), Logger.LogType.ERROR);
+                    try {
+                        if (GameAPI.getInstance().getMinigame().useRedisForServerData()) {
+                            String key = "player:" + gamePlayer.getOnlinePlayer().getName() + ":game";
+                            minigame.getServerDataRedis().getPool().getResource().setex(key, 60, getArenaID());
+                        } else {
+                            QueryResult perksResult = minigame.getDatabase().getConnection().update()
+                                    .table(minigame.getMinigameTable().getTableName())
+                                    .set("game", getArenaID())
+                                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                                    .execute();
+                            if (!perksResult.isSuccessful()) {
+                                Logger.log(perksResult.getRejectMessage(), Logger.LogType.ERROR);
+                            }
                         }
+                        Utils.send(gamePlayer.getOnlinePlayer(), server);
+                    }catch (Exception exception){
+                        MessageManager.get(gamePlayer, "chat.something_wrong.new_game")
+                                .send();
+                        exception.printStackTrace();
                     }
-                    Utils.send(gamePlayer.getOnlinePlayer(), server);
                 }
             }
         }.runTaskAsynchronously(GameAPI.getInstance());

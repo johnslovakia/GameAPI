@@ -24,6 +24,7 @@ public class MinigameSettings {
     private boolean enabledSpectating = true;
     private boolean enabledJoiningAfterStart = false;
     private boolean enabledMovementInPreparation = false;
+    private boolean allowDefaultKitSelection = true;
 
     private int maxPlayers = 16;
     private int minPlayers = 12;

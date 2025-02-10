@@ -5,13 +5,13 @@ import cz.johnslovakia.gameapi.events.GameQuitEvent;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
@@ -179,8 +179,7 @@ public class InventoryManager implements Listener {
         }
         inventory.setHeldItemSlot(holdItemSlot);
         PlayerManager.getGamePlayer(player).getPlayerData().setCurrentInventory(this);
-        //player.updateInventory();
-
+        player.updateInventory();
     }
 
     public void unloadInventory(Player p) {

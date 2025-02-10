@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.utils;
 
 import org.bukkit.Sound;
+import org.bukkit.entity.Player;
 
 public enum Sounds {
     AMBIENCE_CAVE("AMBIENCE_CAVE", "AMBIENT_CAVE"),
@@ -192,7 +193,7 @@ public enum Sounds {
     HORSE_ZOMBIE_HIT("HORSE_ZOMBIE_HIT", "ENTITY_ZOMBIE_HORSE_HURT"),
     HORSE_ZOMBIE_IDLE("HORSE_ZOMBIE_IDLE", "ENTITY_ZOMBIE_HORSE_AMBIENT"),
     VILLAGER_DEATH("VILLAGER_DEATH", "ENTITY_VILLAGER_DEATH"),
-    VILLAGER_HAGGLE("VILLAGER_HAGGLE", "ENTITY_VILLAGER_TRADING"),
+    VILLAGER_HAGGLE("VILLAGER_HAGGLE", "ENTITY_VILLAGER_TRADE"),
     VILLAGER_HIT("VILLAGER_HIT", "ENTITY_VILLAGER_HURT"),
     VILLAGER_IDLE("VILLAGER_IDLE", "ENTITY_VILLAGER_AMBIENT"),
     VILLAGER_NO("VILLAGER_NO", "ENTITY_VILLAGER_NO"),
@@ -217,5 +218,9 @@ public enum Sounds {
                 return this.resolvedSound = Sound.valueOf(this.pre19sound);
             }
         }
+    }
+
+    public void playSound(Player player) {
+        player.playSound(player, bukkitSound(), 1F, 1F);
     }
 }

@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.guis;
 
 import com.cryptomorin.xseries.XEnchantment;
+import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
@@ -10,28 +11,32 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Sounds;
 import cz.johnslovakia.gameapi.utils.StringUtils;
 import me.zort.containr.Component;
 import me.zort.containr.Element;
 import me.zort.containr.GUI;
+import org.apache.commons.lang.WordUtils;
 import org.bukkit.Material;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.Arrays;
-import java.util.Objects;
+import java.util.*;
 
 public class KitInventory implements Listener {
 
     public static void openKitInventory(GamePlayer gamePlayer) {
+        KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
+
+        int size = kitManager.getKits().size();
+        char sizeChar = (size <= 9 ? 'ㆺ' : 'Ẕ');
         GUI inventory = Component.gui()
-                .title("§f七七七七七七七七ㆺ")
+                .title("§f七七七七七七七七" + sizeChar)
                 .rows(3)
                 .prepare((gui, player) -> {
                     PlayerData playerData = gamePlayer.getPlayerData();
                     Game game = playerData.getGame();
-                    KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
 
                     Resource resource = kitManager.getResource();
                     int balance = playerData.getBalance(resource);
@@ -48,6 +53,10 @@ public class KitInventory implements Listener {
                     info.setName(MessageManager.get(player, "inventory.info_item.kit_inventory.name")
                             .getTranslated());
                     info.setLore(MessageManager.get(player, "inventory.info_item.kit_inventory.lore").getTranslated());
+                    if (kitManager.getGameMap() != null){
+                        info.addLoreLine("");
+                        info.addLoreLine("§8These kits are map-specific and not global.");
+                    }
 
 
                     ItemBuilder reset = new ItemBuilder(Material.MAP);
@@ -67,7 +76,7 @@ public class KitInventory implements Listener {
                     }).build());
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
 
-                    gui.setContainer(20, Component.staticContainer()
+                    gui.setContainer((size <= 9 ? 20 : 29), Component.staticContainer()
                             .size(5, 1)
                             .init(container -> {
                                 // Assign components to container
@@ -87,20 +96,28 @@ public class KitInventory implements Listener {
                                 container.fillElement(spacerElement);
                             }).build());
 
+                    List<Kit> kits = kitManager.getKits();
+                    kits.sort(Comparator.comparingInt((Kit kit) -> kit.equals(kitManager.getDefaultKit()) ? 0 : 1)
+                            .thenComparing(Kit::getName));
 
                     gui.setContainer(9, Component.staticContainer()
-                            .size(9, 1)
+                            .size(9, (size <= 9 ? 1 : 2))
                             .init(container -> {
-                                for (Kit kit : kitManager.getKits()) {
-                                    if (kitManager.getDefaultKit() != null && kitManager.getDefaultKit().equals(kit)) {
-                                        continue;
-                                    }
+                                for (Kit kit : kits) {
+                                    //if (kitManager.getDefaultKit() != null && kitManager.getDefaultKit().equals(kit))
+                                        //continue;
+
                                     String translateKey = "kit." + kit.getName().toLowerCase().replace(" ", "_");
 
                                     ItemBuilder item = new ItemBuilder(kit.getIcon());
                                     item.removeEnchantment(XEnchantment.ARROW_INFINITE.getEnchant());
-                                    item.setName((balance >= kit.getPrice() || kit.getPrice() == 0 || kitManager.hasKitPermission(gamePlayer, kit) ? "§a§l" + kit.getName() : "§c§l" + kit.getName()));
+                                    item.setName((balance >= kit.getPrice() || kit.getPrice() == 0 || kitManager.hasKitPermission(gamePlayer, kit) ? "§a§l" + WordUtils.capitalize(kit.getName().replace("_", " ")) : "§c§l" + kit.getName()));
                                     item.removeLore();
+                                    if (kitManager.getGameMap() != null) {
+                                        item.addLoreLine(MessageManager.get(gamePlayer, "inventory.kit.map")
+                                                .replace("%map%", WordUtils.capitalize(WordUtils.capitalize(kitManager.getGameMap().replace("_", " "))))
+                                                .getTranslated());
+                                    }
                                     item.addLoreLine("");
                                     if (MessageManager.existMessage(translateKey)) {
                                         MessageManager.get(player, translateKey)
@@ -119,26 +136,27 @@ public class KitInventory implements Listener {
                                     }
 
 
-                                    if (player.hasPermission("kits.free")) {
-                                        MessageManager.get(player, "inventory.kit.saved")
-                                                .replace("%price%", "" + kit.getPrice())
-                                                .replace("%economy_name%", resource.getName())
-                                                .addToItemLore(item);
-                                    } else if ((playerData.getGame().getSettings().isEnabledChangingKitAfterStart() /*&& kitManager.getPurchasedThisGame().contains(gamePlayer)*/) //TODO: purchasedThisGame
-                                            || (kitManager.isPurchaseKitForever() && kitManager.hasKitPermission(gamePlayer, kit))) {
-                                        MessageManager.get(player, "inventory.kit.purchased_for")
-                                                .replace("%price%", StringUtils.betterNumberFormat(kit.getPrice()))
-                                                .replace("%economy_name%", resource.getName())
-                                                .addToItemLore(item);
-                                    } else {
-                                        MessageManager.get(player, "inventory.kit.price")
-                                                .replace("%balance%", (balance >= kit.getPrice() ? "§a" : "§c") + StringUtils.betterNumberFormat(balance))
-                                                .replace("%price%", StringUtils.betterNumberFormat(kit.getPrice()))
-                                                .replace("%economy_name%", resource.getName())
-                                                .addToItemLore(item);
+                                    if (kit.getPrice() > 0) {
+                                        if (player.hasPermission("kits.free")) {
+                                            MessageManager.get(player, "inventory.kit.saved")
+                                                    .replace("%price%", "" + kit.getPrice())
+                                                    .replace("%economy_name%", resource.getName())
+                                                    .addToItemLore(item);
+                                        } else if ((playerData.getGame().getSettings().isEnabledChangingKitAfterStart() /*&& kitManager.getPurchasedThisGame().contains(gamePlayer)*/) //TODO: purchasedThisGame
+                                                || (kitManager.isPurchaseKitForever() && kitManager.hasKitPermission(gamePlayer, kit))) {
+                                            MessageManager.get(player, "inventory.kit.purchased_for")
+                                                    .replace("%price%", StringUtils.betterNumberFormat(kit.getPrice()))
+                                                    .replace("%economy_name%", resource.getName())
+                                                    .addToItemLore(item);
+                                        } else {
+                                            MessageManager.get(player, "inventory.kit.price")
+                                                    .replace("%balance%", (balance >= kit.getPrice() ? "§a" : "§c") + StringUtils.betterNumberFormat(balance))
+                                                    .replace("%price%", StringUtils.betterNumberFormat(kit.getPrice()))
+                                                    .replace("%economy_name%", resource.getName())
+                                                    .addToItemLore(item);
+                                        }
+                                        item.addLoreLine("");
                                     }
-
-                                    item.addLoreLine("");
 
 
                                     if (playerData.getKit() != null && playerData.getKit().equals(kit)) {
@@ -155,22 +173,24 @@ public class KitInventory implements Listener {
                                     }
 
 
-                                    if (playerData.getDefaultKit() == null) {
-                                        if (kitManager.isPurchaseKitForever()) {
-                                            if (kitManager.hasKitPermission(gamePlayer, kit)) {
+                                    if (GameAPI.getInstance().getMinigame().getSettings().isAllowDefaultKitSelection()) {
+                                        if (playerData.getDefaultKit() == null) {
+                                            if (kitManager.isPurchaseKitForever()) {
+                                                if (kitManager.hasKitPermission(gamePlayer, kit)) {
+                                                    MessageManager.get(player, "inventory.kit.default_kit.select")
+                                                            .addToItemLore(item);
+                                                }
+                                            } else {
                                                 MessageManager.get(player, "inventory.kit.default_kit.select")
                                                         .addToItemLore(item);
                                             }
+                                        } else if (playerData.getDefaultKit().equals(kit)) {
+                                            MessageManager.get(player, "inventory.kit.default_kit.selected")
+                                                    .addToItemLore(item);
                                         } else {
                                             MessageManager.get(player, "inventory.kit.default_kit.select")
                                                     .addToItemLore(item);
                                         }
-                                    } else if (playerData.getDefaultKit().equals(kit)) {
-                                        MessageManager.get(player, "inventory.kit.default_kit.selected")
-                                                .addToItemLore(item);
-                                    } else {
-                                        MessageManager.get(player, "inventory.kit.default_kit.select")
-                                                .addToItemLore(item);
                                     }
 
                                     MessageManager.get(player, "inventory.kit.edit_inventory.action_info")
@@ -199,29 +219,31 @@ public class KitInventory implements Listener {
                                             }
 
 
-                                            if (kitManager.isPurchaseKitForever()) {
-                                                if (!kitManager.hasKitPermission(gamePlayer, kit)) {
-                                                    player.playSound(player.getLocation(), Sounds.ANVIL_BREAK.bukkitSound(), 20.0F, 20.0F);
-                                                    MessageManager.get(player, "chat.kit.default_kit.must_have_purchased")
-                                                            .send();
-                                                    player.closeInventory();
-                                                    return;
+                                            if (GameAPI.getInstance().getMinigame().getSettings().isAllowDefaultKitSelection()) {
+                                                if (kitManager.isPurchaseKitForever()) {
+                                                    if (!kitManager.hasKitPermission(gamePlayer, kit)) {
+                                                        player.playSound(player.getLocation(), Sounds.ANVIL_BREAK.bukkitSound(), 20.0F, 20.0F);
+                                                        MessageManager.get(player, "chat.kit.default_kit.must_have_purchased")
+                                                                .send();
+                                                        player.closeInventory();
+                                                        return;
+                                                    }
                                                 }
-                                            }
-                                            gamePlayer.getPlayerData().setDefaultKit(kit);
-                                            player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 20.0F, 20.0F);
-                                            if (game.getState() == GameState.STARTING || game.getState() == GameState.WAITING) {
-                                                kit.select(gamePlayer);
-                                            } else {
-                                                kit.select(gamePlayer); //bylo false k tomu
-                                                if (gamePlayer.getPlayerData().getKit() == kit) {
-                                                    kit.activate(gamePlayer);
+                                                gamePlayer.getPlayerData().setDefaultKit(kit);
+                                                player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 20.0F, 20.0F);
+                                                if (game.getState() == GameState.STARTING || game.getState() == GameState.WAITING) {
+                                                    kit.select(gamePlayer);
+                                                } else {
+                                                    kit.select(gamePlayer); //bylo false k tomu
+                                                    if (gamePlayer.getPlayerData().getKit() == kit) {
+                                                        kit.activate(gamePlayer);
+                                                    }
                                                 }
+                                                MessageManager.get(player, "chat.kit.default_kit.select")
+                                                        .replace("%kit%", kit.getName())
+                                                        .send();
+                                                player.closeInventory();
                                             }
-                                            MessageManager.get(player, "chat.kit.default_kit.select")
-                                                    .replace("%kit%", kit.getName())
-                                                    .send();
-                                            player.closeInventory();
                                         }
                                     }).build();
                                     container.appendElement(spacerElement);

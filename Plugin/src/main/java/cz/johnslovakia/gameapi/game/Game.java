@@ -392,7 +392,6 @@ public class Game {
     }
 
     public void startPreparation(){
-        getMetadata().put("players_at_start", getPlayers().size());
         prepareGame();
         setState(GameState.INGAME);
 
@@ -405,7 +404,6 @@ public class Game {
             gamePlayer.setLimited(true);
         }
 
-        Task.cancel(this, "StartCountdown");
         Task task = new Task(this, "PreparationTask", getSettings().getPreparationTime(), new PreparationCountdown(), GameAPI.getInstance());
         task.setGame(this);
     }
@@ -463,7 +461,7 @@ public class Game {
         GameMap playingMap = getCurrentMap();
 
         if (playingMap.getSettings().isLoadWorldWithGameAPI()) {
-            String worldName = playingMap.getName() + "_" + getID();
+            String worldName = playingMap.getName().replaceAll(" ", "_") + "_" + getID();
             World world = Bukkit.getWorld(worldName);
             if (world != null) {
                 playingMap.setWorld(world);
@@ -513,9 +511,9 @@ public class Game {
 
     public void startGame(){
         setState(GameState.INGAME);
+        getMetadata().put("players_at_start", getPlayers().size());
 
         if (getSettings().isDefaultGameCountdown()) {
-            Task.cancel(this, "PreparationTask");
             Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), t -> {
                 Task task = new Task(this, "GameCountdown", getSettings().getGameTime(), new GameCountdown(), GameAPI.getInstance());
                 task.setGame(this);
@@ -542,15 +540,7 @@ public class Game {
 
     public void endGame(Winner winner){
         setState(GameState.ENDING);
-
         Task.cancelAll(this);
-
-        for (Iterator<KeyedBossBar> it = Bukkit.getBossBars(); it.hasNext();) {
-            BossBar bossBar = it.next();
-            bossBar.removeAll();
-        }
-
-
 
         String rankingScore = "kills";
         for (List<PlayerScore> scoreList : PlayerManager.getPlayerScores().values()) {
@@ -560,12 +550,10 @@ public class Game {
                 }
             }
         }
-
         Map<GamePlayer, Integer> ranking =  Utils.getTopPlayers(this, rankingScore, 3);
 
         GameEndEvent ev = new GameEndEvent(this, winner, ranking);
         Bukkit.getPluginManager().callEvent(ev);
-
 
 
         Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), t -> {
@@ -574,35 +562,53 @@ public class Game {
         }, 30L);
 
 
+        HashMap<GamePlayer, Integer> oldWinstreaks = new HashMap<>();
+
         for (GamePlayer gamePlayer : getParticipants()) {
-            gamePlayer.getOnlinePlayer().stopSound("custom:ending");
+            Player player = gamePlayer.getOnlinePlayer();
+
+            player.stopSound("custom:ending");
             GameAPI.getInstance().getVersionSupport().setTeamNameTag(gamePlayer.getOnlinePlayer(), getName().replace(" ", "") + getID(), ChatColor.WHITE);
             Utils.hideAndShowPlayers(gamePlayer);
 
+
+            gamePlayer.resetAttributes();
+            gamePlayer.setLimited(false);
+            gamePlayer.setEnabledMovement(true);
+            gamePlayer.setSpectator(false);
+            player.setGameMode(GameMode.ADVENTURE);
+
             if (getSettings().teleportPlayersAfterEnd()){
-                gamePlayer.getOnlinePlayer().teleport(getLobbyPoint());
+                player.teleport(getLobbyPoint());
             }else{
-                gamePlayer.getOnlinePlayer().setAllowFlight(true);
-                gamePlayer.getOnlinePlayer().setFlying(true);
+                player.setAllowFlight(true);
+                player.setFlying(true);
             }
 
-            gamePlayer.getOnlinePlayer().sendMessage("");
 
-            if (winner != null) {
-                if ((winner.getWinnerType().equals(Winner.WinnerType.PLAYER) && (winner.equals(gamePlayer)) || (winner.getWinnerType().equals(Winner.WinnerType.TEAM) && gamePlayer.getPlayerData().getTeam().equals(winner)))) {
-                    MessageManager.get(gamePlayer, "chat.you_won")
-                            .send();
-                }else{
-                    MessageManager.get(gamePlayer, "chat.winner")
-                            .replace("%winner%", gp -> winner.getWinnerType().getTranslatedName(gp) + " " + (winner.getWinnerType().equals(Winner.WinnerType.PLAYER)
-                                    ? ((GamePlayer) winner).getOnlinePlayer().getName()
-                                    : ((GameTeam) winner).getChatColor() + ((GameTeam) winner).getName()))
+            player.sendMessage("");
+
+            Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> { //kvůli Questům
+                if (winner != null) {
+                    if ((winner.getWinnerType().equals(Winner.WinnerType.PLAYER) && (winner.equals(gamePlayer)) || (winner.getWinnerType().equals(Winner.WinnerType.TEAM) && gamePlayer.getPlayerData().getTeam().equals(winner)))) {
+                        MessageManager.get(gamePlayer, "chat.you_won")
+                                .send();
+                    } else {
+                        MessageManager.get(gamePlayer, "chat.winner")
+                                .replace("%winner%", gp -> (winner.getWinnerType().equals(Winner.WinnerType.PLAYER)
+                                        ? ((GamePlayer) winner).getOnlinePlayer().getName()
+                                        : ((GameTeam) winner).getChatColor() + ((GameTeam) winner).getName()))
+                                .replace("%type%", gp -> winner.getWinnerType().getTranslatedName(gp))
+                                .send();
+                    }
+                } else {
+                    MessageManager.get(gamePlayer, "chat.nobody_won")
                             .send();
                 }
-            }else{
-                MessageManager.get(gamePlayer, "chat.nobody_won")
-                        .send();
-            }
+
+                player.sendMessage("");
+            }, 3L);
+
 
 
             if (winner != null) {
@@ -615,96 +621,64 @@ public class Game {
                             .replace("%winner%", (winner.getWinnerType().equals(Winner.WinnerType.PLAYER) ? MessageManager.get(gamePlayer, "winnerType.player") + " " : ((GameTeam) winner).getChatColor()) + winner.getWinnerType().getTranslatedName(gamePlayer) + (winner.getWinnerType().equals(Winner.WinnerType.TEAM) ? " " + MessageManager.get(gamePlayer, "winnerType.team") : ""))
                             .send();
                 }
-
-
-                Location location;
-                if (getSettings().isTeleportPlayersAfterEnd()){
-                    location = getLobbyPoint();
-                }else{
-                    location = getCurrentMap().getMainArea().getCenter();
-                }
-
-                new BukkitRunnable(){
-                    Location newLocation;
-
-                    @Override
-                    public void run() {
-                        if (GameManager.getGameByID(getID()) == null || getState() != GameState.ENDING){
-                            this.cancel();
-                            return;
-                        }
-
-                        newLocation = location.add(Utils.getRandom(-20, 20), 0,  Utils.getRandom(-20, 20));
-                        newLocation = newLocation.getWorld().getHighestBlockAt(newLocation).getLocation();
-                        newLocation = newLocation.add(0, Utils.getRandom(5, 10), 0);
-
-                        Utils.spawnFireworks(newLocation, 1, Color.WHITE, FireworkEffect.Type.BALL);
-                        Color color = Color.YELLOW;
-                        if (getSettings().isUseTeams()){
-                            color = ((GameTeam) getWinner()).getColor();
-                        }
-                        Utils.spawnFireworks(newLocation, 1, color, FireworkEffect.Type.BALL);
-                    }
-                }.runTaskTimer(GameAPI.getInstance(), 0L, 40L);
-
-
-                new BukkitRunnable(){
-                    @Override
-                    public void run() {
-                        for (GamePlayer gamePlayer : getPlayers()) {
-                            Player player = gamePlayer.getOnlinePlayer();
-
-                            if (getSpectatorManager().getInventoryManager().getPlayers().contains(gamePlayer.getOnlinePlayer())) {
-                                getSpectatorManager().getInventoryManager().unloadInventory(gamePlayer.getOnlinePlayer());
-                            }
-
-
-                            gamePlayer.resetAttributes();
-                            gamePlayer.setLimited(false);
-                            gamePlayer.setEnabledMovement(true);
-                            gamePlayer.setSpectator(false);
-                            player.setGameMode(GameMode.ADVENTURE);
-                            gamePlayer.getPlayerData().getCurrentInventory().unloadInventory(player);
-
-                            InventoryManager itemManager = new InventoryManager("Ending");
-                            if (GameManager.getGames().size() > 1 || (GameAPI.getInstance().getMinigame().getDataManager() != null && GameAPI.getInstance().getMinigame().getDataManager().isThereFreeGame())) {
-                                    Item playAgain = new Item(new ItemBuilder(Material.PAPER).hideAllFlags().toItemStack(),
-                                            1, "item.play_again",
-                                            new Consumer<PlayerInteractEvent>() {
-                                                @Override
-                                                public void accept(PlayerInteractEvent e) {
-                                                    GameManager.newArena(e.getPlayer(), false);
-                                                }
-                                            });
-                                    itemManager.setHoldItemSlot(1);
-                                    itemManager.registerItem(playAgain);
-                            }
-                            itemManager.give(player);
-                        }
-                    }
-                }.runTaskLater(GameAPI.getInstance(), 2L);
             }
 
 
-            /*for (Resource type : GameAPI.getInstance().getMinigame().getEconomies()) {
-                if (ResourcesManager.getEarned(gamePlayer, type) != 0) {
-                    int earned = ResourcesManager.getEarned(gamePlayer, type);
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            type.getResourceInterface().deposit(gamePlayer, earned);
-                        }
-                    }.runTaskAsynchronously(GameAPI.getInstance());
+            Location location;
+            if (getSettings().isTeleportPlayersAfterEnd()){
+                location = getLobbyPoint();
+            }else{
+                location = getCurrentMap().getMainArea().getCenter();
+            }
+
+
+            new BukkitRunnable(){
+                Location newLocation;
+
+                @Override
+                public void run() {
+                    if (GameManager.getGameByID(getID()) == null || getState() != GameState.ENDING){
+                        this.cancel();
+                        return;
+                    }
+
+                    newLocation = location.add(RandomUtils.randomInteger(-20, 20), 0,  RandomUtils.randomInteger(-20, 20));
+                    newLocation = newLocation.getWorld().getHighestBlockAt(newLocation).getLocation();
+                    newLocation = newLocation.add(0, RandomUtils.randomInteger(5, 10), 0);
+
+                    Utils.spawnFireworks(newLocation, 1, Color.WHITE, FireworkEffect.Type.BALL);
+                    Color color = Color.YELLOW;
+                    if (getSettings().isUseTeams() && getWinner() != null){
+                        color = ((GameTeam) getWinner()).getColor();
+                    }
+                    Utils.spawnFireworks(newLocation, 1, color, FireworkEffect.Type.BALL);
                 }
-            }*/
-        }
+            }.runTaskTimer(GameAPI.getInstance(), 0L, 30L);
 
 
-        HashMap<GamePlayer, Integer> oldWinstreaks = new HashMap<>();
-        for (GamePlayer gp : getParticipants()) {
-            oldWinstreaks.put(gp, gp.getPlayerData().getStat("Winstreak").getStatScore());
+            gamePlayer.getPlayerData().getCurrentInventory().unloadInventory(player);
 
-            gp.getOnlinePlayer().sendMessage("");
+            if (getSpectatorManager().getInventoryManager().getPlayers().contains(gamePlayer.getOnlinePlayer())) {
+                getSpectatorManager().getInventoryManager().unloadInventory(gamePlayer.getOnlinePlayer());
+            }
+
+            InventoryManager itemManager = new InventoryManager("Ending");
+            if (GameManager.getGames().size() > 1 || (GameAPI.getInstance().getMinigame().getDataManager() != null && GameAPI.getInstance().getMinigame().getDataManager().isThereFreeGame())) {
+                Item playAgain = new Item(new ItemBuilder(Material.PAPER).hideAllFlags().toItemStack(),
+                        1, "item.play_again",
+                        new Consumer<PlayerInteractEvent>() {
+                            @Override
+                            public void accept(PlayerInteractEvent e) {
+                                GameManager.newArena(e.getPlayer(), false);
+                            }
+                        });
+                itemManager.setHoldItemSlot(1);
+                itemManager.registerItem(playAgain);
+            }
+            itemManager.give(player);
+
+            oldWinstreaks.put(gamePlayer, gamePlayer.getPlayerData().getStat("Winstreak").getStatScore());
+            gamePlayer.getOnlinePlayer().sendMessage("");
         }
 
         if (winner != null) {
@@ -747,7 +721,6 @@ public class Game {
                     Player player = gp.getOnlinePlayer();
 
                     if (winner != null) {
-                        player.sendMessage("");
                         MessageManager.get(gp, "chat.winstreak")
                                 .replace("%old_winstreak%", "" + oldWinstreaks.get(gp))
                                 .replace("%new_winstreak%", (gp.getPlayerData().getStat("Winstreak").getStatScore() == 0 ? "§c" : "§a") + gp.getPlayerData().getStat("Winstreak").getStatScore())
@@ -776,7 +749,7 @@ public class Game {
                     }
                 }
             }
-        }.runTaskLater(GameAPI.getInstance(), 10L + 40L);
+        }.runTaskLater(GameAPI.getInstance(), 50L);
     }
 
     public void sendTopPlayers(Map<GamePlayer, Integer> ranking, String rankingScore){
@@ -865,12 +838,15 @@ public class Game {
         for (GamePlayer gamePlayer : getParticipants()){
             Player player = gamePlayer.getOnlinePlayer();
 
+            MessageManager.get(gamePlayer, "chat.rewardsummary.title").send();
+
             if (!ResourcesManager.earnedSomething(gamePlayer)){
-                return;
+                MessageManager.get(gamePlayer, "chat.rewardsummary.no_rewards")
+                        .send();
+                continue;
             }
 
             gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "custom:gamebonus", 0.8F, 1F);
-            MessageManager.get(gamePlayer, "chat.rewardsummary.title").send();
 
             for (Resource type : GameAPI.getInstance().getMinigame().getEconomies()) {
                 int earned = ResourcesManager.getEarned(gamePlayer, type);
@@ -983,11 +959,8 @@ public class Game {
         return GameAPI.getInstance().getMinigame().getSettings();
     }
 
-    public GameMap get() {
-        for (GameMap a : getMapManager().getMaps()) {
-            if (a.isPlaying()) return a;
-        }
-        return null;
+    public boolean isPreparation(){
+        return Task.getTask(this, "PreparationTask") != null;
     }
 
     public GameMap getCurrentMap() {

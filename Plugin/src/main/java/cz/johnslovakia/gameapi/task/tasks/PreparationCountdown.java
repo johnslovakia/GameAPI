@@ -6,6 +6,8 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.task.Task;
 import cz.johnslovakia.gameapi.task.TaskInterface;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.users.PlayerData;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Utils;
 import cz.johnslovakia.gameapi.utils.Sounds;
 import org.bukkit.Bukkit;
@@ -29,7 +31,6 @@ public class PreparationCountdown implements TaskInterface {
         bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.battle_begings_in")
                 .replace("%time%", Utils.getDurationString(task.getCounter()))
                 .getFontTextComponentJSON("gameapi:bossbar_offset"));
-
         bossBar.setVisible(true);
         bossBar.addPlayer(gamePlayer.getOnlinePlayer());
         gamePlayer.getPlayerData().setCurrentBossBar(bossBar);
@@ -84,6 +85,15 @@ public class PreparationCountdown implements TaskInterface {
             MessageManager.get(gamePlayer, "title.battle_started")
                     .send();
             player.playSound(player, "custom:gamestart", 20.0F, 20.0F);
+
+            PlayerData data = gamePlayer.getPlayerData();
+            if (gamePlayer.getMetadata().containsKey("edited_kit_inventory") && (boolean) gamePlayer.getMetadata().get("edited_kit_inventory")){
+                data.setKitInventory(data.getKit(), Utils.copyPlayerInventory(player));
+                Bukkit.getScheduler().runTaskAsynchronously(GameAPI.getInstance(), task2 -> data.saveKitInventories());
+                gamePlayer.getMetadata().remove("edited_kit_inventory");
+            }
+
+            gamePlayer.getMetadata().remove("last_opened_cosmetic_category");
         }
         game.startGame();
     }

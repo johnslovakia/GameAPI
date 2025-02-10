@@ -1,6 +1,5 @@
 package cz.johnslovakia.gameapi.utils.rewards;
 
-import cz.johnslovakia.gameapi.users.PlayerScore;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.utils.RandomUtils;
 import lombok.Getter;
@@ -11,7 +10,7 @@ import java.util.Random;
 public class RewardItem {
 
     private final Resource resource;
-    private int amount;
+    private final int amount;
     private int chance = 100;
     private int randomMinRange = 0;
     private int randomMaxRange = 0;
@@ -49,7 +48,10 @@ public class RewardItem {
     }
 
     public boolean shouldApply() {
-        return new Random().nextInt(100) < chance;
+        //TODO: opravit
+        /*if (chance == 100) return true;
+        return new Random().nextInt(100) < chance;*/
+        return true;
     }
 
 

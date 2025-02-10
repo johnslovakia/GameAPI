@@ -3,6 +3,7 @@ package cz.johnslovakia.gameapi.users;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.datastorage.*;
+import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
@@ -28,8 +29,10 @@ import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.boss.BossBar;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -130,8 +133,36 @@ public class PlayerData {
         if (kitInventories.get(kit) == null){
             return kit.getContent().getInventory();
         }else{
+            if (!areItemsMatching(kit.getContent().getInventory(), kitInventories.get(kit))){
+                kitInventories.remove(kit);
+                Bukkit.getScheduler().runTaskAsynchronously(GameAPI.getInstance(), task -> saveKitInventories());
+
+                MessageManager.get(gamePlayer, "chat.kit_layout_reset")
+                        .replace("%kit%", kit.getName())
+                        .send();
+                return kit.getContent().getInventory();
+            }
+
             return kitInventories.get(kit);
         }
+    }
+
+    public boolean areItemsMatching(Inventory defaultKit, Inventory playerLayout) {
+        Map<String, Integer> defaultItems = getItemCounts(defaultKit);
+        Map<String, Integer> playerItems = getItemCounts(playerLayout);
+
+        return defaultItems.equals(playerItems);
+    }
+
+    private Map<String, Integer> getItemCounts(Inventory inventory) {
+        Map<String, Integer> itemCounts = new HashMap<>();
+        for (ItemStack item : inventory.getContents()) {
+            if (item != null) {
+                String itemName = item.getType().toString();
+                itemCounts.put(itemName, itemCounts.getOrDefault(itemName, 0) + item.getAmount());
+            }
+        }
+        return itemCounts;
     }
 
     public PlayerData setLanguage(Language language) {
@@ -234,11 +265,14 @@ public class PlayerData {
                         PlayerQuestData.Status status = PlayerQuestData.Status.valueOf(questObject.getString("status").toUpperCase());  // "NOT_STARTED", "IN_PROGRESS", "COMPLETED"
                         int progress = questObject.getInt("progress");
                         LocalDate completionDate = null;
-                        if (questObject.get("completion_date") != null) {
+                        if (questObject.has("completion_date") && questObject.get("completion_date") != null) {
                             completionDate = LocalDate.parse(questObject.getString("completion_date"));
                         }
 
                         Quest quest = GameAPI.getInstance().getQuestManager().getQuest(type, name);
+                        if (quest == null){
+                            continue;
+                        }
 
                         PlayerQuestData questData;
                         if (status.equals(PlayerQuestData.Status.COMPLETED)) {
@@ -259,6 +293,7 @@ public class PlayerData {
             } catch (Exception exception) {
                 Logger.log("I can't get quests data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
                 gamePlayer.getOnlinePlayer().sendMessage("Can't get your quests data. Sorry for the inconvenience. (2)");
+                exception.printStackTrace();
             }
         }
     }
@@ -331,6 +366,9 @@ public class PlayerData {
         if (kitManager == null){
             return;
         }
+        if (kitManager.getDefaultKit() != null){
+            Bukkit.getScheduler().runTask(GameAPI.getInstance(), () -> kitManager.getDefaultKit().select(gamePlayer));
+        }
 
         Minigame minigame = GameAPI.getInstance().getMinigame();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
@@ -344,39 +382,69 @@ public class PlayerData {
             gamePlayer.getOnlinePlayer().sendMessage("Can't get your kits data. Sorry for the inconvenience. (1)");
         }else {
             try{
-                String rDKit = result.get().getString("DefaultKit");
-                if (rDKit != null) {
-                    Kit dKit = kitManager.getKit(result.get().getString("DefaultKit"));
-                    if (dKit != null) {
-                        this.defaultKit = dKit;
+                if (minigame.getSettings().isAllowDefaultKitSelection()) {
+                    String rDKit = result.get().getString("DefaultKit");
+                    if (rDKit != null) {
+                        Kit dKit = kitManager.getKit(result.get().getString("DefaultKit"));
+                        if (dKit != null) {
+                            this.defaultKit = dKit;
 
-                        Bukkit.getScheduler().runTask(GameAPI.getInstance(), () -> {
-                            defaultKit.select(gamePlayer);
-                        });
+                            Bukkit.getScheduler().runTask(GameAPI.getInstance(), () -> {
+                                defaultKit.select(gamePlayer);
+                            });
+                        }
                     }
                 }
 
 
                 String jsonString = result.get().getString("KitInventories");
                 if (jsonString != null) {
-                    JSONObject jsonObject = new JSONObject(jsonString);
+                    if (kitManager.getGameMap() == null) {
+                        JSONObject jsonObject = new JSONObject(jsonString);
 
-                    JSONArray inventoriesArray = jsonObject.getJSONArray("inventories");
+                        JSONArray inventoriesArray = jsonObject.getJSONArray("inventories");
 
-                    for (int i = 0; i < inventoriesArray.length(); i++) {
-                        JSONObject kitObject = inventoriesArray.getJSONObject(i);
+                        for (int i = 0; i < inventoriesArray.length(); i++) {
+                            JSONObject kitObject = inventoriesArray.getJSONObject(i);
 
-                        if (kitManager.getGameMap() != null){
-                            if (kitObject.get("map") == null) continue;
-                            if (!kitObject.getString("map").equalsIgnoreCase(kitManager.getGameMap().getName())) continue;
+                            if (kitManager.getGameMap() != null) {
+                                if (kitObject.get("map") == null) continue;
+                                if (!kitObject.getString("map").equalsIgnoreCase(kitManager.getGameMap()))
+                                    continue;
+                            }
+
+                            String name = kitObject.getString("name");
+                            String inventory = kitObject.getString("inventory");
+                            Kit k = kitManager.getKit(name);
+
+                            if (k != null) {
+                                kitInventories.put(k, BukkitSerialization.playerInventoryFromBase64(inventory));
+                            }
                         }
+                    }else{
+                        String map = kitManager.getGameMap();
 
-                        String name = kitObject.getString("name");
-                        String inventory = kitObject.getString("inventory");
-                        Kit k = kitManager.getKit(name);
+                        JSONObject kitsData = new JSONObject(jsonString);
+                        JSONObject kitsDataJson = kitsData.getJSONObject("kits_data");
+                        JSONObject mapsJson = kitsDataJson.getJSONObject("maps");
 
-                        if (k != null) {
-                            kitInventories.put(k, BukkitSerialization.playerInventoryFromBase64(inventory));
+                        if (mapsJson.has(map)) {
+                            JSONObject mapJson = mapsJson.getJSONObject(map);
+
+                            if (mapJson.has("inventories")) {
+                                JSONObject kitInventoriesJson = mapJson.getJSONObject("inventories");
+
+                                for (String kitName : kitInventoriesJson.keySet()) {
+                                    String base64Inventory = kitInventoriesJson.getString(kitName);
+
+                                    Kit kit = kitManager.getKit(kitName);
+                                    if (kit != null) {
+                                        Inventory inventory = BukkitSerialization.playerInventoryFromBase64(base64Inventory);
+
+                                        kitInventories.put(kit, inventory);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -395,8 +463,6 @@ public class PlayerData {
     }
 
     public void saveAll(){
-        Minigame minigame = GameAPI.getInstance().getMinigame();
-
         saveCosmetics();
         saveQuests();
         savePerks();
@@ -500,23 +566,31 @@ public class PlayerData {
                     JSONObject jsonObject = new JSONObject(jsonString);
 
                     for (CosmeticsCategory category : GameAPI.getInstance().getCosmeticsManager().getCategories()) {
-                        Cosmetic cosmetic = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("selected")).stream().filter(c -> GameAPI.getInstance().getCosmeticsManager().getCategory(c).equals(category)).toList().get(0);
-                        if (cosmetic != null) {
-                            selectedCosmetics.put(category, cosmetic);
+                        if (!jsonObject.getJSONArray("purchased").isEmpty())
+                            purchasedCosmetics = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("purchased"));
+
+
+                        if (!jsonObject.getJSONArray("selected").isEmpty()) {
+                            List<Cosmetic> cosmetics = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("selected")).stream().filter(c -> GameAPI.getInstance().getCosmeticsManager().getCategory(c) != null && GameAPI.getInstance().getCosmeticsManager().getCategory(c).equals(category)).toList();
+                            if (!cosmetics.isEmpty()) {
+                                //selectedCosmetics.put(category, cosmetics.get(0));
+                                cosmetics.get(0).select(gamePlayer, false);
+                            }
                         }
                     }
-                    purchasedCosmetics = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("purchased"));
                 }
             } catch (Exception exception) {
                 Logger.log("I can't get cosmetics data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
                 gamePlayer.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (2)");
+                exception.printStackTrace();
             }
         }
     }
 
     public void selectCosmetic(Cosmetic cosmetic){
         if (GameAPI.getInstance().getCosmeticsManager().getCategory(cosmetic) != null) {
-            selectedCosmetics.put(GameAPI.getInstance().getCosmeticsManager().getCategory(cosmetic), cosmetic);
+            if (!selectedCosmetics.containsValue(cosmetic))
+                selectedCosmetics.put(GameAPI.getInstance().getCosmeticsManager().getCategory(cosmetic), cosmetic);
         }
     }
 

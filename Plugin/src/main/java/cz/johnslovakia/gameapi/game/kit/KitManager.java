@@ -7,6 +7,8 @@ import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.guis.KitInventoryEditor;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.utils.Logger;
+import eu.decentsoftware.holograms.api.utils.scheduler.S;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;
@@ -21,30 +23,30 @@ import java.util.Objects;
 @Getter
 public class KitManager implements Listener {
 
-    private static final List<KitManager> kitManagers = new ArrayList<>();
+    @Getter
+    public static List<KitManager> kitManagers = new ArrayList<>();
 
     public static void addKitManager(KitManager manager){
         if (!kitManagers.contains(manager)){
             kitManagers.add(manager);
 
             Bukkit.getPluginManager().registerEvents(manager, GameAPI.getInstance());
-            Bukkit.getPluginManager().registerEvents(new KitInventoryEditor(), GameAPI.getInstance());
             Objects.requireNonNull(GameAPI.getInstance().getCommand("saveinventory")).setExecutor(new KitInventoryEditor.SaveCommand());
         }
     }
 
     public static KitManager getKitManager(Game game){
-        for (KitManager kitManager : kitManagers.stream().filter(kitManager -> kitManager.getGame() != null).toList()){
-            if (kitManager.getGame().equals(game)){
+        for (KitManager kitManager : kitManagers.stream().filter(kitManager -> kitManager.getGame() != null || kitManager.getGameMap() != null).toList()){
+            if ((kitManager.getGame() != null && kitManager.getGame().equals(game)) || (kitManager.getGameMap() != null && game.getCurrentMap() != null && (kitManager.getGameMap().equalsIgnoreCase(game.getCurrentMap().getName()) || kitManager.getGameMap().equalsIgnoreCase(game.getCurrentMap().getName().replaceAll(" ", "_"))))){
                 return kitManager;
             }
         }
         return kitManagers.get(0);
     }
 
-    public static KitManager getKitManager(GameMap gameMap){
-        for (KitManager kitManager : kitManagers.stream().filter(kitManager -> (kitManager.getGameMap() != null || kitManager.getGame() != null)).toList()){
-            if (kitManager.getGameMap().equals(gameMap) || kitManager.getGame().getCurrentMap().equals(gameMap)){
+    public static KitManager getKitManager(String gameMap){
+        for (KitManager kitManager : kitManagers.stream().filter(kitManager -> (kitManager.getGameMap() != null)).toList()){
+            if (kitManager.getGameMap().equalsIgnoreCase(gameMap) || kitManager.getGameMap().equalsIgnoreCase(gameMap.replaceAll(" ", "_"))){
                 return kitManager;
             }
         }
@@ -53,7 +55,7 @@ public class KitManager implements Listener {
 
 
     private Game game;
-    private GameMap gameMap;
+    private String gameMap;
     private final Resource resource;
 
     private final List<Kit> kits = new ArrayList<>();
@@ -83,9 +85,8 @@ public class KitManager implements Listener {
         addKitManager(this);
     }
 
-    public KitManager(GameMap gameMap, Resource resource, boolean buyingForever) {
+    public KitManager(String gameMap, Resource resource, boolean buyingForever) {
         this.gameMap = gameMap;
-        this.game = gameMap.getGame();
         this.resource = resource;
         this.purchaseKitForever = buyingForever;
 

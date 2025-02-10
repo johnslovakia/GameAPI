@@ -9,9 +9,9 @@
 \u1E86 - více info po přejetí (https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.onlinewebfonts.com%2Ficon%2F566696&psig=AOvVaw3Y5Hrw4SEL2eaIcwKGfrdQ&ust=1725114146813000&source=images&cd=vfe&opi=89978449&ved=0CBQQjRxqFwoTCNCH2pT1nIgDFQAAAAAdAAAAABAJ)
 \u1E87 - countdown
 
-\u1E89 - background roh levá strana
-\u1E8A - background střed
-\u1E8B - background roh pravá strana
+\u1E89 - background roh levá strana 	ẉ
+\u1E8A - background střed Ẋ
+\u1E8B - background roh pravá strana ẋ
 
 \u1E8D - Sword znak (offset) ẍ
 \u1E8C - Lebka znak (offset) Ẍ

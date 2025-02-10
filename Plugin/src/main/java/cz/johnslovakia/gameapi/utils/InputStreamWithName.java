@@ -1,7 +1,10 @@
 package cz.johnslovakia.gameapi.utils;
 
+import lombok.Getter;
+
 import java.io.InputStream;
 
+@Getter
 public class InputStreamWithName {
     private final InputStream inputStream;
     private final String fileName;
@@ -11,11 +14,4 @@ public class InputStreamWithName {
         this.fileName = fileName;
     }
 
-    public InputStream getInputStream() {
-        return inputStream;
-    }
-
-    public String getFileName() {
-        return fileName;
-    }
 }

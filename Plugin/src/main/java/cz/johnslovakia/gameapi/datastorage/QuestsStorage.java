@@ -5,7 +5,7 @@ import cz.johnslovakia.gameapi.users.quests.PlayerQuestData;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.time.LocalTime;
+import java.time.LocalDate;
 import java.util.List;
 
 public class QuestsStorage {
@@ -33,10 +33,8 @@ public class QuestsStorage {
             questJson.put("status", questData.getStatus().name());
             questJson.put("progress", questData.getProgress());
 
-            if (questData.getCompletionDate() != null) {
-                questJson.put("completion_date", questData.getCompletionDate().toString());
-            } else {
-                questJson.put("completion_date", LocalTime.now());
+            if (questData.getStatus() == PlayerQuestData.Status.COMPLETED) {
+                questJson.put("completion_date", (questData.getCompletionDate() != null ? questData.getCompletionDate().toString() : LocalDate.now().toString()));
             }
 
             jsonArray.put(questJson);

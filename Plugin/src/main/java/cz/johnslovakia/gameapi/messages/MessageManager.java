@@ -28,6 +28,7 @@ public class MessageManager {
     public static void addLinkedRewardMessage(String key, Reward reward){
         if (!messages.containsKey(key)){
             linkedRewardMessages.put(key, reward);
+            reward.setLinkedMessageKey(key);
         }
     }
 

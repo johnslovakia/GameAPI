@@ -58,33 +58,39 @@ public class Reward {
     public void applyReward(GamePlayer gamePlayer, boolean sendMessage) {
         Lock lock = getPlayerLock(gamePlayer);
 
+        boolean atleastOneApplied = false;
         for (RewardItem item : getRewardItems()) {
-            if (!item.shouldApply()) {
+            if (!item.shouldApply() || item.getAmount() == 0) {
                 continue;
             }
-            consumer.accept(item);
+            if (consumer != null) {
+                consumer.accept(item);
+            }
+            atleastOneApplied = true;
         }
 
 
-        if (sendMessage && linkedMessageKey != null) {
-            sendMessage(gamePlayer);
-        }
+        if (atleastOneApplied) {
+            if (sendMessage && linkedMessageKey == null) {
+                sendMessage(gamePlayer);
+            }
 
 
-        lock.lock();
-        try {
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    for (RewardItem item : getRewardItems()) {
-                        item.getResource().getResourceInterface().deposit(gamePlayer, item.getAmount());
+            lock.lock();
+            try {
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        for (RewardItem item : getRewardItems()) {
+                            item.getResource().getResourceInterface().deposit(gamePlayer, item.getAmount());
+                        }
+                        Bukkit.getScheduler().runTask(GameAPI.getInstance(), task -> lock.unlock());
                     }
-                    Bukkit.getScheduler().runTask(GameAPI.getInstance(), task -> lock.unlock());
-                }
-            }.runTaskAsynchronously(GameAPI.getInstance());
+                }.runTaskAsynchronously(GameAPI.getInstance());
 
-        } catch (Exception e) {
-            e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 

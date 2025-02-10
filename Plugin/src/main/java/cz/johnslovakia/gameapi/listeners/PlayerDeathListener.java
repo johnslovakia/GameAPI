@@ -137,7 +137,7 @@ public class PlayerDeathListener implements Listener {
                 }.runTaskLater(GameAPI.getInstance(), 25 * 20L);
             }
 
-            if (cosmeticsManager.getSelectedCosmetic(killMessagesCategory, killer) == null){
+            if (cosmeticsManager.getSelectedCosmetic(killer, killMessagesCategory) == null || killer.getPlayerData().getKillMessage() == null){
                 MessageManager.get(game.getParticipants(), "chat.kill")
                         .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                         .replace("%killer%", killer.getOnlinePlayer().getName())
@@ -146,16 +146,13 @@ public class PlayerDeathListener implements Listener {
                         .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
                         .send();
             }else{
-                KillMessage message = killer.getPlayerData().getKillMessage();
-                if (message != null) {
-                    MessageManager.get(game.getParticipants(), message.getMessageKey(e.getDmgCause()))
-                            .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
-                            .replace("%killer%", killer.getOnlinePlayer().getName())
-                            .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
-                            .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
-                            .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
-                            .send();
-                }
+                MessageManager.get(game.getParticipants(), killer.getPlayerData().getKillMessage().getMessageKey(e.getDmgCause()))
+                        .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
+                        .replace("%killer%", killer.getOnlinePlayer().getName())
+                        .replace("%player_color%", "" + (useTeams ? gamePlayer.getPlayerData().getTeam().getChatColor() : "§a"))
+                        .replace("%killer_color%", "" + (useTeams ? killer.getPlayerData().getTeam().getChatColor() : "§a"))
+                        .addAndTranslate(killCounter.get(killer) > 1 && (blockedxKill.get(count) == null || !blockedxKill.get(count).contains(killer)) ? getxKillMessageKey(killCounter.get(killer)) : "")
+                        .send();
             }
 
 
@@ -181,12 +178,10 @@ public class PlayerDeathListener implements Listener {
 
 
             if (e.isFirstGameKill()){
-                Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), taks -> {
-                                    e.getGame().getPlayers().forEach(gp -> gp.getOnlinePlayer().sendMessage(MessageManager.get(gp, "chat.first_blood")
-                                            .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
-                                            .replace("%killer%", killer.getOnlinePlayer().getName())
-                                            .getTranslated()));
-                                }, 2L);
+                e.getGame().getPlayers().forEach(gp -> gp.getOnlinePlayer().sendMessage(MessageManager.get(gp, "chat.first_blood")
+                        .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
+                        .replace("%killer%", killer.getOnlinePlayer().getName())
+                        .getTranslated()));
             }
 
 
@@ -215,15 +210,13 @@ public class PlayerDeathListener implements Listener {
             }
         }
 
-        gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer().getLocation(), Sounds.ANVIL_LAND.bukkitSound(), 0.8F, 1F);
-        XParticle.sphere(1.5, 12, ParticleDisplay.of(Particle.DUST).withColor(Color.RED, 0.75f).withLocation(gamePlayer.getOnlinePlayer().getLocation().add(0, 0.4, 0)));
 
 
         if (useTeams){
             GameTeam gameTeam = gamePlayer.getPlayerData().getTeam();
             if (gameTeam.getAliveMembers().isEmpty()) {
                 MessageManager.get(game.getParticipants(), "chat.team_eliminated")
-                        .replace("%team", gameTeam.getChatColor() + gameTeam.getName())
+                        .replace("%team%", gameTeam.getChatColor() + gameTeam.getName())
                         .send();
             }
         }

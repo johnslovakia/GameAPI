@@ -1,76 +1,76 @@
 package cz.johnslovakia.gameapi.game.cosmetics.defaultCosmetics;
 
+import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.events.GamePlayerDeathEvent;
 import cz.johnslovakia.gameapi.game.cosmetics.*;
-import cz.johnslovakia.gameapi.users.PlayerManager;
-import org.bukkit.Location;
+import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.utils.Sounds;
+import cz.johnslovakia.gameapi.utils.Utils;
+
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.entity.Player;
-import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+public class KillSoundsCategory extends CosmeticsCategory implements Listener {
 
-public class KillSoundsCategory implements CosmeticsCategory {
-    private static final List<Cosmetic> predefinedCosmetics;
+    public KillSoundsCategory() {
+        super("Kill Sounds", new ItemStack(Material.MUSIC_DISC_5));
 
-    static {
-        predefinedCosmetics = new ArrayList<>();
+        FileConfiguration config = GameAPI.getInstance().getMinigame().getPlugin().getConfig();
         
-        Cosmetic greenSparks = new Cosmetic("Green Sparks", new ItemStack(Material.EMERALD), 2500, CosmeticRarity.COMMON)
-                .setLocationConsumer(location -> location.getWorld().spawnParticle(Particle.COMPOSTER, location.getX(), location.getY(), location.getZ(), 2, 0.1, 0.1, 0.1, 1));
-        Cosmetic lava = new Cosmetic("Lava", new ItemStack(Material.LAVA_BUCKET), 2500, CosmeticRarity.COMMON)
-                .setLocationConsumer(location -> location.getWorld().spawnParticle(Particle.LAVA, location.getX(), location.getY(), location.getZ(), 2, 0.1, 0.1, 0.1, 1));
+        int LEGENDARY_PRICE = Utils.getPrice(config, "kill_sounds.legendary", 18000);
+        int EPIC_PRICE = Utils.getPrice(config, "kill_sounds.epic", 14000);
+        int RARE_PRICE = Utils.getPrice(config, "kill_sounds.rare", 8000);
+        int UNCOMMON_PRICE = Utils.getPrice(config, "kill_sounds.uncommon", 6000);
+        int COMMON_PRICE = Utils.getPrice(config, "kill_sounds.common", 4000);
 
-        predefinedCosmetics.add(greenSparks);
-        predefinedCosmetics.add(lava);
+        Cosmetic explodeSoundCosmetic = new Cosmetic("Explode Sound", new ItemStack(Material.TNT), RARE_PRICE, CosmeticRarity.RARE)
+                .setPreviewConsumer(gamePlayer -> Sounds.EXPLODE.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic anvilLandSoundCosmetic = new Cosmetic("Anvil Land Sound", new ItemStack(Material.ANVIL), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setPreviewConsumer(gamePlayer -> Sounds.ANVIL_LAND.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic glassSoundCosmetic = new Cosmetic("Glass Sound", new ItemStack(Material.GLASS), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setPreviewConsumer(gamePlayer -> Sounds.GLASS.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic eggPopSoundCosmetic = new Cosmetic("Egg Pop Sound", new ItemStack(Material.EGG), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setPreviewConsumer(gamePlayer -> Sounds.CHICKEN_EGG_POP.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic woofSoundCosmetic = new Cosmetic("Wolf Howl Sound", new ItemStack(XMaterial.WOLF_SPAWN_EGG.parseMaterial()), EPIC_PRICE, CosmeticRarity.EPIC)
+                .setPreviewConsumer(gamePlayer -> Sounds.WOLF_HOWL.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic swimSoundCosmetic = new Cosmetic("Swim Sound", new ItemStack(Material.WATER_BUCKET), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setPreviewConsumer(gamePlayer -> Sounds.SWIM.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic burpSoundCosmetic = new Cosmetic("Burp Sound", new ItemStack(Material.BREAD), UNCOMMON_PRICE, CosmeticRarity.UNCOMMON)
+                .setPreviewConsumer(gamePlayer -> Sounds.BURP.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic levelUpSoundCosmetic = new Cosmetic("Level Up Sound", new ItemStack(XMaterial.EXPERIENCE_BOTTLE.parseMaterial()), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setPreviewConsumer(gamePlayer -> Sounds.LEVEL_UP.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic dragonHitSoundCosmetic = new Cosmetic("Dragon Hit Sound", new ItemStack(GameAPI.getInstance().getVersionSupport().getCustomHead("31d6e3e41145967b32fb63576c63e3057e63beceb73cea18d20fc8547b0b0645")), RARE_PRICE, CosmeticRarity.RARE)
+                .setPreviewConsumer(gamePlayer -> Sounds.ENDERDRAGON_HIT.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic blazeDeathSoundCosmetic = new Cosmetic("Blaze Death Sound", new ItemStack(XMaterial.GOLDEN_SWORD.parseMaterial()), UNCOMMON_PRICE, CosmeticRarity.UNCOMMON)
+                .setPreviewConsumer(gamePlayer -> Sounds.BLAZE_DEATH.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic villagerSoundCosmetic = new Cosmetic("Villager Sound", new ItemStack(XMaterial.VILLAGER_SPAWN_EGG.parseMaterial()), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setPreviewConsumer(gamePlayer -> Sounds.VILLAGER_IDLE.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic meowSoundCosmetic = new Cosmetic("Meow Sound", new ItemStack(GameAPI.getInstance().getVersionSupport().getCustomHead("13df83a5cdab5a6143d1127e26369636881a194dd3199df5aa9123a4d33ad58a")), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setPreviewConsumer(gamePlayer -> Sounds.CAT_MEOW.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic ghastMoanSoundCosmetic = new Cosmetic("Ghast Moan Sound", new ItemStack(XMaterial.GHAST_SPAWN_EGG.parseMaterial()), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setPreviewConsumer(gamePlayer -> Sounds.GHAST_MOAN.playSound(gamePlayer.getOnlinePlayer()));
+        Cosmetic witherSoundCosmetic = new Cosmetic("Wither Sound", new ItemStack(XMaterial.WITHER_SKELETON_SKULL.parseMaterial()), EPIC_PRICE, CosmeticRarity.EPIC)
+                .setPreviewConsumer(gamePlayer -> Sounds.WITHER_DEATH.playSound(gamePlayer.getOnlinePlayer()));
+
+        addCosmetic(explodeSoundCosmetic, anvilLandSoundCosmetic, glassSoundCosmetic, eggPopSoundCosmetic, woofSoundCosmetic, swimSoundCosmetic, burpSoundCosmetic, levelUpSoundCosmetic,
+                dragonHitSoundCosmetic, blazeDeathSoundCosmetic, villagerSoundCosmetic, meowSoundCosmetic, ghastMoanSoundCosmetic, witherSoundCosmetic);
+
+
+        Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
     }
-    
-    
-    @Override
-    public CosmeticsManager getManager() {
-        return GameAPI.getInstance().getCosmeticsManager();
-    }
 
-    @Override
-    public String getName() {
-        return "Kill Sounds";
-    }
 
-    @Override
-    public ItemStack getIcon() {
-        return new ItemStack(Material.ARROW);
-    }
-
-    @Override
-    public List<Cosmetic> getCosmetics() {
-        return predefinedCosmetics;
-    }
-
-    @Override
-    public Set<CTrigger<?>> getTriggers() {
-        Set<CTrigger<?>> triggers = new HashSet<>();
-
-        CTrigger<GamePlayerDeathEvent> trigger = new CTrigger<>(GamePlayerDeathEvent.class,
-                GamePlayerDeathEvent::getKiller,
-                event -> event.getKiller() != null,
-                event -> {
-                    Cosmetic cosmetic = event.getKiller().getPlayerData().getSelectedCosmetics().get(this);
-                    if (cosmetic == null){
-                        return;
-                    }
-
-                    cosmetic.getGamePlayerConsumer().accept(event.getKiller());
-
-                });
-
-        triggers.add(trigger);
-        return triggers;
+    @EventHandler
+    public void onGamePlayerDeath(GamePlayerDeathEvent e) {
+        GamePlayer killer = e.getKiller();
+        if (killer != null && getSelectedCosmetic(killer) != null){
+            getSelectedCosmetic(killer).getPreviewConsumer().accept(e.getGamePlayer());
+            getSelectedCosmetic(killer).getPreviewConsumer().accept(killer);
+        }
     }
 }

@@ -61,18 +61,19 @@ public class StringUtils {
 
 
         if (!item.getEnchantments().isEmpty()){
-            StringBuilder stringBuilder = new StringBuilder("(");
+            StringBuilder stringBuilder = new StringBuilder(" (");
             int i = 1;
             for (Enchantment enchantment : item.getEnchantments().keySet()){
-                String formatedEnchantment = WordUtils.capitalize(item.getType().name().toLowerCase().replaceAll("_", " "));
+                String formatedEnchantment = WordUtils.capitalize(enchantment.getKey().getKey().toLowerCase().replaceAll("_", " "));
                 formatedEnchantment += " " + numeral(item.getEnchantmentLevel(enchantment));
                 stringBuilder.append(formatedEnchantment);
                 if (item.getEnchantments().size() > i){
                     stringBuilder.append(",");
+                    if (formatedName.length() + formatedEnchantment.length() >= maxLoreLength){
+                        stringBuilder.append("\n ");
+                    }
                 }
-                if (formatedName.length() + formatedEnchantment.length() >= maxLoreLength){
-                    stringBuilder.append("\n ");
-                }
+
                 i++;
             }
             formatedName += stringBuilder;
@@ -100,9 +101,9 @@ public class StringUtils {
                 stringBuilder.append(formatedPotion);
                 if (item.getEnchantments().size() > i){
                     stringBuilder.append(",");
-                }
-                if (formatedName.length() + formatedPotion.length() >= maxLoreLength){
-                    stringBuilder.append("\n ");
+                    if (formatedName.length() + formatedPotion.length() >= maxLoreLength){
+                        stringBuilder.append("\n ");
+                    }
                 }
                 i++;
             }
@@ -117,7 +118,7 @@ public class StringUtils {
                     String duration = item.getType().getMaxDurability() - damageable.getDamage() + " " + MessageManager.get(gamePlayer, "word.uses").getTranslated();
                     if (formatedName.contains("(")) {
                         if (formatedName.length() >= maxLoreLength) {
-                            formatedName += ",\n";
+                            formatedName += ",\n ";
                         } else {
                             formatedName += ", ";
                         }
@@ -164,15 +165,6 @@ public class StringUtils {
     }
 
     public static String colorizer(String message) {
-        /*Pattern pattern = Pattern.compile("#[a-fA-F0-9]{6}");
-        Matcher matcher = pattern.matcher(message);
-
-        while (matcher.find()) {
-            String color = message.substring(matcher.start(), matcher.end());
-            message = message.replace(color, net.md_5.bungee.api.ChatColor.of(color) + "");
-            matcher = pattern.matcher(message);
-        }
-        return ChatColor.translateAlternateColorCodes('&', message);*/
         Pattern pattern = Pattern.compile("#[a-fA-F0-9]{6}");
         Matcher matcher = pattern.matcher(message);
         while (matcher.find()) {

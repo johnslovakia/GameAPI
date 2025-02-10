@@ -59,7 +59,7 @@ public class RespawnListener implements Listener {
                         }
                     }.runTaskLater(GameAPI.getInstance(), 20L);
                 }
-            }else if (player.getLastDamageCause() != null && player.getLastDamageCause().getCause().equals(EntityDamageEvent.DamageCause.VOID)){
+            }else if (player.getLastDamageCause() == null || (player.getLastDamageCause() != null && player.getLastDamageCause().getCause().equals(EntityDamageEvent.DamageCause.VOID))){
                 e.setRespawnLocation(getNonRespawnLocation(game));
             }else{
                 e.setRespawnLocation((Location) gamePlayer.getMetadata().get("death_location"));

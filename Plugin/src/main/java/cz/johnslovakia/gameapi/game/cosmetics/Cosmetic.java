@@ -9,6 +9,7 @@ import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.utils.Sounds;
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -29,6 +30,7 @@ public class Cosmetic {
     private Consumer<GamePlayer> gamePlayerConsumer;
     private Consumer<Location> locationConsumer;
     private Consumer<GamePlayer> selectConsumer;
+    private Consumer<GamePlayer> previewConsumer;
 
     public Cosmetic(String name, ItemStack icon, int price, CosmeticRarity rarity) {
         this.name = name;
@@ -38,25 +40,36 @@ public class Cosmetic {
     }
 
     public void select(GamePlayer gamePlayer){
+        select(gamePlayer, true);
+    }
+
+    public void select(GamePlayer gamePlayer, boolean message){
         Player player = gamePlayer.getOnlinePlayer();
 
-        if (GameAPI.getInstance().getCosmeticsManager().hasSelected(gamePlayer, this)) {
-            MessageManager.get(gamePlayer, "chat.cosmetics.already_selected")
-                    .send();
-            player.playSound(player.getLocation(), Sounds.VILLAGER_NO.bukkitSound(), 10.0F, 10.0F);
+        if (!hasPlayer(gamePlayer)) return;
+
+        if (hasSelected(gamePlayer)) {
+            if (message) {
+                MessageManager.get(gamePlayer, "chat.cosmetics.already_selected")
+                        .send();
+                player.playSound(player.getLocation(), Sounds.VILLAGER_NO.bukkitSound(), 10.0F, 10.0F);
+            }
+            return;
         }
 
         gamePlayer.getPlayerData().selectCosmetic(this);
         if (getSelectConsumer() != null) getSelectConsumer().accept(gamePlayer);
 
-        MessageManager.get(gamePlayer, "chat.cosmetics.select")
-                .replace("%cosmetic%", getName())
-                .send();
-        player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 10.0F, 10.0F);
+        if (message) {
+            MessageManager.get(gamePlayer, "chat.cosmetics.select")
+                    .replace("%cosmetic%", getName())
+                    .send();
+            player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 10.0F, 10.0F);
+        }
     }
 
     public void purchase(GamePlayer gamePlayer){
-        if (GameAPI.getInstance().getCosmeticsManager().hasPlayer(gamePlayer, this)){
+        if (hasPlayer(gamePlayer)){
             return;
         }
 
@@ -82,6 +95,7 @@ public class Cosmetic {
                 .send();
         //gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer().getLocation(), Sounds.LEVEL_UP.bukkitSound(), 10.0F, 10.0F); - už u select
         select(gamePlayer);
+        Bukkit.getScheduler().runTaskAsynchronously(GameAPI.getInstance(), task -> gamePlayer.getPlayerData().saveCosmetics());
     }
 
     public boolean hasPurchased(GamePlayer gamePlayer){
@@ -110,6 +124,11 @@ public class Cosmetic {
 
     public Cosmetic setSelectConsumer(Consumer<GamePlayer> selectConsumer) {
         this.selectConsumer = selectConsumer;
+        return this;
+    }
+
+    public Cosmetic setPreviewConsumer(Consumer<GamePlayer> previewConsumer) {
+        this.previewConsumer = previewConsumer;
         return this;
     }
 }

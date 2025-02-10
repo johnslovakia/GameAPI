@@ -12,7 +12,9 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Utils;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.damage.DamageSource;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -575,28 +577,32 @@ public class MapSettingsListener implements Listener {
         if(settings != null) {
             Area borderArea =  game.getCurrentMap().getMainArea();
             if (settings.isAllowedInstantVoidKill() && borderArea != null || gamePlayer.isSpectator()) {
-                if (gamePlayer.isSpectator()){
-                    player.teleport(RespawnListener.getNonRespawnLocation(game));
-                    return;
-                }
                 double lowestAreaY = borderArea.getLocation1().getY();
                 if (borderArea.getLocation2().getY() < lowestAreaY){
                     lowestAreaY = borderArea.getLocation2().getY();
                 }
-                if (e.getTo().getY() < lowestAreaY - 15){
-                    player.damage(player.getHealth());
+                if (e.getTo().getY() < lowestAreaY - 20){
+                    player.teleport(RespawnListener.getNonRespawnLocation(game));
+                    if (!gamePlayer.isSpectator()) {
+                        Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> {
+                            player.getInventory().clear();
+                            player.damage(player.getHealth());
+                        }, 1L);
+                    }
                 }
             }
         }
     }
 
     @EventHandler
-    public void onPlayerPickupItem(PlayerPickupItemEvent e) {
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
+    public void onPlayerPickupItem(EntityPickupItemEvent e) {
+        if (e.getEntity() instanceof Player player) {
+            GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
-        AreaSettings settings = AreaManager.getActiveSettings(gamePlayer);
-        if(settings != null){
-            if(!settings.isAllowItemPicking()) e.setCancelled(true);
+            AreaSettings settings = AreaManager.getActiveSettings(gamePlayer);
+            if (settings != null) {
+                if (!settings.isAllowItemPicking()) e.setCancelled(true);
+            }
         }
     }
 

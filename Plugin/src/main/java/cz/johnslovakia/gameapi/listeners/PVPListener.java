@@ -14,6 +14,7 @@ import cz.johnslovakia.gameapi.utils.Utils;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -23,6 +24,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
@@ -119,7 +121,9 @@ public class PVPListener implements Listener {
                             damager = PlayerManager.getGamePlayer(shooter);
 
                             e.setCancelled(true);
-                            player.getOnlinePlayer().setVelocity(player.getOnlinePlayer().getVelocity().add(new Vector(0.8, 0, 0.8)));
+                            double knockbackStrength = 0.7;
+                            Vector direction = player.getOnlinePlayer().getLocation().toVector().subtract(shooter.getLocation().toVector()).normalize();
+                            player.getOnlinePlayer().setVelocity(direction.multiply(knockbackStrength));
                             Utils.damagePlayer(player.getOnlinePlayer(), 0.3);
                         }
                     }else if (e.getDamager() instanceof Snowball projectile) {
@@ -127,7 +131,9 @@ public class PVPListener implements Listener {
                             damager = PlayerManager.getGamePlayer(shooter);
 
                             e.setCancelled(true);
-                            player.getOnlinePlayer().setVelocity(player.getOnlinePlayer().getVelocity().add(new Vector(0.8, 0, 0.8)));
+                            double knockbackStrength = 0.7;
+                            Vector direction = player.getOnlinePlayer().getLocation().toVector().subtract(shooter.getLocation().toVector()).normalize();
+                            player.getOnlinePlayer().setVelocity(direction.multiply(knockbackStrength));
                             Utils.damagePlayer(player.getOnlinePlayer(), 0.3);
                         }
                     }else if (e.getDamager() instanceof LightningStrike projectile) {
@@ -232,6 +238,15 @@ public class PVPListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent e) {
         Player player = e.getEntity();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+
+
+        List<ItemStack> copy = new ArrayList<>(e.getDrops());
+        e.getDrops().clear();
+        for (ItemStack item : copy) {
+            if (item.getType().equals(Material.CARVED_PUMPKIN) && item.hasItemMeta() && item.getItemMeta().hasCustomModelData()) continue;
+            player.getWorld().dropItemNaturally(player.getLocation().clone().add(0, 0.2, 0), item);
+        }
+
 
         if (gamePlayer.getType().equals(GamePlayerType.DISCONNECTED)){
             e.setKeepInventory(true);

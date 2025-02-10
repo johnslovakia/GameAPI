@@ -16,7 +16,11 @@ public class RedisManager {
         //this.pool = new JedisPool(host, port);
         JedisPoolConfig poolConfig = new JedisPoolConfig();
         this.pool = new JedisPool(poolConfig, host, port, 2000, password);
-        pool.getResource().auth(username, password);
+        if (username != null) {
+            pool.getResource().auth(username, password);
+        }else{
+            pool.getResource().auth(password);
+        }
 
         this.password = password;
         this.username = username;
@@ -44,5 +48,6 @@ public class RedisManager {
 
     public void close() {
         pool.getResource().close();
+        pool.close();
     }
 }
