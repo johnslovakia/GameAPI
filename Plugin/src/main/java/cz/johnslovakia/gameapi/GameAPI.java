@@ -26,10 +26,7 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.quests.QuestManager;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.users.stats.StatsManager;
-import cz.johnslovakia.gameapi.utils.InputStreamWithName;
-import cz.johnslovakia.gameapi.utils.ItemUtils;
-import cz.johnslovakia.gameapi.utils.Logger;
-import cz.johnslovakia.gameapi.utils.ProtocolTagChanger;
+import cz.johnslovakia.gameapi.utils.*;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import lombok.Getter;
 import lombok.Setter;
@@ -291,6 +288,11 @@ public class GameAPI extends JavaPlugin {
             Logger.log("Something went wrong when setting up the other necessities for the minigame! The following message is for Developers: ", Logger.LogType.ERROR);
             e.printStackTrace();
             somethingwrong = true;
+        }
+
+
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new PlaceholderAPIExpansion(minigame).register();
         }
 
 

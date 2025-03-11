@@ -47,6 +47,7 @@ import java.util.function.Consumer;
 
 @Getter
 public class Game {
+    private final Game game = Game.this;
 
     private final String name;
     private String ID;
@@ -61,10 +62,18 @@ public class Game {
     @Setter
     private boolean firstGameKill = true;
 
-    private Winner winner;
     @Setter
     private MapManager mapManager;
+    @Setter
+    private TeamManager teamManager;
     private GameDataManager serverDataManager;
+    @Setter
+    private StartingProcessHandler startingProcessHandler = new StartingProcessHandler() {
+        @Override
+        public Game getGame() {
+            return game;
+        }
+    };
 
     private final List<GamePlayer> participants = new ArrayList<>();
     private final List<Block> placedBlocks = new ArrayList<>();
@@ -252,7 +261,7 @@ public class Game {
                 gamePlayer.getPlayerData().setGame(this);
 
                 gamePlayer.setSpectator(false);
-                gamePlayer.getPlayerData().getGame().preparePlayer(gamePlayer);
+                startingProcessHandler.preparePlayer(gamePlayer);
                 gamePlayer.setType(GamePlayerType.PLAYER);
                 player.teleport(Objects.requireNonNullElse((Location) gamePlayer.getMetadata().get("death_location"), getCurrentMap().getPlayerToLocation(gamePlayer)));
 
@@ -272,7 +281,7 @@ public class Game {
                 getParticipants().add(gamePlayer);
                 gamePlayer.getPlayerData().setGame(this);
 
-                gamePlayer.getPlayerData().getGame().preparePlayer(gamePlayer);
+                startingProcessHandler.preparePlayer(gamePlayer);
 
                 GameJoinEvent ev = new GameJoinEvent(this, gamePlayer, GameJoinEvent.JoinType.JOIN_AFTER_START);
                 Bukkit.getPluginManager().callEvent(ev);
@@ -391,153 +400,6 @@ public class Game {
         }
     }
 
-    public void startPreparation(){
-        prepareGame();
-        setState(GameState.INGAME);
-
-        GamePreparationEvent ev = new GamePreparationEvent(this);
-        Bukkit.getPluginManager().callEvent(ev);
-
-
-        for (GamePlayer gamePlayer : getPlayers()){
-            gamePlayer.setEnabledMovement(getSettings().isEnabledMovementInPreparation());
-            gamePlayer.setLimited(true);
-        }
-
-        Task task = new Task(this, "PreparationTask", getSettings().getPreparationTime(), new PreparationCountdown(), GameAPI.getInstance());
-        task.setGame(this);
-    }
-
-    public void preparePlayer(GamePlayer gamePlayer){
-        boolean rejoin = gamePlayer.getType().equals(GamePlayerType.DISCONNECTED);
-        Player player = gamePlayer.getOnlinePlayer();
-
-        //TODO: jak na rounds... toto spoustět vždy na začátku v startPreparation a jen vynechat tu zprávu...
-
-        gamePlayer.resetAttributes();
-
-        if (!rejoin) {
-            player.sendMessage("");
-            if (getSettings().sendMinigameDescription()) {
-                MessageManager.get(gamePlayer, "chat.description")
-                        .replace("%minigame%", GameAPI.getInstance().getMinigame().getName())
-                        .replace("%description%", MessageManager.get(gamePlayer, GameAPI.getInstance().getMinigame().getDescriptionTranslateKey()).getTranslated())
-                        .replace("%map%",
-                                MessageManager.get(gamePlayer, "chat.description.map")
-                                    .replace("%map%", getCurrentMap().getName()
-                                    .replace("%authors%", getCurrentMap().getAuthors()))
-                                    .getTranslated())
-                        .replace("%authors%", getCurrentMap().getAuthors())
-                        .send();
-            }
-            if (getSettings().isUseTeams() && getSettings().getMaxTeamPlayers() > 1) {
-                player.sendMessage(MessageManager.get(player, "chat.team_chat").getTranslated());
-            }
-
-            if (getLobbyInventory() != null) {
-                getLobbyInventory().unloadInventory(player);
-            }
-            player.getInventory().clear();
-
-            if (gamePlayer.getPlayerData().getKit() != null) {
-                gamePlayer.getPlayerData().getKit().activate(gamePlayer);
-            }
-            if (getState().equals(GameState.INGAME) && getSettings().isAllowedJoiningAfterStart()) {
-                //getCurrentMap().teleport(gamePlayer);
-                player.teleport(gamePlayer.getPlayerData().getTeam().getSpawn());
-            }
-        }
-    }
-
-    public void prepareGame(){
-        if (!getSettings().isChooseRandomMap()) {
-            if (this.nextArena() == null) {
-                return;
-            }
-            this.nextArena().setWinned(true);
-        }
-
-
-        GameMap playingMap = getCurrentMap();
-
-        if (playingMap.getSettings().isLoadWorldWithGameAPI()) {
-            String worldName = playingMap.getName().replaceAll(" ", "_") + "_" + getID();
-            World world = Bukkit.getWorld(worldName);
-            if (world != null) {
-                playingMap.setWorld(world);
-            } else {
-                Logger.log("I haven't had time to load the world!", Logger.LogType.ERROR);
-                return;
-            }
-        }
-
-        if (getSettings().isUseTeams()){
-            for (GamePlayer gamePlayer : getParticipants()){
-                if (gamePlayer.getPlayerData().getTeam() == null){
-                    GameTeam lowestTeam = TeamManager.getSmallestTeam(this);
-                    lowestTeam.joinPlayer(gamePlayer, TeamJoinCause.AUTO);
-                }
-            }
-        }
-
-
-
-        if (getSettings().isEnabledRespawning() && getSettings().useTeams()){
-            TeamManager.getTeams(this).forEach(team -> team.setDead(false));
-        }
-
-        getCurrentMap().getWorld().setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
-
-        getCurrentMap().teleport();
-        for (GamePlayer gamePlayer : getPlayers()) {
-            preparePlayer(gamePlayer);
-
-            if (GameAPI.getInstance().useDecentHolograms()) {
-                StatsHolograms.remove(gamePlayer.getOnlinePlayer());
-            }
-        }
-
-
-        Iterator<UUID> iterator = PlayerManager.getPlayerMap().keySet().iterator();
-        while (iterator.hasNext()) {
-            UUID uuid = iterator.next();
-            GamePlayer gamePlayer = PlayerManager.getPlayerMap().get(uuid);
-            if (!gamePlayer.isOnline() && gamePlayer.getPlayerData().getGame().equals(this)) {
-                iterator.remove();
-            }
-        }
-
-    }
-
-    public void startGame(){
-        setState(GameState.INGAME);
-        getMetadata().put("players_at_start", getPlayers().size());
-
-        if (getSettings().isDefaultGameCountdown()) {
-            Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), t -> {
-                Task task = new Task(this, "GameCountdown", getSettings().getGameTime(), new GameCountdown(), GameAPI.getInstance());
-                task.setGame(this);
-
-                if (getSettings().getRounds() > 1){
-                    task.setRestartCount(getSettings().getRounds() - 1);
-                }
-            }, 2L);
-        }
-
-        if (!getSettings().usePreperationTask()){
-            Task.cancel(this, "StartCountdown");
-            prepareGame();
-        }
-
-        for (GamePlayer gamePlayer : getParticipants()){
-            gamePlayer.setEnabledMovement(true);
-            gamePlayer.setLimited(false);
-        }
-
-        GameStartEvent ev = new GameStartEvent(this);
-        Bukkit.getPluginManager().callEvent(ev);
-    }
-
     public void endGame(Winner winner){
         setState(GameState.ENDING);
         Task.cancelAll(this);
@@ -628,7 +490,11 @@ public class Game {
             if (getSettings().isTeleportPlayersAfterEnd()){
                 location = getLobbyPoint();
             }else{
-                location = getCurrentMap().getMainArea().getCenter();
+                if (getCurrentMap().getMainArea() != null) {
+                    location = getCurrentMap().getMainArea().getCenter();
+                }else{
+                    location = new Location(getCurrentMap().getWorld(), 0, 90, 0);
+                }
             }
 
 
@@ -648,8 +514,8 @@ public class Game {
 
                     Utils.spawnFireworks(newLocation, 1, Color.WHITE, FireworkEffect.Type.BALL);
                     Color color = Color.YELLOW;
-                    if (getSettings().isUseTeams() && getWinner() != null){
-                        color = ((GameTeam) getWinner()).getColor();
+                    if (getSettings().isUseTeams() && winner != null){
+                        color = ((GameTeam) winner).getColor();
                     }
                     Utils.spawnFireworks(newLocation, 1, color, FireworkEffect.Type.BALL);
                 }
@@ -684,7 +550,7 @@ public class Game {
         if (winner != null) {
             if (winner.getWinnerType().equals(Winner.WinnerType.TEAM)) {
                 GameTeam wTeam = (GameTeam) winner;
-                for (GameTeam lTeam : TeamManager.getTeams(this).stream().filter(team -> team != wTeam).toList()) {
+                for (GameTeam lTeam : getTeamManager().getTeams().stream().filter(team -> team != wTeam).toList()) {
                     lTeam.getMembers().forEach(loser -> loser.getPlayerData().getStat("Winstreak").setStat(0));
                 }
                 for (GamePlayer gamePlayer : wTeam.getMembers()) {

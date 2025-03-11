@@ -9,7 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AreaSettings {
+@Setter
+public class AreaSettings implements Cloneable{
 
     @Setter
     @Getter
@@ -17,9 +18,9 @@ public class AreaSettings {
     private boolean canPlaceAll = true;
     private boolean canBreakAll = true;
     @Getter
-    private final List<Material> canPlace = new ArrayList<>();
+    private List<Material> canPlace = new ArrayList<>();
     @Getter
-    private final Map<Material, Boolean> canBreak = new HashMap<>();;
+    private Map<Material, Boolean> canBreak = new HashMap<>();;
     private boolean canPvP = true;
     private boolean allowMobDamage = true;
     private boolean allowItemFrameDamage = true;
@@ -533,5 +534,19 @@ public class AreaSettings {
 
     public void setLoadWorldWithGameAPI(boolean loadWorldWithGameAPI) {
         this.loadWorldWithGameAPI = loadWorldWithGameAPI;
+    }
+
+    @Override
+    public AreaSettings clone() {
+        try {
+            AreaSettings clone = (AreaSettings) super.clone();
+
+            clone.canPlace = new ArrayList<>(this.canPlace);
+            clone.canBreak = new HashMap<>(this.canBreak);
+
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 }

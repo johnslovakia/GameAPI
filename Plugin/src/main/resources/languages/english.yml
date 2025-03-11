@@ -296,6 +296,8 @@ chat.set_kit_inventory.closed_inventory: "§cYour inventory layout for kit #df1c
 chat.set_kit_inventory.closed_inventory.wanna_save: " §a↳ §fDo you want to save the layout? §a[Click me]"
 chat.set_kit_inventory.closed_inventory.wanna_save.hover: "§7Click to save the layout"
 chat.afk_kick_countdown: "§cIf you don't move within #df1c1c%seconds% seconds§c, you will be kicked off the server."
+chat.sending_to_lobby: "§7Sending to lobby..."
+chat.sending_to_lobby.no_arena_found: "§7Sending you to lobby because no available arena has been found."
 
 
 #Game countdowns

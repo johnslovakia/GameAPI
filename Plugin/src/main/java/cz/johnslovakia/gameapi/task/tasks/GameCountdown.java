@@ -24,6 +24,10 @@ public class GameCountdown implements TaskInterface {
 
 
     private void createBossbar(GamePlayer gamePlayer, Task task){
+        if (gamePlayer.getPlayerData().getCurrentBossBar() != null){
+            gamePlayer.getPlayerData().getCurrentBossBar().removeAll();
+        }
+
         BossBar bossBar = Bukkit.createBossBar("§c00:00", BarColor.WHITE , BarStyle.SOLID);
 
         bossBar.setTitle(StringUtils.getFontTextComponentJSON(StringUtils.getDurationString(task.getCounter()), "gameapi:bossbar_offset"));

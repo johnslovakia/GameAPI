@@ -1,6 +1,5 @@
 package cz.johnslovakia.gameapi.users;
 
-import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.users.stats.Stat;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 import cz.johnslovakia.gameapi.utils.rewards.Reward;
@@ -20,7 +19,6 @@ public class PlayerManager {
 
     public static void removeGamePlayer(Player player){
         UUID uuid = player.getUniqueId();
-
         playerMap.remove(uuid);
     }
 

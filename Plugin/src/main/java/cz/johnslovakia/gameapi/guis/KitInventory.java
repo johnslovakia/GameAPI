@@ -30,10 +30,10 @@ public class KitInventory implements Listener {
         KitManager kitManager = KitManager.getKitManager(gamePlayer.getPlayerData().getGame());
 
         int size = kitManager.getKits().size();
-        char sizeChar = (size <= 9 ? 'ㆺ' : 'Ẕ');
+        char sizeChar = (size <= 9 ? 'ㆺ' : 'ẙ'/*'Ẕ'*/);
         GUI inventory = Component.gui()
                 .title("§f七七七七七七七七" + sizeChar)
-                .rows(3)
+                .rows(size <= 9 ? 3 : 4)
                 .prepare((gui, player) -> {
                     PlayerData playerData = gamePlayer.getPlayerData();
                     Game game = playerData.getGame();

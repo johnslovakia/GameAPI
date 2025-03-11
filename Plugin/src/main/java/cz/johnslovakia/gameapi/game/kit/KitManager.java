@@ -131,11 +131,11 @@ public class KitManager implements Listener {
     }
 
     public Kit getKit(String name){
-        if (kits.stream().filter(kit -> kit.getName().equals(name)).count() > 1)
+        if (kits.stream().filter(kit -> kit.getName().equalsIgnoreCase(name)).count() > 1)
             throw new IllegalArgumentException("There are multiple kits with the same name (" + name + "), so I can't determine which one you mean!");
 
         return kits.stream()
-                .filter(kit -> kit.getName().equals(name))
+                .filter(kit -> kit.getName().equalsIgnoreCase(name))
                 .findFirst()
                 .orElse(null);
     }

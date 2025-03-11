@@ -17,6 +17,7 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -116,6 +117,11 @@ public class JoinQuitListener implements Listener {
 
         Optional.ofNullable(gamePlayer.getPlayerData().getGame())
                 .ifPresent(game -> game.quitPlayer(player));
+
+        BossBar bossBar = gamePlayer.getPlayerData().getCurrentBossBar();
+        if (bossBar != null) {
+            bossBar.removeAll();
+        }
     }
 
 

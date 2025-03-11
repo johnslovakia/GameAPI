@@ -1,7 +1,10 @@
 package cz.johnslovakia.gameapi;
 
+import cz.johnslovakia.gameapi.game.Game;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.function.Consumer;
 
 @Setter @Getter
 public class MinigameSettings {
@@ -38,6 +41,8 @@ public class MinigameSettings {
     private int preparationTime = 4;
     private int respawnCooldown = -1;
     private int rounds = 0;
+
+    private Consumer<Game> ownStartingProcess;
 
     public boolean useTeams() {
         return useTeams;

@@ -44,8 +44,7 @@ import java.util.logging.Level;
 @Getter @Setter
 public class PlayerData {
 
-    private GamePlayer gamePlayer;
-    private PlayerTable playerTable;
+    private final GamePlayer gamePlayer;
 
     private Game game;
     private GameTeam team;
@@ -69,20 +68,21 @@ public class PlayerData {
 
     private Map<Perk, Integer> perksLevel = new HashMap<>();
 
+
     public PlayerData(GamePlayer gamePlayer) {
         this.gamePlayer = gamePlayer;
-        this.playerTable = new PlayerTable(gamePlayer);
 
         new BukkitRunnable(){
             @Override
             public void run() {
-                gamePlayer.getPlayerData().getPlayerTable().newUser(gamePlayer);
+                PlayerTable playerTable = new PlayerTable(gamePlayer);
+                playerTable.newUser(gamePlayer);
+
                 GameAPI.getInstance().getMinigame().getMinigameTable().newUser(gamePlayer);
                 GameAPI.getInstance().getStatsManager().getStatsTable().newUser(gamePlayer);
                 loadData();
             }
         }.runTaskAsynchronously(GameAPI.getInstance());
-
 
 
         try {
@@ -103,6 +103,8 @@ public class PlayerData {
         }
 
     }
+
+
 
 
     public void loadData(){

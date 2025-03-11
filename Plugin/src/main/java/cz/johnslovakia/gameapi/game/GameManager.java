@@ -71,9 +71,11 @@ public class GameManager {
             }
         }
 
-        MessageManager.get(gamePlayer, "chat.no_arena_found").send();
         if (sendToLobbyIfNoArena){
-            Utils.sendToLobby(player);
+            MessageManager.get(gamePlayer, "chat.sending_to_lobby.no_arena_found").send();
+            Utils.sendToLobby(player, false);
+        }else{
+            MessageManager.get(gamePlayer, "chat.no_arena_found").send();
         }
     }
 
@@ -116,7 +118,7 @@ public class GameManager {
 
 
         Game newGame = new Game(game.getName(), game.getLobbyInventory(), game.getLobbyPoint());
-        TeamManager.resetTeamsAndRegisterForNewGame(game, newGame);
+        game.getTeamManager().resetTeamsAndRegisterForNewGame(newGame);
 
         newGame.setMapManager(game.getMapManager());
         game.getMapManager().setVoting(true);

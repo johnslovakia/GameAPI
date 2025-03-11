@@ -38,7 +38,7 @@ public class GamePlayer extends Winner {
     private boolean enabledMovement = true;
     private boolean limited = false;
 
-    private PlayerData playerData;
+    private final PlayerData playerData;
     private FastBoard scoreboard;
 
     private FriendsInterface friends;

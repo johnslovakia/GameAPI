@@ -148,9 +148,10 @@ public class Kit implements Listener{
 
 
         if ((kitManager.getDefaultKit() != null && kitManager.getDefaultKit().equals(this)) || balance >= getPrice() || kitManager.hasKitPermission(gamePlayer, this) || gamePlayer.getPlayerData().getPurchasedKitsThisGame().contains(this)) {
-            if (gamePlayer.hasKit()){
+            if (gamePlayer.hasKit() ){
                 if (gamePlayer.getPlayerData().getKit().equals(this)){
-                    MessageManager.get(gamePlayer, "chat.kit.already_selected")
+                    if (!kitManager.getDefaultKit().equals(this))
+                        MessageManager.get(gamePlayer, "chat.kit.already_selected")
                             .send();
                     return;
                 }

@@ -19,6 +19,10 @@ import java.util.List;
 public class StartCountdownCommand implements TaskInterface {
 
     private void createBossBar(GamePlayer gamePlayer, Task task){
+        if (gamePlayer.getPlayerData().getCurrentBossBar() != null){
+            gamePlayer.getPlayerData().getCurrentBossBar().removeAll();
+        }
+
         BossBar bossBar = Bukkit.createBossBar("Game starting in:", BarColor.WHITE, BarStyle.SOLID);
 
         if (gamePlayer.getMetadata().get("bossbar.waiting_for_players") != null) {
@@ -101,12 +105,12 @@ public class StartCountdownCommand implements TaskInterface {
             }
         }
         if (game.getSettings().usePreperationTask()) {
-            game.startPreparation();
+            game.getStartingProcessHandler().startPreparation();
         }else{
             for (GamePlayer gamePlayer : game.getParticipants()) {
                 gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "custom:gamestart", 20.0F, 20.0F);
             }
-            game.startGame();
+            game.getStartingProcessHandler().startGame();
         }
     }
 

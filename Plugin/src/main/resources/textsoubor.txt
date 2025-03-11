@@ -30,6 +30,8 @@ https://www.spigotmc.org/threads/left-aligned-actionbar-supporting-custom-unicod
 #36dbe4 (stará: #40e8f0) - aqua
 #09a8af (stará 2: #21b6bd) (stará: #29dce5) - tmavší aqua
 
+https://www.fileformat.info/info/unicode/char/1e98/index.htm
+
 
 resource pack věci
 https://github.com/McTsts/mc-core-shaders/blob/main/remove%20text%20shadow/1.20%20-%201.21/rendertype_text.fsh

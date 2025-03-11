@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.listeners;
 
+import org.bukkit.GameRule;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -10,6 +11,7 @@ public class WorldListener implements Listener {
     @EventHandler(priority= EventPriority.HIGHEST)
     public void onWorldInit(WorldInitEvent e) {
         e.getWorld().setAutoSave(false);
+        e.getWorld().setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
         e.getWorld().setKeepSpawnInMemory(false);
     }
 }

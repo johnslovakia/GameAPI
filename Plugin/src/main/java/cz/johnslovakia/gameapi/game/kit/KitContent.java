@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.game.kit;
 
+import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -25,7 +26,14 @@ public class KitContent {
         this.inventory = Bukkit.createInventory(null, InventoryType.PLAYER);
     }
 
-    public void addItem(ItemStack... items){
+    public KitContent addItem(ItemBuilder... items){
+        for (ItemBuilder itemBuilder : items){
+            addItem(itemBuilder.toItemStack());
+        }
+        return  this;
+    }
+
+    public KitContent addItem(ItemStack... items){
         for (ItemStack item : items){
             if (item.getType().toString().toLowerCase().contains("helmet")){
                 inventory.setItem(39, item);
@@ -39,6 +47,7 @@ public class KitContent {
                 inventory.addItem(item);
             }
         }
+        return  this;
     }
 
     public ItemStack[] getContents(){

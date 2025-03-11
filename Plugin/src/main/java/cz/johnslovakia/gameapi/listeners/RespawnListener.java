@@ -74,11 +74,19 @@ public class RespawnListener implements Listener {
         MapLocation spectatorSpawn = playingMap.getSpectatorSpawn();
 
         if (spectatorSpawn == null){
-            Location center = playingMap.getMainArea().getCenter().add(0, 15, 0);
-            while (center.getBlock().getType().equals(Material.AIR)){
-                center.add(0, 1, 0);
+            if (game.getCurrentMap().getMainArea() != null) {
+                Location center = playingMap.getMainArea().getCenter().add(0, 15, 0);
+                while (center.getBlock().getType().equals(Material.AIR)) {
+                    center.add(0, 1, 0);
+                }
+                return center;
+            }else{
+                if (game.getPlayers().get(0) != null){
+                    return game.getPlayers().get(0).getOnlinePlayer().getLocation();
+                }else{
+                    return new Location(game.getCurrentMap().getWorld(), 0, 90, 0);
+                }
             }
-            return center;
         }
         return spectatorSpawn.getLocation();
     }

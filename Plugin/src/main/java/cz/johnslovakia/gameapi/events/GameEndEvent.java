@@ -27,7 +27,7 @@ public class GameEndEvent extends Event {
     }
 
     public List<GamePlayer> getLossers(){
-        if (game.getWinner() == null){
+        if (winner == null){
             return List.of();
         }
 

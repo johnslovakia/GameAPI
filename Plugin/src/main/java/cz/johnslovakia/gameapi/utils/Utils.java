@@ -194,10 +194,16 @@ public class Utils {
     }
 
     public static void sendToLobby(Player player){
+        sendToLobby(player, true);
+    }
+
+    public static void sendToLobby(Player player, boolean message){
         ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", GameAPI.getInstance());
         List<String> lobbies = config.getConfig().getStringList("lobby_servers");
 
-        player.sendMessage("§7Sending to lobby...");
+        if (message)
+            MessageManager.get(player
+                    , "chat.sending_to_lobby").send();
         new BukkitRunnable(){
             @Override
             public void run() {

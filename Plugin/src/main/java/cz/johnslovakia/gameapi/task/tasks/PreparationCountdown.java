@@ -26,6 +26,10 @@ import java.util.Map;
 public class PreparationCountdown implements TaskInterface {
 
     private void createBossBar(GamePlayer gamePlayer, Task task){
+        if (gamePlayer.getPlayerData().getCurrentBossBar() != null){
+            gamePlayer.getPlayerData().getCurrentBossBar().removeAll();
+        }
+
         BossBar bossBar = Bukkit.createBossBar("Battle begins in:", BarColor.WHITE, BarStyle.SOLID);
 
         bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.battle_begings_in")
@@ -95,7 +99,7 @@ public class PreparationCountdown implements TaskInterface {
 
             gamePlayer.getMetadata().remove("last_opened_cosmetic_category");
         }
-        game.startGame();
+        game.getStartingProcessHandler().startGame();
     }
 
     @Override

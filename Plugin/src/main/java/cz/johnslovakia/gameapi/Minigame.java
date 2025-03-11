@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.Setter;
 import me.zort.sqllib.SQLConnectionBuilder;
 import me.zort.sqllib.SQLDatabaseConnection;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
 import java.sql.SQLException;
@@ -93,7 +94,7 @@ public abstract class Minigame {
     public class Database {
 
         private final SQLDatabaseConnection connection;
-        private final MysqlLoader aswmLoader;
+        private MysqlLoader aswmLoader;
 
         private final String sqlURL, host, database, username, password;
         private final int port;
@@ -109,10 +110,12 @@ public abstract class Minigame {
             this.useSSL = useSSL;
 
             this.connection = new SQLConnectionBuilder(host, port, database, username, password).build();
-            try {
-                this.aswmLoader = new MysqlLoader(sqlURL, host, port, database, useSSL, username, password);
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
+            if (Bukkit.getPluginManager().getPlugin("SlimeWorldPlugin"/*"SlimeWorldManager"*/) != null) {
+                try {
+                    this.aswmLoader = new MysqlLoader(sqlURL, host, port, database, useSSL, username, password);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }

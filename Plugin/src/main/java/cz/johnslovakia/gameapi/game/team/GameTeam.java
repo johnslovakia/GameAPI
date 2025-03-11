@@ -75,7 +75,7 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
                                 .send();
                         return false;
                     }
-                    if (!TeamManager.getTeamAllowEnter(game, this)){
+                    if (!game.getTeamManager().getTeamAllowEnter(this)){
                         MessageManager.get(gamePlayer, "chat.team.balancing.cant_join")
                                 .send();
                         return false;
@@ -197,7 +197,7 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
     }
 
     public TeamScore getScoreByName(String name) {
-        for (TeamScore ts : TeamManager.getScoresByTeam(this)) {
+        for (TeamScore ts : game.getTeamManager().getScoresByTeam(this)) {
             if (ts.getScoreName().equalsIgnoreCase(name)) {
                 return ts;
             }

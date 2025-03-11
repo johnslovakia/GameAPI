@@ -16,7 +16,7 @@ public class PartyUtils {
 
         for (GamePlayer gamePlayer : members) {
             Game game = gamePlayer.getPlayerData().getGame();;
-            GameTeam team = TeamManager.getSmallestTeam(game);
+            GameTeam team = game.getTeamManager().getSmallestTeam();
 
             if (team.getMembers().size() < game.getSettings().getMaxTeamPlayers()) {
                 team.joinPlayer(gamePlayer, TeamJoinCause.PARTY_OTHER_TEAM);

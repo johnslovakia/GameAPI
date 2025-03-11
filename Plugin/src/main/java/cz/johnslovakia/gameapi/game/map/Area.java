@@ -37,8 +37,8 @@ public class Area {
      *
      * @return ArenaSettings for this area.
      */
-    @Getter
-    private final AreaSettings settings;
+    @Getter @Setter
+    private AreaSettings settings;
 
     /**
      * Define an area to make checking for certain events easier.

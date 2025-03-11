@@ -133,7 +133,7 @@ public class GameMap {
 
     public void teleport() {
         if (game.getSettings().isUseTeams()) {
-            for (GameTeam gameTeam : TeamManager.getTeams(game)){
+            for (GameTeam gameTeam : game.getTeamManager().getTeams()){
                 int spawn = 0;
                 for (GamePlayer gamePlayer : gameTeam.getMembers()){
                     if (!gamePlayer.isOnline()) {

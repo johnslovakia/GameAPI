@@ -22,6 +22,10 @@ import java.util.Map;
 public class EndCountdown implements TaskInterface {
 
     private  void createBossBar(GamePlayer gamePlayer, Task task){
+        if (gamePlayer.getPlayerData().getCurrentBossBar() != null){
+            gamePlayer.getPlayerData().getCurrentBossBar().removeAll();
+        }
+
         BossBar bossBar = Bukkit.createBossBar("Game starting in:", BarColor.WHITE,BarStyle.SOLID);
 
         bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.finding_new_game_in")

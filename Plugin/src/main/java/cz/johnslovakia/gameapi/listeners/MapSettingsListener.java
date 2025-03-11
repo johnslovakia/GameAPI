@@ -574,7 +574,7 @@ public class MapSettingsListener implements Listener {
         if (e.getTo() == null) return;
 
         AreaSettings settings = AreaManager.getActiveSettings(gamePlayer);
-        if(settings != null) {
+        if(game.getCurrentMap().getMainArea() != null && settings != null) {
             Area borderArea =  game.getCurrentMap().getMainArea();
             if (settings.isAllowedInstantVoidKill() && borderArea != null || gamePlayer.isSpectator()) {
                 double lowestAreaY = borderArea.getLocation1().getY();

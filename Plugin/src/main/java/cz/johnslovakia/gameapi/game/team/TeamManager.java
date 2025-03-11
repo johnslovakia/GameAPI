@@ -1,47 +1,47 @@
 package cz.johnslovakia.gameapi.game.team;
 
 import cz.johnslovakia.gameapi.game.Game;
+import lombok.Getter;
 
 import java.util.*;
 
+@Getter
 public class TeamManager {
 
+    private final Game game;
+    private List<GameTeam> teams = new ArrayList<>();
+    private HashMap<String, List<TeamScore>> scores = new HashMap<>();
 
-    //TODO: zmatek... přepsat
-    private static Map<Game, List<GameTeam>> teams = new HashMap<>();
-    private static HashMap<String, List<TeamScore>> scores = new HashMap<>();
-
-    public static void registerTeam(GameTeam... team){
-        for (GameTeam gameTeam : team) {
-            if (!teams.containsKey(gameTeam.getGame())) {
-                List<GameTeam> list = new ArrayList<>();
-                list.add(gameTeam);
-                teams.put(gameTeam.getGame(), list);
-            }else{
-                List<GameTeam> list = teams.get(gameTeam.getGame());
-                list.add(gameTeam);
-                teams.put(gameTeam.getGame(), list);
-            }
-        }
+    public TeamManager(Game game) {
+        this.game = game;
     }
 
-    public static boolean getTeamAllowEnter(Game game, GameTeam team) {
+    public TeamManager(Game game, List<GameTeam> teams) {
+        this.game = game;
+        this.teams = teams;
+    }
+
+    public void registerTeam(GameTeam... team){
+        teams.addAll(Arrays.asList(team));
+    }
+
+    public boolean getTeamAllowEnter(GameTeam team) {
         int tolerance = 1;
 
         int totalPlayers = 0;
-        for (GameTeam t : TeamManager.getTeams(game)) {
+        for (GameTeam t : teams) {
             totalPlayers += t.getAllMembers().size();
         }
 
-        double averagePlayers = (double) totalPlayers / TeamManager.getTeams(game).size();
+        double averagePlayers = (double) totalPlayers / teams.size();
         int maxAllowedSize = (int) Math.ceil(averagePlayers + tolerance);
 
         return team.getAllMembers().size() < maxAllowedSize;
     }
 
-    public static GameTeam getSmallestTeam(Game game) {
+    public GameTeam getSmallestTeam() {
         GameTeam smallestTeam = null;
-        for (GameTeam team : TeamManager.getTeams(game)) {
+        for (GameTeam team : teams) {
             if (smallestTeam == null || team.getAllMembers().size() < smallestTeam.getAllMembers().size()) {
                 smallestTeam = team;
             }
@@ -49,9 +49,9 @@ public class TeamManager {
         return smallestTeam;
     }
 
-    public static GameTeam getHighestTeam(Game game) {
+    public GameTeam getHighestTeam() {
         GameTeam highest = null;
-        for(GameTeam team : TeamManager.getTeams(game)) {
+        for(GameTeam team : teams) {
             if (highest == null || team.getAllMembers().size() > highest.getAllMembers().size())
                 highest = team;
         }
@@ -59,35 +59,28 @@ public class TeamManager {
     }
 
 
-    public static void resetTeamsAndRegisterForNewGame(Game oldGame, Game newGame){
-        if (teams.get(oldGame) == null || teams.isEmpty()){
-            return;
-        }
-        for (GameTeam t : teams.get(oldGame)){
+    public void resetTeamsAndRegisterForNewGame(Game newGame){
+        TeamManager newTeamManager = new TeamManager(newGame);
+
+        for (GameTeam t : teams){
             GameTeam newTeam = new GameTeam(newGame, t.getTeamColor());
-            teams.remove(oldGame);
-            registerTeam(newTeam);
-
-            List<TeamScore> oldTeamScores = getScoresByTeam(t);
-
-            for (String s : scores.keySet()){
-                List<TeamScore> list = scores.get(s);
-                list.removeAll(oldTeamScores);
-
-                TeamScore ts = new TeamScore(newTeam, s);
-                list.add(ts);
-
-                scores.put(s, list);
-            }
-
+            newTeamManager.registerTeam(newTeam);
         }
 
+        for (String s : scores.keySet()){
+            newTeamManager.registerNewScore(s);
+        }
+
+        newGame.setTeamManager(newTeamManager);
+
+        teams.clear();
+        scores.clear();
         //Collections.sort(teams);
     }
 
 
-    public static GameTeam getTeam(Game game, String name){
-        for (GameTeam team : getTeams(game)){
+    public GameTeam getTeam(String name){
+        for (GameTeam team : teams){
             if (team.getName().equals(name)) {
                 return team;
             }
@@ -95,60 +88,38 @@ public class TeamManager {
         return null;
     }
 
-    public static List<GameTeam> getTeams(Game game) {
-        return teams.get(game);
-        /*List<GameTeam> list = new ArrayList<>();
-        for (GameTeam team : teams){
-            if (team.getGame().equals(game)){
-                list.add(team);
-            }
-        }
-        return list;*/
-    }
 
-    public static int getTeamsSize(){
-        /*List<TeamColor> uniqueTeams = new ArrayList<>();
-
-        for (GameTeam team : teams) {
-            if (!uniqueTeams.contains(team.getTeamColor())) {
-                uniqueTeams.add(team.getTeamColor());
-            }
-        }
-        return uniqueTeams.size();*/
+    public int getTeamsSize(){
         if (teams.isEmpty()){
             return 4;
         }else{
-            return teams.get(teams.keySet().stream().toList().get(0)).size();
+            return teams.size();
         }
     }
 
-    public static List<TeamScore> getScoresByName(String name) {
+    public List<TeamScore> getScoresByName(String name) {
         if (scores.containsKey(name)) {
             return scores.get(name);
         }
         return null;
     }
 
-    public static List<TeamScore> getScoresByTeam(GameTeam team) {
+    public List<TeamScore> getScoresByTeam(GameTeam team) {
         List<TeamScore> teamScores = new ArrayList<>();
         for (List<TeamScore> ts : scores.values()) {
             for (TeamScore ts2 : ts) {
                 if (ts2.getTeam().equals(team)) {
                     teamScores.add(ts2);
-                    continue;
                 }
             }
         }
         return teamScores;
     }
 
-    public static void registerNewScore(String name) {
+    public void registerNewScore(String name) {
         if (scores.containsKey(name)) return;
         List<TeamScore> sc = new ArrayList<>();
-        List<GameTeam> allTeams = teams.values().stream()
-                .flatMap(Collection::stream)
-                .toList();
-        for (GameTeam t : allTeams) {
+        for (GameTeam t : teams) {
             TeamScore ts = new TeamScore(t, name);
             sc.add(ts);
         }
