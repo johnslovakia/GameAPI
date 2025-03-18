@@ -145,18 +145,18 @@ public class GameManager {
             }
         }
 
-        games.remove(game);
         registerGame(newGame);
-
-        GameResetEvent ev = new GameResetEvent(game, newGame);
-        Bukkit.getPluginManager().callEvent(ev);
-
 
         if (!players.isEmpty()) {
             for (Player player : players) {
                 GameManager.newArena(player, true);
             }
         }
+
+        GameResetEvent ev = new GameResetEvent(game, newGame);
+        Bukkit.getPluginManager().callEvent(ev);
+
+        games.remove(game);
     }
 
     public static Game getGameByID(String id){

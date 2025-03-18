@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.game.team;
 
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
@@ -9,8 +10,9 @@ public enum TeamColor {
     RED, BLUE, GREEN, YELLOW, AQUA, DARK_AQUA, WHITE, PINK, GRAY, PURPLE, DARK_GREEN, ORANGE;
 
     public String formattedName() {
-        String caps = this.toString().toLowerCase();
-        return caps.substring(0, 1).toUpperCase() + caps.substring(1);
+        String name = this.toString().toLowerCase();
+        name = name.substring(0, 1).toUpperCase() + name.substring(1);
+        return StringUtils.capitalize(name.replace("_", " "));
     }
 
     public ChatColor getChatColor() {

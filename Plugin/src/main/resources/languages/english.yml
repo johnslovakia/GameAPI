@@ -12,6 +12,8 @@ inventory.info_item.teleporter.name: "§fTeleporter"
 inventory.info_item.teleporter.lore: "§7Teleport to the player and/newline/§7view basic information."
 inventory.info_item.cosmetics_inventory.name: "§fGame Cosmetics"
 inventory.info_item.cosmetics_inventory.lore: "§7Cosmetics let you stand out/newline/§7and express yourself in-game."
+inventory.info_item.team_selector_inventory.name: "§fTeam Selector"
+inventory.info_item.team_selector_inventory.lore: "§7Choose a team"
 
 inventory.cosmetics.purchase: "#FFA500► Left-click to purchase"
 inventory.cosmetics.previous_page: "§aPrevious page"

@@ -24,6 +24,9 @@ public class StatsTable {
         this.TABLE_NAME = GameAPI.getInstance().getMinigame().getName() + "_stats";
     }
     public void createTable() {
+        if (GameAPI.getInstance().getMinigame().getDatabase() == null)
+            return;
+
         StringBuilder stats_s = new StringBuilder("`id` INT AUTO_INCREMENT PRIMARY KEY, `Nickname` VARCHAR(32) NOT NULL");
 
         List<String> stats = new ArrayList<>();
