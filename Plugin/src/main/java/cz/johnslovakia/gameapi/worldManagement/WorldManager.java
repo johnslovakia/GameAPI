@@ -19,24 +19,17 @@ public class WorldManager {
     public static List<String> loadedWorlds = new ArrayList<>();
 
 
-    public static void unload(GameMap arena, Game game){
+    public static void unload(GameMap arena){
         if (arena.getWorld() == null){
             return;
         }
+        arena.setWorld(null);
+
         String world_name = arena.getWorld().getName();
         Bukkit.unloadWorld(arena.getWorld(), false);
 
-        File activeWorldFolder = new File(Bukkit.getWorldContainer().getParentFile(), world_name);
-        if (activeWorldFolder.exists()) delete(activeWorldFolder);
-
-
-
-        File sourceWorldFolder = new File(GameAPI.getInstance().getMinigame().getPlugin().getDataFolder() + "/maps/", arena.getName());
-        if (sourceWorldFolder.exists()) {
-            if (activeWorldFolder.exists()) FileManager.deleteFile(activeWorldFolder);
-        }
-
-        arena.setWorld(null);
+        File activeWorldFolder = new File(Bukkit.getWorldContainer(), world_name);
+        if (activeWorldFolder.exists()) FileManager.deleteFile(activeWorldFolder);
     }
 
     public static void delete(File file){

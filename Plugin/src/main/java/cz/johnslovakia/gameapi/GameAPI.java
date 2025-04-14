@@ -171,6 +171,25 @@ public class GameAPI extends JavaPlugin {
             return;
         }
         this.getLogger().info("Loading support for " + version);
+
+
+
+
+        File worldContainer = Bukkit.getWorldContainer();
+        File[] worldsToDelete = worldContainer.listFiles(file ->
+                file.isDirectory() && file.getName().matches(".+_[a-zA-Z0-9]{6}")
+        );
+
+        if (worldsToDelete != null) {
+            for (File worldFolder : worldsToDelete) {
+                if (worldFolder.getName().toLowerCase().contains("world") || worldFolder.getName().toLowerCase().contains("nether")) continue;
+                Bukkit.getLogger().info("Deleting world folder: " + worldFolder.getName());
+                if (Bukkit.getWorld(worldFolder.getName()) != null){
+                    Bukkit.unloadWorld(worldFolder.getName(), false);
+                }
+                FileManager.deleteFile(worldFolder);
+            }
+        }
     }
 
     @Override
@@ -297,6 +316,10 @@ public class GameAPI extends JavaPlugin {
 
 
 
+        if (GameAPI.getInstance().getMinigame().getDatabase() == null){
+            Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
+            return;
+        }
         SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
 
         for (Resource resource : minigame.getEconomies()){

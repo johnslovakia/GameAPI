@@ -118,6 +118,10 @@ public class MinigameTable {
         }
 
 
+        if (GameAPI.getInstance().getMinigame().getDatabase() == null){
+            Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
+            return;
+        }
         SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
         if (connection == null){
             return;

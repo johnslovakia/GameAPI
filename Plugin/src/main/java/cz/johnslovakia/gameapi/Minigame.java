@@ -3,11 +3,12 @@ package cz.johnslovakia.gameapi;
 import com.infernalsuite.aswm.loaders.mysql.MysqlLoader;
 import cz.johnslovakia.gameapi.datastorage.MinigameTable;
 import cz.johnslovakia.gameapi.datastorage.RedisManager;
+import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.serverManagement.DataManager;
 import cz.johnslovakia.gameapi.serverManagement.gameData.GameDataManager;
 import cz.johnslovakia.gameapi.serverManagement.gameData.JSONProperty;
 import cz.johnslovakia.gameapi.users.resources.Resource;
-import cz.johnslovakia.gameapi.game.Game;
+
 
 import cz.johnslovakia.gameapi.utils.InputStreamWithName;
 import cz.johnslovakia.gameapi.utils.UpdateChecker;

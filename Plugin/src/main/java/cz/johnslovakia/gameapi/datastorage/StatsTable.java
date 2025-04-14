@@ -24,8 +24,10 @@ public class StatsTable {
         this.TABLE_NAME = GameAPI.getInstance().getMinigame().getName() + "_stats";
     }
     public void createTable() {
-        if (GameAPI.getInstance().getMinigame().getDatabase() == null)
+        if (GameAPI.getInstance().getMinigame().getDatabase() == null) {
+            Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
             return;
+        }
 
         StringBuilder stats_s = new StringBuilder("`id` INT AUTO_INCREMENT PRIMARY KEY, `Nickname` VARCHAR(32) NOT NULL");
 

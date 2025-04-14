@@ -26,11 +26,22 @@ public class KitContent {
         this.inventory = Bukkit.createInventory(null, InventoryType.PLAYER);
     }
 
+
+    public KitContent setItem(int slot, ItemBuilder item){
+        setItem(slot, item.toItemStack());
+        return this;
+    }
+
+    public KitContent setItem(int slot, ItemStack item){
+        inventory.setItem(slot, item);
+        return this;
+    }
+
     public KitContent addItem(ItemBuilder... items){
         for (ItemBuilder itemBuilder : items){
             addItem(itemBuilder.toItemStack());
         }
-        return  this;
+        return this;
     }
 
     public KitContent addItem(ItemStack... items){
@@ -47,7 +58,7 @@ public class KitContent {
                 inventory.addItem(item);
             }
         }
-        return  this;
+        return this;
     }
 
     public ItemStack[] getContents(){

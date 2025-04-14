@@ -129,8 +129,10 @@ public class TrailsCategory extends CosmeticsCategory {
                         new BukkitRunnable() {
                             @Override
                             public void run() {
-                                if (projectileLaunchEvent.getEntity().isOnGround() || projectileLaunchEvent.getEntity().isDead())
+                                if (projectileLaunchEvent.getEntity().isOnGround() || projectileLaunchEvent.getEntity().isDead()) {
+                                    this.cancel();
                                     return;
+                                }
 
                                 Location location = projectileLaunchEvent.getEntity().getLocation();
                                 cosmetic.getLocationConsumer().accept(location);

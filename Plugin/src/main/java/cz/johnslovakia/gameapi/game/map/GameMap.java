@@ -69,6 +69,13 @@ public class GameMap {
         this.areas.addAll(Arrays.asList(areas));
     }
 
+    public Area getArea(String name) {
+        for (Area area : this.areas) {
+            if (area.getName().equals(name)) return area;
+        }
+        return null;
+    }
+
     public void addSpawn(MapLocation... spawns){
         this.spawns.addAll(Arrays.asList(spawns));
     }
@@ -200,7 +207,7 @@ public class GameMap {
         }else{
             if (getWorld() != null) {
                 try {
-                    WorldManager.unload(this, game);
+                    WorldManager.unload(this);
                 }catch (Exception e){
                     // This exception cannot be ignored
                     throw new RuntimeException(e);

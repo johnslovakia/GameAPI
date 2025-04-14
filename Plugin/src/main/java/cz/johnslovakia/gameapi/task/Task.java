@@ -128,6 +128,7 @@ public class Task {
                 
                 if (counter == 0) {
                     counter = startCounter;
+                    this.cancel();
                 }
             }
         }.runTaskTimer(this.plugin, 0, 20L);

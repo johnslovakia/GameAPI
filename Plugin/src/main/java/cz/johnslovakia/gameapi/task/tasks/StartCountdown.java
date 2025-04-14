@@ -57,8 +57,8 @@ public class StartCountdown implements TaskInterface {
         MinigameSettings settings = game.getSettings();
         List<GamePlayer> players = game.getPlayers();
 
-        if (!settings.isChooseRandomMap()) {
-            if (task.getCounter() == 10) {
+        if (task.getCounter() == 10) {
+            if (!settings.isChooseRandomMap()) {
                 if (game.getMapManager().isEnabledVoting()) {
                     game.winMap();
                 }
@@ -93,8 +93,6 @@ public class StartCountdown implements TaskInterface {
                     .getFontTextComponentJSON("gameapi:bossbar_offset"));
             
         }
-
-
 
         if (players.isEmpty() || (players.size() <= settings.getMinPlayers() - 2 && settings.getMinPlayers() >= 5)
                 || (settings.getMinPlayers() <= 4 && players.size() < settings.getMinPlayers())) {

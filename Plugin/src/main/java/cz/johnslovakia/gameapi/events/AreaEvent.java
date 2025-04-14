@@ -3,19 +3,20 @@ package cz.johnslovakia.gameapi.events;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.game.map.Area;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import lombok.Getter;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.plugin.RegisteredListener;
 
-
+@Getter
 public class AreaEvent extends Event implements Cancellable {
 
-    private boolean cancelled = false;
+    private boolean isCancelled = false;
     private static final HandlerList handlers = new HandlerList();
-    private GamePlayer player;
-    private Area area;
+    private final GamePlayer player;
+    private final Area area;
     private PlayerMoveEvent moveEvent;
 
 
@@ -34,25 +35,16 @@ public class AreaEvent extends Event implements Cancellable {
         return this.player;
     }
 
-    public Area getArea(){
-        return this.area;
-    }
 
-    public PlayerMoveEvent getMoveEvent() {
-        return moveEvent;
-    }
-
-    @Override
     public boolean isCancelled() {
-        return cancelled;
+        return isCancelled;
     }
 
-    @Override
     public void setCancelled(boolean cancelled) {
-        this.cancelled = cancelled;
+        this.isCancelled = cancelled;
     }
 
-    @Override
+    /*@Override
     public HandlerList getHandlers() {
         for(RegisteredListener listener : handlers.getRegisteredListeners()){
             if(!listener.getPlugin().equals(GameAPI.getInstance())){ //GameAPI.getPlugin()
@@ -60,7 +52,12 @@ public class AreaEvent extends Event implements Cancellable {
             }
         }
         return handlers;
+    }*/
+
+    public HandlerList getHandlers() {
+        return handlers;
     }
+
     public static HandlerList getHandlerList(){
         return handlers;
     }

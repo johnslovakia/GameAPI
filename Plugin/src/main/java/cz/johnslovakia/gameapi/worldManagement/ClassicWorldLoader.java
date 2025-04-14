@@ -56,6 +56,10 @@ public class ClassicWorldLoader {
             }*/
 
             FileManager.copyFolder(source, active);
+            if (Bukkit.getWorld(active.getName()) != null){
+                Bukkit.unloadWorld(active.getName(), false);
+                FileManager.deleteFile(Bukkit.getWorld(active.getName()).getWorldFolder());
+            }
             World bukkitWorld = Bukkit.createWorld(new WorldCreator(active.getName()));
 
             //bukkitWorld.setGameRule("ANNOUNCE_ADVANCEMENTS", "false");
@@ -75,11 +79,16 @@ public class ClassicWorldLoader {
 
     public static World loadClassicArenaWorld(GameMap arena, Game game){
         File sourceWorldFolder = new File(GameAPI.getInstance().getMinigameDataFolder() + "/maps/", arena.getName());
-        if (!sourceWorldFolder.exists() && new File(Bukkit.getWorldContainer() + "/", arena.getName()).exists()){
-            sourceWorldFolder = new File(Bukkit.getWorldContainer() + "/", arena.getName());
-        }else{
-            Logger.log("Can't load Classic Arena World! No map file!", Logger.LogType.ERROR);
-            return null;
+
+        if (!sourceWorldFolder.exists()) {
+            File fallbackFolder = new File(Bukkit.getWorldContainer(), arena.getName());
+            if (fallbackFolder.exists()) {
+                sourceWorldFolder = fallbackFolder;
+            } else {
+                Logger.log("Can't load Classic Arena World! No map file!", Logger.LogType.ERROR);
+                Logger.log(sourceWorldFolder.getAbsolutePath() + " (" + arena.getName() + ")", Logger.LogType.INFO);
+                return null;
+            }
         }
 
         String worldName = sourceWorldFolder.getName() + "_" + game.getID();

@@ -86,6 +86,10 @@ public class PlayerData {
 
 
         try {
+            if (GameAPI.getInstance().getMinigame().getDatabase() == null){
+                Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
+                return;
+            }
             Optional<Row> result = GameAPI.getInstance().getMinigame().getDatabase().getConnection().select()
                     .from(PlayerTable.TABLE_NAME)
                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())

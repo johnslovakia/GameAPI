@@ -1,78 +1,70 @@
 package cz.johnslovakia.gameapi.utils;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.events.ListenerPriority;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.wrappers.WrappedChatComponent;
+import com.comphenix.protocol.events.*;
 import com.google.common.base.Strings;
-
+import com.google.gson.JsonParser;
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.chat.ComponentSerializer;
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import org.bukkit.ChatColor;
 import org.bukkit.plugin.Plugin;
-
+import org.bukkit.event.Listener;
+import org.bukkit.event.EventPriority;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.HashMap;
+import java.util.Map;
 
-//https://www.spigotmc.org/threads/boss-bar-and-textcomponent.484472/
-//https://github.com/zippo-store/HypeGradients/blob/cb70c9b583714b88539b43362c9300d0288e4e92/HypeGradients-API/src/main/java/me/doublenico/hypegradients/api/packet/AbstractPacket.java#L24
-
-//TODO: zkusit udělat lépe a nebude fungovat §l myslím
 public class ProtocolTagChanger extends PacketAdapter {
+
+    private final Map<String, String> jsonCache = new HashMap<>();
+    private final Pattern fontPattern = Pattern.compile("\"font\":\"(.*?)\"");
+    private final Pattern textPattern = Pattern.compile("\"text\":\"(.*?)\"");
+    private final JsonParser jsonParser = new JsonParser();
 
     public ProtocolTagChanger(Plugin plugin, ListenerPriority listenerPriority, PacketType packetType) {
         super(plugin, listenerPriority, packetType);
     }
 
-
     @Override
     public void onPacketSending(PacketEvent event) {
-
         PacketContainer packet = event.getPacket();
         if (packet.getType() == PacketType.Play.Server.BOSS) {
             try {
-                if (packet.getStructures() != null || packet.getStructures().read(1) != null || packet.getStructures().read(1).getChatComponents() != null) {
+                if (packet.getStructures() != null && packet.getStructures().read(1) != null && packet.getStructures().read(1).getChatComponents() != null) {
                     WrappedChatComponent baseWrap = packet.getStructures().read(1).getChatComponents().read(0);
 
                     if (baseWrap != null && !Strings.isNullOrEmpty(baseWrap.getJson())) {
-                        String text = TextComponent.toLegacyText(ComponentSerializer.parse(baseWrap.getJson()));
-                        //Logger.log("1 - " + text, Logger.LogType.INFO);
-                        String font = extractFont(text);
-                        //Logger.log("2 - " + font, Logger.LogType.INFO);
-                        String message = extractMessage(text);
-                        //Logger.log("3 - " + message, Logger.LogType.INFO);
-                        String json = convertToJson(message, font);
+                        String originalJson = baseWrap.getJson();
 
-                        packet.getStructures().read(1).getChatComponents().write(0, WrappedChatComponent.fromJson(json));
+                        // Use cached result if available
+                        String newJson = jsonCache.get(originalJson);
+                        if (newJson == null) {
+                            String text = TextComponent.toLegacyText(ComponentSerializer.parse(originalJson));
+                            String font = extractFont(text);
+                            String message = extractMessage(text);
+                            newJson = convertToJson(message, font);
+                            jsonCache.put(originalJson, newJson);
+                        }
+
+                        packet.getStructures().read(1).getChatComponents().write(0, WrappedChatComponent.fromJson(newJson));
                     }
                 }
-            }catch (Exception ignored){}
+            } catch (Exception ignored) {
+            }
         }
     }
 
-    public static String extractFont(String input) {
-        Pattern pattern = Pattern.compile("\"font\":\"(.*?)\"");
-        Matcher matcher = pattern.matcher(input);
-
-        if (matcher.find()) {
-            return matcher.group(1);
-        } else {
-            return "minecraft:default";
-        }
+    public String extractFont(String input) {
+        Matcher matcher = fontPattern.matcher(input);
+        return matcher.find() ? matcher.group(1) : "minecraft:default";
     }
 
-    public static String extractMessage(String input) {
-        Pattern pattern = Pattern.compile("\"text\":\"(.*?)\"");
-        Matcher matcher = pattern.matcher(input);
-
-        if (matcher.find()) {
-            return matcher.group(1);
-        } else {
-            Logger.log("ProtocolTagChanger: Text not found (input: " + input + ")", Logger.LogType.WARNING);
-            return " ";
-        }
+    public String extractMessage(String input) {
+        Matcher matcher = textPattern.matcher(input);
+        return matcher.find() ? matcher.group(1) : " ";
     }
 
     public String convertToJson(String input, String font) {
@@ -88,13 +80,7 @@ public class ProtocolTagChanger extends PacketAdapter {
                 ChatColor color = ChatColor.getByChar(colorCode);
 
                 if (!currentText.isEmpty()) {
-                    jsonOutput.append("{\"text\":\"")
-                            .append(currentText.toString())
-                            .append("\",\"color\":\"")
-                            .append(currentColor != null ? currentColor.name().toLowerCase() : "white")
-                            .append("\",\"font\":\"")
-                            .append(font)
-                            .append("\"},");
+                    appendJsonPart(jsonOutput, currentText.toString(), currentColor, font);
                     currentText.setLength(0);
                 }
 
@@ -105,14 +91,8 @@ public class ProtocolTagChanger extends PacketAdapter {
             }
         }
 
-        if (currentText.length() > 0) {
-            jsonOutput.append("{\"text\":\"")
-                    .append(currentText.toString())
-                    .append("\",\"color\":\"")
-                    .append(currentColor != null ? currentColor.name().toLowerCase() : "white")
-                    .append("\",\"font\":\"")
-                    .append(font)
-                    .append("\"}");
+        if (!currentText.isEmpty()) {
+            appendJsonPart(jsonOutput, currentText.toString(), currentColor, font);
         }
 
         String result = jsonOutput.toString();
@@ -123,5 +103,13 @@ public class ProtocolTagChanger extends PacketAdapter {
         return "[" + result + "]";
     }
 
-
+    private void appendJsonPart(StringBuilder jsonOutput, String text, ChatColor color, String font) {
+        jsonOutput.append("{\"text\":\"")
+                .append(text)
+                .append("\",\"color\":\"")
+                .append(color != null ? color.name().toLowerCase() : "white")
+                .append("\",\"font\":\"")
+                .append(font)
+                .append("\"},");
+    }
 }

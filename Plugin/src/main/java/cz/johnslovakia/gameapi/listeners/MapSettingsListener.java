@@ -401,6 +401,8 @@ public class MapSettingsListener implements Listener {
         if(settings != null){
             if(settings.isKeepInventory()){
                 e.setKeepInventory(true);
+            }else if (!settings.isDropItemsOnDeath()){
+                e.getDrops().clear();
             }
             e.setDeathMessage("");
         }

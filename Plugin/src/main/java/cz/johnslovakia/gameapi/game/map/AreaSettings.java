@@ -28,6 +28,8 @@ public class AreaSettings implements Cloneable{
     private boolean allowExpDrop = true;
     private boolean allowItemDrop = true;
     private boolean allowMobSpawn = false;
+    @Getter
+    private boolean dropItemsOnDeath = true;
     private boolean allowCreeperExplosion = true;
     private boolean allowOtherExplosion = true;
     private boolean allowEndermanGrief = true;
@@ -125,11 +127,13 @@ public class AreaSettings implements Cloneable{
         return this;
     }
 
-    public void addCanPlaceBlock(Material material){
-        if (canPlace.contains(material)){
-            return;
+    public void addCanPlaceBlock(Material... materials){
+        for (Material material : materials) {
+            if (canPlace.contains(material)) {
+                return;
+            }
+            canPlace.add(material);
         }
-        canPlace.add(material);
     }
 
     public void addCanBreakBlock(Material... materials){

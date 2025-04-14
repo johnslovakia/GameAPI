@@ -147,14 +147,18 @@ public class GameManager {
 
         registerGame(newGame);
 
+        GameResetEvent ev = new GameResetEvent(game, newGame);
+        Bukkit.getPluginManager().callEvent(ev);
+
         if (!players.isEmpty()) {
             for (Player player : players) {
-                GameManager.newArena(player, true);
+                MessageManager.get(player, "chat.finding_new_game").send();
+                Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> {
+                    GameManager.newArena(player, true);
+                }, 25L);
             }
         }
 
-        GameResetEvent ev = new GameResetEvent(game, newGame);
-        Bukkit.getPluginManager().callEvent(ev);
 
         games.remove(game);
     }

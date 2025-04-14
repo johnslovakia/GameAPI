@@ -10,7 +10,6 @@ import cz.johnslovakia.gameapi.events.*;
 import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.game.map.MapVotesComparator;
 import cz.johnslovakia.gameapi.game.team.GameTeam;
-import cz.johnslovakia.gameapi.game.team.TeamJoinCause;
 import cz.johnslovakia.gameapi.game.map.MapManager;
 import cz.johnslovakia.gameapi.task.tasks.EndCountdown;
 import cz.johnslovakia.gameapi.task.tasks.StartCountdown;
@@ -18,15 +17,13 @@ import cz.johnslovakia.gameapi.users.*;
 import cz.johnslovakia.gameapi.game.team.TeamManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.task.Task;
-import cz.johnslovakia.gameapi.task.tasks.GameCountdown;
-import cz.johnslovakia.gameapi.task.tasks.PreparationCountdown;
 import cz.johnslovakia.gameapi.users.friends.FriendsInterface;
 import cz.johnslovakia.gameapi.users.parties.PartyInterface;
-import cz.johnslovakia.gameapi.users.stats.StatsHolograms;
 import cz.johnslovakia.gameapi.utils.*;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import cz.johnslovakia.gameapi.utils.inventoryBuilder.InventoryManager;
 import cz.johnslovakia.gameapi.utils.inventoryBuilder.Item;
+import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import lombok.Getter;
 import lombok.Setter;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -37,7 +34,6 @@ import org.bukkit.block.Block;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
-import org.bukkit.boss.KeyedBossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -54,7 +50,8 @@ public class Game {
     private GameState state = GameState.LOADING;
     @Setter
     private Task runningMainTask;
-    private final Location lobbyPoint;
+    @Setter
+    private Location lobbyPoint;
     @Setter
     private InventoryManager lobbyInventory;
     @Setter
@@ -88,16 +85,39 @@ public class Game {
 
         while (this.ID == null || GameManager.isDuplicate(this.ID)){
             this.ID = StringUtils.randomString(6, true, true, false);
+            GameManager.addID(this.ID);
         }
 
     }
 
     public void finishSetup(){
+        getSpectatorManager().loadItemManager();
+
         if (getSettings().isChooseRandomMap()){
             selectRandomMap();
+            new BukkitRunnable(){
+                int i = 0;
+
+                @Override
+                public void run() {
+                    if (Bukkit.getWorld(getCurrentMap().getName() + "_" + getID()) != null){
+                        state = GameState.WAITING;
+                        this.cancel();
+                        return;
+                    }
+                    if (i >= 10){
+                        this.cancel();
+                    }else{
+                        i++;
+                    }
+                }
+            }.runTaskTimer(GameAPI.getInstance(), 10L, 10L);
+
+        }else {
+            Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> {
+                state = GameState.WAITING;
+            }, 10L);
         }
-        getSpectatorManager().loadItemManager();
-        state = GameState.WAITING;
 
 
         Minigame minigame = GameAPI.getInstance().getMinigame();
@@ -116,10 +136,10 @@ public class Game {
 
     int animationTick = 0;
     public void updateWaitingForPlayersBossBar(){
-        String[] dotPatterns = {"", ".", "..", "..."};
+        /*String[] dotPatterns = {"", ".", "..", "..."};
         animationTick = (animationTick + 1) % dotPatterns.length;
 
-        String dots = dotPatterns[animationTick];
+        String dots = dotPatterns[animationTick];*/
 
         for (GamePlayer gamePlayer : getParticipants()){
             BossBar bossBar = (BossBar) gamePlayer.getMetadata().get("bossbar.waiting_for_players");
@@ -143,7 +163,7 @@ public class Game {
             bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.waiting_for_players")
                     .replace("%online%", "" + chatColor + getParticipants().size())
                     .replace("%required%", "" + getSettings().getMinPlayers())
-                    .replace("...", dots)
+                    //.replace("...", dots)
                     .getFontTextComponentJSON("gameapi:bossbar_offset"));
         }
     }
@@ -205,7 +225,7 @@ public class Game {
             }
 
 
-            if (getParticipants().size() == 1){
+            /*if (getParticipants().size() == 1){
                 Bukkit.getScheduler().runTaskTimer(GameAPI.getInstance(), task -> {
                     if (!getState().equals(GameState.WAITING) || getParticipants().isEmpty()){
                         task.cancel();
@@ -213,7 +233,8 @@ public class Game {
                     }
                     updateWaitingForPlayersBossBar();
                 }, 0, 30L);
-            }
+            }*/
+            updateWaitingForPlayersBossBar();
 
             Utils.hideAndShowPlayers(gamePlayer);
 
@@ -368,7 +389,7 @@ public class Game {
             PlayerManager.removeGamePlayer(player);
         }
 
-
+        updateWaitingForPlayersBossBar();
         checkArenaFullness();
     }
 
@@ -793,7 +814,7 @@ public class Game {
         }
     }
 
-    public GameMap selectRandomMap() {
+    public void selectRandomMap() {
         getMapManager().setVoting(false);
 
         List<GameMap> maps = new ArrayList<>(getMapManager().getMaps().stream().filter(GameMap::isIngame).toList());
@@ -801,7 +822,6 @@ public class Game {
 
         GameMap map = maps.get(0);
         map.setWinned(true);
-        return map;
     }
 
     public GameMap nextArena() {
@@ -849,6 +869,9 @@ public class Game {
         if (serverDataManager != null) {
             serverDataManager.getJSONProperty("GameState").update(this, state.name());
         }
+
+        GameStateChangeEvent ev = new GameStateChangeEvent(getGame(), state);
+        Bukkit.getPluginManager().callEvent(ev);
     }
 
     public List<GamePlayer> getPlayers(){

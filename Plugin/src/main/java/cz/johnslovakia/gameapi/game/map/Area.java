@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Area {
 
@@ -23,6 +24,7 @@ public class Area {
      */
     @Getter
     private final String name;
+    @Getter
     private final GameMap map;
     @Setter
     private MapLocation loc1;
@@ -73,10 +75,6 @@ public class Area {
         return map.getWorld();
     }
 
-    public GameMap getArena() {
-        return map;
-    }
-
     /**
      * Checks whether or not a player is in the area.
      * @return True if player is in area, false otherwise.
@@ -92,7 +90,7 @@ public class Area {
     public boolean isInArea(Location location, double tolerance) {
         double buffer = tolerance / 2;
 
-        if (!location.getWorld().equals(getWorld())){
+        if (!Objects.equals(location.getWorld(), getWorld())){
             return false;
         }
 

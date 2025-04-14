@@ -1,6 +1,8 @@
 package cz.johnslovakia.gameapi.game.kit;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.events.KitActiveEvent;
+import cz.johnslovakia.gameapi.events.KitGiveContentEvent;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.events.KitSelectEvent;
 import cz.johnslovakia.gameapi.game.Game;
@@ -78,14 +80,7 @@ public class Kit implements Listener{
         int balance = data.getBalance(resource);
 
 
-        if (game.getState() != GameState.INGAME) {
-            player.getInventory().clear();
-        }
-
-        Inventory inventory = data.getKitInventory(this);
-        player.getInventory().setContents(inventory.getContents());
-
-        Utils.colorizeArmor(gamePlayer);
+        giveContent(gamePlayer);
 
         if (kitManager.getDefaultKit() != this) {
             if (getPrice() != 0) {
@@ -122,6 +117,9 @@ public class Kit implements Listener{
             }
             gamePlayer.getPlayerData().addPurchasedKitThisGame(this);
         }
+
+        KitActiveEvent ev = new KitActiveEvent(gamePlayer, this);
+        Bukkit.getPluginManager().callEvent(ev);
     }
 
     public void unselect(GamePlayer gamePlayer) {
@@ -177,6 +175,24 @@ public class Kit implements Listener{
         }
     }
 
+    public void giveContent(GamePlayer gamePlayer){
+        Player player = gamePlayer.getOnlinePlayer();
+        PlayerData data = gamePlayer.getPlayerData();
+        Game game = gamePlayer.getPlayerData().getGame();
+
+        if (game.getState() != GameState.INGAME) {
+            player.getInventory().clear();
+        }
+
+        Inventory inventory = data.getKitInventory(this);
+        player.getInventory().setContents(inventory.getContents());
+
+        Utils.colorizeArmor(gamePlayer);
+
+        KitGiveContentEvent ev = new KitGiveContentEvent(gamePlayer, this);
+        Bukkit.getPluginManager().callEvent(ev);
+    }
+
     @EventHandler
     public void onRespawn(PlayerRespawnEvent e) {
         Player player = e.getPlayer();
@@ -196,8 +212,7 @@ public class Kit implements Listener{
             new BukkitRunnable(){
                 @Override
                 public void run() {
-                    player.getInventory().setContents(data.getKitInventories().get(kit) != null ? data.getKitInventories().get(kit).getContents() : getContent().getInventory().getContents());
-                    Utils.colorizeArmor(gamePlayer);
+                    giveContent(gamePlayer);
                 }
             }.runTaskLater(GameAPI.getInstance(), 2L);
         }
@@ -208,6 +223,8 @@ public class Kit implements Listener{
         if (e.getWhoClicked() instanceof Player player) {
             GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
             Game game = gamePlayer.getPlayerData().getGame();
+            if (game == null)
+                return;
             if (game.isPreparation()){
                 gamePlayer.getMetadata().put("edited_kit_inventory", true);
             }

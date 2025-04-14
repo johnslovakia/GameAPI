@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.game.map.Area;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.utils.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -68,33 +69,30 @@ public class AreaListener implements Listener {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
         Game game = gamePlayer.getPlayerData().getGame();
 
-        if (game != null) {
-            if (!gamePlayer.isEnabledMovement()) {
-                Location from = e.getFrom();
-                Location to = e.getTo();
+        Location from = e.getFrom();
+        Location to = e.getTo();
 
-                if (from.getX() != to.getX() || /*from.getY() != to.getY() ||*/ from.getZ() != to.getZ()) {
-                    Location loc = e.getFrom();
-                    e.getPlayer().teleport(loc.setDirection(to.getDirection()));
-                }
+        if (!gamePlayer.isEnabledMovement()) {
+
+            if (from.getX() != to.getX() || from.getZ() != to.getZ()) {
+                Location loc = e.getFrom();
+                e.getPlayer().teleport(loc.setDirection(to.getDirection()));
             }
-            
+        }
 
+        if (game != null) {
             if (game.getState() != GameState.INGAME) return;
             if (game.getCurrentMap() == null) return;
 
-            Location f = e.getFrom();
-            Location t = e.getTo();
 
             if (game.getCurrentMap().getMainArea() != null) {
                 Area borderArea = game.getCurrentMap().getMainArea();
-                if (t != null) {
-                    if (borderArea.isBorder() && !borderArea.isInArea(t, 12) && f.getY() <= t.getY()) {
-                        //gamePlayer.getOnlinePlayer().teleport(f);
-                        Vector direction = borderArea.getCenter().clone().subtract(f).toVector();
+                if (to != null) {
+                    if (borderArea.isBorder() && !borderArea.isInArea(to, 12) && from.getY() <= to.getY()) {
+                        Vector direction = borderArea.getCenter().clone().subtract(from).toVector();
                         direction.normalize().multiply(0.5);
 
-                        gamePlayer.getOnlinePlayer().teleport(f.clone().add(direction));
+                        gamePlayer.getOnlinePlayer().teleport(to.clone().add(direction));
                         MessageManager.get(gamePlayer, "chat.move_border").send();
                     }
                 }
@@ -105,10 +103,11 @@ public class AreaListener implements Listener {
                 boolean fromIsIn = false;
                 boolean toIsIn = false;
 
-                if (area.isInArea(f)) {
+                if (area.isInArea(from)) {
                     fromIsIn = true;
                 }
-                if (area.isInArea(t)) {
+                assert to != null;
+                if (area.isInArea(to)) {
                     toIsIn = true;
                 }
 
@@ -124,22 +123,4 @@ public class AreaListener implements Listener {
             }
         }
     }
-
-    /*@EventHandler
-    public void onPlayerLeaveArea(PlayerMoveEvent e) {
-        Player player = e.getPlayer();
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-
-        if (e.getArea().isBorder()){
-            if (gamePlayer.getOnlinePlayer().getLocation().getY() <= 5) {
-                return;
-            }
-            PlayerMoveEvent moveEvent = e.getMoveEvent();
-            if (moveEvent == null) return;
-            if (moveEvent.getFrom().getY() > e.getMoveEvent().getTo().getY()) return;
-
-            gamePlayer.getOnlinePlayer().teleport(e.getMoveEvent().getFrom());
-            MessageManager.get(gamePlayer, "chat.move_border").send();
-        }
-    }*/
 }
