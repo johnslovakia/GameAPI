@@ -81,6 +81,7 @@ public class MinigameTable {
                 "Nickname VARCHAR(24) UNIQUE NOT NULL," +
                 "Cosmetics JSON," +
                 "Quests JSON," +
+                "Achievements JSON," +
                 "KitInventories JSON");
 
         if (rows != null) {

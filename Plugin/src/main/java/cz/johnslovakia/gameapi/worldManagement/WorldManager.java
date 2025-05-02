@@ -23,10 +23,10 @@ public class WorldManager {
         if (arena.getWorld() == null){
             return;
         }
-        arena.setWorld(null);
 
         String world_name = arena.getWorld().getName();
         Bukkit.unloadWorld(arena.getWorld(), false);
+        arena.setWorld(null);
 
         File activeWorldFolder = new File(Bukkit.getWorldContainer(), world_name);
         if (activeWorldFolder.exists()) FileManager.deleteFile(activeWorldFolder);

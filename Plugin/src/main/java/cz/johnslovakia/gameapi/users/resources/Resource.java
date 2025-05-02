@@ -7,19 +7,18 @@ import org.bukkit.ChatColor;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class Resource {
 
     public static List<Resource> resourceList = new ArrayList<>();
 
-
-    @Getter
-    private String name, img_char;
-    @Getter
+    private String name;
     private ChatColor chatColor;
-    @Getter
     private int rank;
 
-    @Getter @Setter
+    @Setter
+    private String img_char;
+    @Setter
     private ResourceInterface resourceInterface;
 
 
@@ -40,16 +39,6 @@ public class Resource {
         resourceList.add(this);
     }
 
-    public Resource(String name, String img_char, ChatColor chatColor, int rank, ResourceInterface resourceInterface) {
-        this.name = name;
-        this.img_char = img_char;
-        this.chatColor = chatColor;
-        this.rank = rank;
-        this.resourceInterface = resourceInterface;
-
-        resourceList.add(this);
-    }
-
     public Resource(String name, ChatColor chatColor, int rank, boolean automatically, boolean forAllMinigames) {
         this.name = name;
         this.chatColor = chatColor;
@@ -60,11 +49,17 @@ public class Resource {
         resourceList.add(this);
     }
 
-    public Resource(String name, String img_char, ChatColor chatColor, int rank, boolean automatically, boolean forAllMinigames) {
+    public Resource(String name, ChatColor chatColor, ResourceInterface resourceInterface) {
         this.name = name;
-        this.img_char = img_char;
         this.chatColor = chatColor;
-        this.rank = rank;
+        this.resourceInterface = resourceInterface;
+
+        resourceList.add(this);
+    }
+
+    public Resource(String name, ChatColor chatColor, boolean automatically, boolean forAllMinigames) {
+        this.name = name;
+        this.chatColor = chatColor;
         this.automatically = automatically;
         this.forAllMinigames = forAllMinigames;
 

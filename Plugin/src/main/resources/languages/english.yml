@@ -144,6 +144,7 @@ inventory.item.go_back: "§7Go back"
 item.play_again: "§6§lPLAY AGAIN"
 item.settings: "§aSettings"
 item.teleporter: "§aTeleporter"
+item.hat.q_to_remove: "§7Press Q to unequip"
 
 
 #Kill Messages
@@ -250,6 +251,7 @@ chat.kit.default_kit.select: " §aYou have saved kit #71c900%kit% §aas your 
 chat.team.join: " §aYou joined to team #71c900%team%"
 chat.quests.completed: " §a%type% Quest Completed! §7(%description%)"
 chat.quests.started: " §aStarted %type% Quest: #71c900%name%"
+chat.achievements.unlocked: " §aAchievement Unlocked: #71c900%name%"
 
 chat.kit.activated: "Ẁ #36dbe4Kit #09a8af%kit% #36dbe4activated! §c(- #df1c1c%price% §c%economy_name%)"
 chat.kit.activated_vip: "Ẁ #36dbe4Kit #09a8af%kit% #36dbe4activated! §a(Saved: #71c900%saved% §a%economy_name%)"

@@ -15,6 +15,7 @@ import cz.johnslovakia.gameapi.datastorage.PlayerTable;
 import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.guis.KitInventoryEditor;
 import cz.johnslovakia.gameapi.serverManagement.gameData.GameDataManager;
+import cz.johnslovakia.gameapi.users.achievements.AchievementManager;
 import cz.johnslovakia.gameapi.users.resources.ResourceInterface;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
 import cz.johnslovakia.gameapi.game.perk.PerkManager;
@@ -64,6 +65,8 @@ public class GameAPI extends JavaPlugin {
     private StatsManager statsManager;
     @Setter
     private QuestManager questManager;
+    @Setter
+    private AchievementManager achievementManager;
 
 
     private String version;
@@ -183,7 +186,7 @@ public class GameAPI extends JavaPlugin {
         if (worldsToDelete != null) {
             for (File worldFolder : worldsToDelete) {
                 if (worldFolder.getName().toLowerCase().contains("world") || worldFolder.getName().toLowerCase().contains("nether")) continue;
-                Bukkit.getLogger().info("Deleting world folder: " + worldFolder.getName());
+                Logger.log("Deleting world folder: " + worldFolder.getName(), Logger.LogType.INFO);
                 if (Bukkit.getWorld(worldFolder.getName()) != null){
                     Bukkit.unloadWorld(worldFolder.getName(), false);
                 }
@@ -234,7 +237,7 @@ public class GameAPI extends JavaPlugin {
         }
 
         try {
-            Bukkit.getLogger().log(Level.INFO, "Creating language files...");
+            Bukkit.getLogger().log(Level.INFO, "Processing language files...");
 
             for (InputStreamWithName is : minigame.getLanguageFiles()) {
                 long startTime = System.currentTimeMillis();
@@ -267,10 +270,8 @@ public class GameAPI extends JavaPlugin {
                     throw new RuntimeException(e);
                 }
 
-                Bukkit.getLogger().log(Level.INFO, "Language file " + name + " created (" + (System.currentTimeMillis() - startTime) + "ms)");
                 loadMessagesFromFile(mainFile);
-
-
+                Bukkit.getLogger().log(Level.INFO, "Processing of language file " + name + " completed (" + (System.currentTimeMillis() - startTime) + "ms)");
             }
         } catch (IOException e) {
             Logger.log("Something went wrong when retrieving messages! The following message is for Developers: ", Logger.LogType.ERROR);
@@ -287,7 +288,6 @@ public class GameAPI extends JavaPlugin {
             somethingwrong = true;
         }
 
-
         minigame.setupPlayerScores();
 
 
@@ -295,7 +295,6 @@ public class GameAPI extends JavaPlugin {
         PlayerTable playerTable = new PlayerTable();
 
         try{
-
             minigameTable.createTable();
             playerTable.createTable();
             if (minigame.getServerDataMySQL() != null){

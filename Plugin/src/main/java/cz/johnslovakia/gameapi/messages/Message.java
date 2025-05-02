@@ -8,11 +8,13 @@ import cz.johnslovakia.gameapi.utils.StringUtils;
 import cz.johnslovakia.gameapi.utils.Utils;
 import lombok.Getter;
 import lombok.Setter;
+import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.chat.ComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
@@ -43,6 +45,9 @@ public class Message {
                 return;
             }
             String msg = MessageManager.getMessages(key).get(language);
+            if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null && msg.contains("%")) {
+                PlaceholderAPI.setPlaceholders(recipient.getOnlinePlayer(), msg);
+            }
             messages.put(recipient, Objects.requireNonNullElseGet(msg, () -> "§cNo translation found for message key: " + key + " (Language: " + language.getName() + ")"));
         }
     }

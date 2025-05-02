@@ -4,6 +4,8 @@ import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.datastorage.*;
 import cz.johnslovakia.gameapi.messages.MessageManager;
+import cz.johnslovakia.gameapi.users.achievements.Achievement;
+import cz.johnslovakia.gameapi.users.achievements.PlayerAchievementData;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
@@ -29,7 +31,6 @@ import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.boss.BossBar;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -65,6 +66,8 @@ public class PlayerData {
     private InventoryManager currentInventory;
 
     private List<PlayerQuestData> questData = new ArrayList<>();
+
+    private List<PlayerAchievementData> achievementData = new ArrayList<>();
 
     private Map<Perk, Integer> perksLevel = new HashMap<>();
 
@@ -119,6 +122,7 @@ public class PlayerData {
                 loadCosmetics();
                 loadPerks();
                 loadQuests();
+                loadAchievements();
 
                 if (GameAPI.getInstance().getQuestManager() != null) {
                     GameAPI.getInstance().getQuestManager().check(gamePlayer);
@@ -304,6 +308,73 @@ public class PlayerData {
         }
     }
 
+    private void loadAchievements(){
+        if (GameAPI.getInstance().getAchievementManager() == null){
+            return;
+        }
+
+        Minigame minigame = GameAPI.getInstance().getMinigame();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
+
+        Optional<Row> result = connection.select()
+                .from(minigame.getMinigameTable().getTableName())
+                .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
+                .obtainOne();
+        if (!result.isPresent()) {
+            Logger.log("I can't get achievements data for player " + gamePlayer.getOnlinePlayer().getName() + ". (1)", Logger.LogType.ERROR);
+            gamePlayer.getOnlinePlayer().sendMessage("Can't get your achievements data. Sorry for the inconvenience. (1)");
+        }else {
+            try{
+                String jsonString = result.get().getString("Achievements");
+                if (jsonString != null) {
+                    JSONObject jsonObject = new JSONObject(jsonString);
+
+                    JSONArray achievementsArray = jsonObject.getJSONArray("Achievements");
+
+                    for (int i = 0; i < achievementsArray.length(); i++) {
+                        JSONObject achievementObject = achievementsArray.getJSONObject(i);
+                        String name = achievementObject.getString("name");
+                        PlayerAchievementData.Status status = PlayerAchievementData.Status.valueOf(achievementObject.getString("status").toUpperCase());  // "LOCKED", "UNLOCKED"
+                        int progress = achievementObject.getInt("progress");
+
+                        Achievement achievement = GameAPI.getInstance().getAchievementManager().getAchievement(name);
+                        if (achievement == null){
+                            continue;
+                        }
+
+                        PlayerAchievementData achievementData;
+                        if (status.equals(PlayerAchievementData.Status.UNLOCKED)) {
+                            achievementData = new PlayerAchievementData(achievement, gamePlayer, PlayerAchievementData.Status.UNLOCKED);
+                        }else{
+                            achievementData = new PlayerAchievementData(achievement, gamePlayer, progress);
+                        }
+                        if (progress >= achievement.getCompletionGoal() && status != PlayerAchievementData.Status.UNLOCKED){
+                            Bukkit.getLogger().log(Level.WARNING, "Achievement data is incorrectly stored in the database. Status: " + status.name() + " Progress: " + progress + " Completion goal: " + achievement.getCompletionGoal() + " Achievement Name: " + achievement.getDisplayName());
+                            achievementData.setStatus(PlayerAchievementData.Status.UNLOCKED);
+                        }
+
+                        getAchievementData().add(achievementData);
+                    }
+                }
+            } catch (Exception exception) {
+                Logger.log("I can't get achievements data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
+                gamePlayer.getOnlinePlayer().sendMessage("Can't get your achievements data. Sorry for the inconvenience. (2)");
+                exception.printStackTrace();
+            }
+        }
+    }
+
+    public List<PlayerAchievementData> getAchievementsDataByStatus(PlayerAchievementData.Status status){
+        PlayerData playerData = gamePlayer.getPlayerData();
+
+        return playerData.getAchievementData().stream().filter(a -> a.getStatus().equals(status)).toList();
+    }
+
+    public Optional<PlayerAchievementData> getAchievementData(Achievement achievement){
+        return getAchievementData().stream().filter(a -> a.getAchievement().equals(achievement)).findFirst();
+    }
+
+
     public void setPerkLevel(Perk perk, int level){
         perksLevel.put(perk, level);
     }
@@ -469,8 +540,10 @@ public class PlayerData {
     }
 
     public void saveAll(){
+        //TODO: změna jen, když se něco změní?
         saveCosmetics();
         saveQuests();
+        saveAchievements();
         savePerks();
         saveKitInventories();
 
@@ -527,6 +600,23 @@ public class PlayerData {
             if (!questsResult.isSuccessful()) {
                 Logger.log("Something went wrong when saving quests data! The following message is for Developers: ", Logger.LogType.ERROR);
                 Logger.log(questsResult.getRejectMessage(), Logger.LogType.ERROR);
+            }
+        }
+    }
+
+    public void saveAchievements(){
+        Minigame minigame = GameAPI.getInstance().getMinigame();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
+
+        if (GameAPI.getInstance().getAchievementManager() != null) {
+            QueryResult achievementsResult = connection.update()
+                    .table(minigame.getMinigameTable().getTableName())
+                    .set("Achievements", AchievementsStorage.toJSON(getGamePlayer()).toString())
+                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .execute();
+            if (!achievementsResult.isSuccessful()) {
+                Logger.log("Something went wrong when saving achievements data! The following message is for Developers: ", Logger.LogType.ERROR);
+                Logger.log(achievementsResult.getRejectMessage(), Logger.LogType.ERROR);
             }
         }
     }

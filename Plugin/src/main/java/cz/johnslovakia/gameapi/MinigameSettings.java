@@ -28,6 +28,7 @@ public class MinigameSettings {
     private boolean enabledJoiningAfterStart = false;
     private boolean enabledMovementInPreparation = false;
     private boolean allowDefaultKitSelection = true;
+    private boolean canDropCosmeticHat = false;
 
     private int maxPlayers = 16;
     private int minPlayers = 12;

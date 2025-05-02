@@ -85,9 +85,8 @@ public class Game {
 
         while (this.ID == null || GameManager.isDuplicate(this.ID)){
             this.ID = StringUtils.randomString(6, true, true, false);
-            GameManager.addID(this.ID);
         }
-
+        GameManager.addID(this.ID);
     }
 
     public void finishSetup(){
@@ -156,8 +155,10 @@ public class Game {
 
             String oldTitle = StringUtils.colorizer(bossBar.getTitle());
             if (!oldTitle.isEmpty()) {
-                int oldParticipantsSize = Integer.parseInt(oldTitle.replaceAll("§[0-9a-fA-Fk-or]", "").split("\\(")[1].split("/")[0]);
-                chatColor = (oldParticipantsSize != getParticipants().size() ? (getParticipants().size() > oldParticipantsSize ? ChatColor.YELLOW : ChatColor.RED) : ChatColor.WHITE);
+                try{
+                    int oldParticipantsSize = Integer.parseInt(oldTitle.replaceAll("§[0-9a-fA-Fk-or]", "").replaceAll(" ", "").split("\\(")[1].split("/")[0]);
+                    chatColor = (oldParticipantsSize != getParticipants().size() ? (getParticipants().size() > oldParticipantsSize ? ChatColor.YELLOW : ChatColor.RED) : ChatColor.WHITE);
+                }catch (Exception ignored){}
             }
 
             bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.waiting_for_players")
@@ -185,8 +186,6 @@ public class Game {
 
         if (getState().equals(GameState.WAITING)
                 || getState().equals(GameState.STARTING)){
-
-
             if (getPlayers().size() >= settings.getMaxPlayers()) {
                 if (player.hasPermission("game.joinfullserver")){
                     boolean joined = false;
@@ -530,6 +529,9 @@ public class Game {
                     }
 
                     newLocation = location.add(RandomUtils.randomInteger(-20, 20), 0,  RandomUtils.randomInteger(-20, 20));
+                    if (newLocation.getWorld() == null){
+                        return;
+                    }
                     newLocation = newLocation.getWorld().getHighestBlockAt(newLocation).getLocation();
                     newLocation = newLocation.add(0, RandomUtils.randomInteger(5, 10), 0);
 
