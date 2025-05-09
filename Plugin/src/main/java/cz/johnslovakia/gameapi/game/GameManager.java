@@ -118,7 +118,8 @@ public class GameManager {
 
 
         Game newGame = new Game(game.getName(), game.getLobbyInventory(), game.getLobbyPoint());
-        game.getTeamManager().resetTeamsAndRegisterForNewGame(newGame);
+        if (game.getTeamManager() != null)
+            game.getTeamManager().resetTeamsAndRegisterForNewGame(newGame);
 
         newGame.setMapManager(game.getMapManager());
         game.getMapManager().setVoting(true);
@@ -141,6 +142,8 @@ public class GameManager {
                 if (gamePlayer.getOnlinePlayer().isOnline()) {
                     players.add(player);
                 }
+                gamePlayer.getPlayerData().flushSomeData();
+                gamePlayer.getPlayerData().setGame(null);
                 PlayerManager.removeGamePlayer(player);
             }
         }

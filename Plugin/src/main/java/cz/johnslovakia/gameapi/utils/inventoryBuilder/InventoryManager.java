@@ -181,7 +181,6 @@ public class InventoryManager implements Listener {
         }
         inventory.setHeldItemSlot(holdItemSlot);
         PlayerManager.getGamePlayer(player).getPlayerData().setCurrentInventory(this);
-        player.updateInventory();
     }
 
     public void unloadInventory(Player p) {

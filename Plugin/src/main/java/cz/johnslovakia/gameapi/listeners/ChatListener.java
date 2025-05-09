@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.StringUtils;
+import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
@@ -30,7 +31,6 @@ public class ChatListener implements Listener {
 
         String word_all = MessageManager.get(gamePlayer, "word.all_chat").getTranslated();
         String word_team = MessageManager.get(gamePlayer, "word.team_chat").getTranslated();
-
 
         String prefix = "";
         String suffix = "";

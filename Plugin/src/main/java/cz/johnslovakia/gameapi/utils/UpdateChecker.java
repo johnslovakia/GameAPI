@@ -56,7 +56,7 @@ public class UpdateChecker {
                     }
                 }
             } else {
-                System.out.println("Failed to check the version. HTTP code: " + connection.getResponseCode());
+                Bukkit.getLogger().log(Level.WARNING, "Failed to check the version. HTTP code: " + connection.getResponseCode());
             }
 
             connection.disconnect();

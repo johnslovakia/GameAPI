@@ -229,7 +229,7 @@ public class PlayerDeathListener implements Listener {
             new BukkitRunnable(){
                 @Override
                 public void run() {
-                    List<PlayerScore> stats = PlayerManager.getScoresByPlayer(gamePlayer).stream().filter(s -> s.getScore() != 0 && s.getStat() != null).toList();
+                    List<PlayerScore> stats = gamePlayer.getPlayerData().getScores().stream().filter(s -> s.getScore() != 0 && s.getStat() != null).toList();
 
                     if (game.getState().equals(GameState.INGAME) && !stats.isEmpty()) {
                         TextComponent message = new TextComponent(MessageManager.get(gamePlayer, "chat.view_statistic").getTranslated());

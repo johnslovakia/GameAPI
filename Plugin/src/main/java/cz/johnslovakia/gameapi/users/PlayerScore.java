@@ -7,6 +7,7 @@ import cz.johnslovakia.gameapi.events.PlayerScoreEvent;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.stats.Stat;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 import cz.johnslovakia.gameapi.utils.rewards.Reward;
@@ -29,7 +30,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
     private final String pluralName;
     private String displayName;
     private final String name;
-    private GamePlayer gamePlayer;
+    private final GamePlayer gamePlayer;
     @Setter
     private int score = 0;
     private final int rewardLimit;
@@ -53,11 +54,6 @@ public class PlayerScore implements Comparable<PlayerScore> {
         this.stat = builder.getStat();
         this.rewardLimit = builder.getLimit();
 
-        if (reward != null) {
-            reward.setConsumer(item -> addEarning(item.getResource(), item.getAmount()));
-        }
-
-
         if (builder.getTriggers() != null){
             this.triggers = builder.getTriggers();
 
@@ -80,7 +76,8 @@ public class PlayerScore implements Comparable<PlayerScore> {
             getStat().getPlayerStat(getGamePlayer()).increase();
         }
         if (reward && this.reward != null) {
-            getReward().applyReward(gamePlayer, isAllowedMessage());
+            Reward.PlayerRewardRecord record = getReward().applyReward(gamePlayer, isAllowedMessage());
+            record.earned().forEach(this::addEarning);
         }
     }
 
@@ -106,7 +103,8 @@ public class PlayerScore implements Comparable<PlayerScore> {
             }
 
             if (this.reward != null){
-                getReward().applyReward(gamePlayer, isAllowedMessage());
+                Reward.PlayerRewardRecord record = getReward().applyReward(gamePlayer, isAllowedMessage());
+                record.earned().forEach(this::addEarning);
             }
         }
     }
@@ -172,6 +170,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
         return this;
     }
 
+
     private boolean checkConditions(GamePlayer target) {
         boolean result = true;
         boolean alternativeResult = false;
@@ -209,7 +208,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
             Class<? extends Event> clazz = trigger.getEventClass();
             if(clazz.equals(event.getClass())){
                 if(!trigger.validate(clazz.cast(event))) continue;
-                GamePlayer gamePlayer = trigger.compute(clazz.cast(event)).stream().filter(g -> g.equals(getGamePlayer())).findFirst().orElse(null);
+                GamePlayer gamePlayer = trigger.compute(clazz.cast(event)).stream().filter(g -> g == getGamePlayer()).findFirst().orElse(null);
                 if (gamePlayer != null) {
                     if (checkConditions(gamePlayer)) {
                         if (trigger.getResponse() != null) {

@@ -4,6 +4,7 @@ import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.resources.Resource;
+import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;
@@ -21,7 +22,6 @@ import java.util.function.Consumer;
 public class Reward {
 
     private final List<RewardItem> rewardItems = new ArrayList<>();
-    private Consumer<RewardItem> consumer;
 
     private String forWhat = null;
     private String linkedMessageKey;
@@ -51,20 +51,21 @@ public class Reward {
         }
     }
 
-    public void applyReward(GamePlayer gamePlayer){
-        applyReward(gamePlayer, true);
+    public PlayerRewardRecord applyReward(GamePlayer gamePlayer){
+        return applyReward(gamePlayer, true);
     }
 
-    public void applyReward(GamePlayer gamePlayer, boolean sendMessage) {
+    public PlayerRewardRecord applyReward(GamePlayer gamePlayer, boolean sendMessage) {
         Lock lock = getPlayerLock(gamePlayer);
+        Map<Resource, Integer> earned = new HashMap<>();
 
         boolean atleastOneApplied = false;
         for (RewardItem item : getRewardItems()) {
-            if (!item.shouldApply() || item.getAmount() == 0) {
+            int amount = item.getAmount();
+            if (!item.shouldApply() || amount == 0) {
                 continue;
-            }
-            if (consumer != null) {
-                consumer.accept(item);
+            }else{
+                earned.put(item.getResource(), amount);
             }
             atleastOneApplied = true;
         }
@@ -75,14 +76,15 @@ public class Reward {
                 sendMessage(gamePlayer);
             }
 
-
             lock.lock();
             try {
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        for (RewardItem item : getRewardItems()) {
-                            item.getResource().getResourceInterface().deposit(gamePlayer, item.getAmount());
+                        for (Resource resource : earned.keySet()) {
+                            int amount = earned.get(resource);
+                            resource.getResourceInterface().deposit(gamePlayer, amount);
+                            earned.put(resource, amount);
                         }
                         Bukkit.getScheduler().runTask(GameAPI.getInstance(), task -> lock.unlock());
                     }
@@ -92,6 +94,8 @@ public class Reward {
                 e.printStackTrace();
             }
         }
+
+        return new PlayerRewardRecord(earned);
     }
 
     public void sendMessage(GamePlayer gamePlayer){
@@ -129,5 +133,7 @@ public class Reward {
                     .send();
         }
     }
+
+    public record PlayerRewardRecord(Map<Resource, Integer> earned){}
 }
 

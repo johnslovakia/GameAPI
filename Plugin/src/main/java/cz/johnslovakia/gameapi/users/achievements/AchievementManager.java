@@ -2,11 +2,15 @@ package cz.johnslovakia.gameapi.users.achievements;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 
+import cz.johnslovakia.gameapi.utils.rewards.Reward;
+import cz.johnslovakia.gameapi.utils.rewards.RewardItem;
 import lombok.Getter;
 
+import org.bukkit.ChatColor;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -21,9 +25,11 @@ public class AchievementManager {
 
     private final String name;
     private final List<Achievement> achievements = new ArrayList<>();
+    private final Resource resource;
 
     public AchievementManager(String name) {
         this.name = name;
+        this.resource = new Resource("Points", ChatColor.YELLOW, 5, true, true);
     }
 
     public void registerAchievement(Achievement... achievements){

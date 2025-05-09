@@ -139,6 +139,8 @@ public class Game {
         animationTick = (animationTick + 1) % dotPatterns.length;
 
         String dots = dotPatterns[animationTick];*/
+        if (!getState().equals(GameState.WAITING))
+            return;
 
         for (GamePlayer gamePlayer : getParticipants()){
             BossBar bossBar = (BossBar) gamePlayer.getMetadata().get("bossbar.waiting_for_players");
@@ -158,6 +160,8 @@ public class Game {
                 try{
                     int oldParticipantsSize = Integer.parseInt(oldTitle.replaceAll("§[0-9a-fA-Fk-or]", "").replaceAll(" ", "").split("\\(")[1].split("/")[0]);
                     chatColor = (oldParticipantsSize != getParticipants().size() ? (getParticipants().size() > oldParticipantsSize ? ChatColor.YELLOW : ChatColor.RED) : ChatColor.WHITE);
+                    if (chatColor != ChatColor.WHITE)
+                        Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> updateWaitingForPlayersBossBar(), 30L);
                 }catch (Exception ignored){}
             }
 
@@ -218,6 +222,7 @@ public class Game {
 
             getParticipants().add(gamePlayer);
             gamePlayer.getPlayerData().setGame(this);
+            Bukkit.getScheduler().runTaskAsynchronously(GameAPI.getInstance(), task -> gamePlayer.getPlayerData().loadKits());
 
             if (serverDataManager != null) {
                 serverDataManager.getJSONProperty("Players").update(this, getParticipants().size());
@@ -233,7 +238,8 @@ public class Game {
                     updateWaitingForPlayersBossBar();
                 }, 0, 30L);
             }*/
-            updateWaitingForPlayersBossBar();
+            if (game.getState().equals(GameState.WAITING))
+                updateWaitingForPlayersBossBar();
 
             Utils.hideAndShowPlayers(gamePlayer);
 
@@ -315,7 +321,6 @@ public class Game {
         if (getState().equals(GameState.INGAME)) {
             getParticipants().add(gamePlayer);
             gamePlayer.getPlayerData().setGame(this);
-
             gamePlayer.setSpectator(true);
 
             GameJoinEvent ev = new GameJoinEvent(this, gamePlayer, GameJoinEvent.JoinType.SPECTATOR);
@@ -388,7 +393,8 @@ public class Game {
             PlayerManager.removeGamePlayer(player);
         }
 
-        updateWaitingForPlayersBossBar();
+        if (game.getState().equals(GameState.WAITING))
+            updateWaitingForPlayersBossBar();
         checkArenaFullness();
     }
 
@@ -407,15 +413,16 @@ public class Game {
                     Task.cancel(this, "StartCountdown");
                 }
 
-                for (GameMap a : getMapManager().getMaps()) {
-                    if (!a.isIngame()) continue;
-                    if (!settings.isChooseRandomMap()) {
+                if (!settings.isChooseRandomMap()) {
+                    for (GameMap a : getMapManager().getMaps()) {
+                        if (!a.isIngame()) continue;
                         a.setWinned(false);
                     }
+                    getMapManager().setVoting(true);
                 }
-                getMapManager().setVoting(true);
                 MessageManager.get(getParticipants(), "chat.not_enough_players")
                         .send();
+                updateWaitingForPlayersBossBar();
             }
         }
     }
@@ -425,11 +432,10 @@ public class Game {
         Task.cancelAll(this);
 
         String rankingScore = "kills";
-        for (List<PlayerScore> scoreList : PlayerManager.getPlayerScores().values()) {
-            for (PlayerScore score : scoreList) {
-                if (score.isScoreRanking()){
-                    rankingScore = score.getName();
-                }
+        for (PlayerManager.Score score : PlayerManager.getScores()) {
+            if (score.isScoreRanking()){
+                rankingScore = score.getName();
+                break;
             }
         }
         Map<GamePlayer, Integer> ranking =  Utils.getTopPlayers(this, rankingScore, 3);
@@ -597,7 +603,7 @@ public class Game {
         new BukkitRunnable(){
             @Override
             public void run() {
-                sendTopPlayers(ranking, finalRankingScore);
+                sendTopPlayers(finalRankingScore);
             }
         }.runTaskLater(GameAPI.getInstance(), 10L);
 
@@ -606,21 +612,21 @@ public class Game {
             public void run() {
                 sendRewardSummary();
 
-                for (GamePlayer gp : oldWinstreaks.keySet()) {
-                    Player player = gp.getOnlinePlayer();
+                for (GamePlayer gamePlayer : oldWinstreaks.keySet()) {
+                    Player player = gamePlayer.getOnlinePlayer();
 
                     if (winner != null) {
-                        MessageManager.get(gp, "chat.winstreak")
-                                .replace("%old_winstreak%", "" + oldWinstreaks.get(gp))
-                                .replace("%new_winstreak%", (gp.getPlayerData().getStat("Winstreak").getStatScore() == 0 ? "§c" : "§a") + gp.getPlayerData().getStat("Winstreak").getStatScore())
+                        MessageManager.get(gamePlayer, "chat.winstreak")
+                                .replace("%old_winstreak%", "" + oldWinstreaks.get(gamePlayer))
+                                .replace("%new_winstreak%", (gamePlayer.getPlayerData().getStat("Winstreak").getStatScore() == 0 ? "§c" : "§a") + gamePlayer.getPlayerData().getStat("Winstreak").getStatScore())
                                 .send();
                     }
 
 
-                    List<PlayerScore> stats = PlayerManager.getScoresByPlayer(gp).stream().filter(s -> s.getScore() != 0 && s.getStat() != null).toList();
+                    List<PlayerScore> stats = gamePlayer.getPlayerData().getScores().stream().filter(s -> s.getScore() != 0 && s.getStat() != null).toList();
 
                     if (!stats.isEmpty()) {
-                        TextComponent message = new TextComponent(MessageManager.get(gp, "chat.view_statistic").getTranslated());
+                        TextComponent message = new TextComponent(MessageManager.get(gamePlayer, "chat.view_statistic").getTranslated());
 
                         ComponentBuilder b = new ComponentBuilder("");
                         int i = 0;
@@ -641,20 +647,20 @@ public class Game {
         }.runTaskLater(GameAPI.getInstance(), 50L);
     }
 
-    public void sendTopPlayers(Map<GamePlayer, Integer> ranking, String rankingScore){
-        if (ranking.isEmpty()){
+    public void sendTopPlayers(String rankingScore){
+        Map<GamePlayer, Integer> fullRanking =  Utils.getTopPlayers(this, rankingScore, getSettings().getMaxPlayers());
+        if (fullRanking.isEmpty()){
             return;
         }
-
-        Map<GamePlayer, Integer> fullRanking =  Utils.getTopPlayers(this, rankingScore, getSettings().getMaxPlayers());
 
         for (GamePlayer gamePlayer : getParticipants()) {
             Player player = gamePlayer.getOnlinePlayer();
 
             MessageManager.get(gamePlayer, "chat.top3players.title").send();
 
-            for (GamePlayer pos : ranking.keySet()) {
-                int position = ranking.get(pos);
+            int i = 1;
+            for (GamePlayer pos : fullRanking.keySet()) {
+                int position = fullRanking.get(pos);
                 MessageManager.get(gamePlayer, "chat.top3players.position")
                         .replace("%position%", "" + position)
                         .replace("%player_head%", ChatHeadAPI.getInstance().getHeadAsString(pos.getOfflinePlayer()))
@@ -662,6 +668,9 @@ public class Game {
                         .replace("%score%", "" + pos.getScoreByName(rankingScore).getScore())
                         .replace("%ranking_score_name%", rankingScore)
                         .send();
+                i++;
+                if (i > 3)
+                    break;
             }
 
             player.sendMessage("");
@@ -732,59 +741,56 @@ public class Game {
             if (!ResourcesManager.earnedSomething(gamePlayer)){
                 MessageManager.get(gamePlayer, "chat.rewardsummary.no_rewards")
                         .send();
-                continue;
-            }
+                player.sendMessage("");
+            }else{
+                gamePlayer.getOnlinePlayer().playSound(player, "custom:gamebonus", 0.8F, 1F);
 
-            gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "custom:gamebonus", 0.8F, 1F);
+                for (Resource type : GameAPI.getInstance().getMinigame().getEconomies()) {
+                    int earned = ResourcesManager.getEarned(gamePlayer, type);
+                    if (earned > 0) {
+                        TextComponent message = new TextComponent("  §7• " + (type.getImg_char() != null ? type.getImg_char() : "") + " " + type.getChatColor() + earned + " §7" + type.getName());
+                        ComponentBuilder b = new ComponentBuilder("");
 
-            for (Resource type : GameAPI.getInstance().getMinigame().getEconomies()) {
-                int earned = ResourcesManager.getEarned(gamePlayer, type);
-                if (earned > 0) {
+                        List<PlayerScore> scoreList = gamePlayer.getPlayerData().getScores();
 
-                    TextComponent message = new TextComponent("  §7• " + (type.getImg_char() != null ? type.getImg_char() : "") + " " + type.getChatColor() + earned + " §7" + type.getName());
-                    ComponentBuilder b = new ComponentBuilder("");
-
-                    List<PlayerScore> scoreList = PlayerManager.getScoresByPlayer(gamePlayer);
-
-                    int i = 0;
-                    for (PlayerScore score : scoreList) {
-                        if (score.getGamePlayer() == gamePlayer && score.getScore() != 0 && score.getEarned(type) != 0) {
-                            b.append(type.getChatColor() + "+" + score.getEarned(type) + ChatColor.GRAY + " (" + (score.getScore() > 1 ? score.getScore() + " " : "") + score.getDisplayName(true)/*(!(score.getDisplayName().endsWith("s")) ? score.getDisplayName() : score.getDisplayName().substring(0, score.getDisplayName().length() - 1))*/ + ")");
-                            i++;
-                            if (i < scoreList.size() - 1) {
-                                b.append("\n");
+                        int i = 0;
+                        for (PlayerScore score : scoreList) {
+                            if (score.getGamePlayer() == gamePlayer && score.getScore() != 0 && score.getEarned(type) != 0) {
+                                b.append(type.getChatColor() + "+" + score.getEarned(type) + ChatColor.GRAY + " (" + (score.getScore() > 1 ? score.getScore() + " " : "") + score.getDisplayName(true)/*(!(score.getDisplayName().endsWith("s")) ? score.getDisplayName() : score.getDisplayName().substring(0, score.getDisplayName().length() - 1))*/ + ")");
+                                i++;
+                                if (i < scoreList.size() - 1) {
+                                    b.append("\n");
+                                }
                             }
                         }
-                    }
 
-                    message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));
-                    gamePlayer.getOnlinePlayer().spigot().sendMessage(message);
+                        message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, b.create()));
+                        gamePlayer.getOnlinePlayer().spigot().sendMessage(message);
 
+                        Resource mainResource = GameAPI.getInstance().getMinigame().getEconomies().stream().filter(e -> e.getRank() == 1).toList().get(0);
 
-                    Resource mainResource = GameAPI.getInstance().getMinigame().getEconomies().stream().filter(e -> e.getRank() == 1).toList().get(0);
+                        if (mainResource != null && mainResource == type) {
+                            List<Integer> percentages = Arrays.asList(50, 45, 40, 35, 30, 25, 20, 15, 10, 5);
 
-                    if (mainResource != null && mainResource == type) {
-                        List<Integer> percentages = Arrays.asList(50, 45, 40, 35, 30, 25, 20, 15, 10, 5);
-
-                        for (Integer percent : percentages) {
-                            if (gamePlayer.getOnlinePlayer().hasPermission("vip.bonus" + percent)){
-                                int coins = (int) (((double) earned * (double) percent) / (double) 100);
-                                if (coins != 0) {
-                                    mainResource.getResourceInterface().deposit(gamePlayer, coins);
-                                    MessageManager.get(gamePlayer, "chat.rewardsummary.bonus")
-                                            .replace("%economy_color%", "" + mainResource.getChatColor())
-                                            .replace("%reward%", "" + coins)
-                                            .replace("%economy_name%", mainResource.getName())
-                                            .replace("%bonus%", "" + percent)
-                                            .send();
-                                    break;
+                            for (Integer percent : percentages) {
+                                if (gamePlayer.getOnlinePlayer().hasPermission("vip.bonus" + percent)){
+                                    int coins = (int) (((double) earned * (double) percent) / (double) 100);
+                                    if (coins != 0) {
+                                        mainResource.getResourceInterface().deposit(gamePlayer, coins);
+                                        MessageManager.get(gamePlayer, "chat.rewardsummary.bonus")
+                                                .replace("%economy_color%", "" + mainResource.getChatColor())
+                                                .replace("%reward%", "" + coins)
+                                                .replace("%economy_name%", mainResource.getName())
+                                                .replace("%bonus%", "" + percent)
+                                                .send();
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-
             player.sendMessage("");
         }
     }

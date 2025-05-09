@@ -4,10 +4,10 @@ import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
-import cz.johnslovakia.gameapi.users.quests.PlayerQuestData;
-import cz.johnslovakia.gameapi.users.quests.QuestType;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 import cz.johnslovakia.gameapi.utils.rewards.Reward;
+
+import cz.johnslovakia.gameapi.utils.rewards.RewardItem;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -20,7 +20,8 @@ public interface Achievement {
     default String getDisplayName(){
         return getName();
     }
-    Reward getReward();
+    int getPoints();
+    //Map<int> getStages(); //je i tam dole zakomentovany complete
     int getCompletionGoal();
     Set<Trigger<?>> getTriggers();
 
@@ -44,7 +45,8 @@ public interface Achievement {
                         .replace("%name%", getName())
                         .replace("%description%", MessageManager.get(player, getTranslationKey()).getTranslated())
                         .getTranslated());
-                getReward().applyReward(gamePlayer);
+
+                new Reward(new RewardItem("Points", getPoints())).applyReward(gamePlayer);
             }
         }.runTaskLater(GameAPI.getInstance(), 1L);
     }
@@ -58,7 +60,7 @@ public interface Achievement {
         PlayerAchievementData achievementData = playerData.getAchievementData(this).get();
 
         achievementData.increaseProgress();
-        if (achievementData.getProgress() >= getCompletionGoal())
+        //if (achievementData.getProgress() >= getCompletionGoal())
             complete(gamePlayer);
     }
 

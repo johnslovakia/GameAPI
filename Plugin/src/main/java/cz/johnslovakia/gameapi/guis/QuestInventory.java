@@ -19,6 +19,9 @@ import me.zort.containr.GUI;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Comparator;
+import java.util.List;
+
 public class QuestInventory {
 
     private static ItemStack getEditedItem(GamePlayer gamePlayer, Quest quest){
@@ -92,8 +95,12 @@ public class QuestInventory {
                     }).build());
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
 
+                    List<Quest> sorted = data.getQuests().stream()
+                            .sorted(Comparator.comparing(q -> q.getType() == QuestType.WEEKLY))
+                            .toList();
+
                     int slot = 11;
-                    for (Quest quest : data.getQuests()) {
+                    for (Quest quest : sorted) {
                         Element element = Component.element(getEditedItem(gamePlayer, quest)).addClick(i -> {
                             if (data.getQuestData(quest).isCompleted()){
                                 MessageManager.get(player, "chat.quests.already_completed")

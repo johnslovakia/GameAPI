@@ -55,6 +55,7 @@ public class PlayerData {
     private BossBar currentBossBar;
     private KillMessage killMessage;
 
+    private List<PlayerScore> scores = new ArrayList<>();
     private List<GameMap> votesForMaps = new ArrayList<>();
 
     private Map<CosmeticsCategory, Cosmetic> selectedCosmetics = new HashMap<>();
@@ -118,7 +119,7 @@ public class PlayerData {
         new BukkitRunnable(){
             @Override
             public void run() {
-                loadKits();
+                //loadKits(); //Přesunuto do Game, protože to zavísí na Game
                 loadCosmetics();
                 loadPerks();
                 loadQuests();
@@ -137,6 +138,23 @@ public class PlayerData {
         kit = defaultKit;
         currentInventory = null;
         votesForMaps.clear();
+    }
+
+
+    public void addPlayerScore(PlayerManager.Score score){
+        boolean exists = scores.stream()
+                .anyMatch(ps -> ps.getName().equalsIgnoreCase(score.getName()));
+
+        if (!exists)
+            scores.add(new PlayerScore(gamePlayer, score));
+    }
+
+    public void addPlayerScore(PlayerScore playerScore){
+        boolean exists = scores.stream()
+                .anyMatch(ps -> ps.getName().equalsIgnoreCase(playerScore.getName()));
+
+        if (!exists)
+            scores.add(playerScore);
     }
 
     public Inventory getKitInventory(Kit kit){
@@ -435,7 +453,7 @@ public class PlayerData {
         kitInventories.put(kit, inventory);
     }
 
-    private void loadKits(){
+    public void loadKits(){
         if (game == null){
             return;
         }

@@ -6,6 +6,7 @@ import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.chat.ComponentSerializer;
 import org.apache.commons.lang.WordUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
@@ -18,6 +19,7 @@ import java.awt.*;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
@@ -572,7 +574,7 @@ public class StringUtils {
                     value -= times * advanceValue;
                 }
             } else {
-                System.out.println("Warning: advanceValue is zero for symbol: " + symbol);
+                Bukkit.getLogger().log(Level.WARNING, "AdvanceValue is zero for symbol: " + symbol);
             }
         }
 

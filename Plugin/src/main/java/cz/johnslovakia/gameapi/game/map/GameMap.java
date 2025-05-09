@@ -205,7 +205,7 @@ public class GameMap {
                 WorldManager.loadArenaWorld(this, game);
             }
         }else{
-            if (getWorld() != null) {
+            if (getWorld() != null && settings.isLoadWorldWithGameAPI()) {
                 try {
                     WorldManager.unload(this);
                 }catch (Exception e){

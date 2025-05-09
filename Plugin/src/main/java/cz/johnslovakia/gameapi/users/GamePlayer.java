@@ -45,7 +45,6 @@ public class GamePlayer extends Winner {
     private PartyInterface party;
 
 
-
     private HashMap<String, Object> metadata = new HashMap<>();
 
     public GamePlayer(OfflinePlayer offlinePlayer){
@@ -185,7 +184,7 @@ public class GamePlayer extends Winner {
 
 
     public PlayerScore getScoreByName(String name) {
-        for (PlayerScore ts : PlayerManager.getScoresByPlayer(this)) {
+        for (PlayerScore ts : getPlayerData().getScores()) {
             if (ts.getName().equalsIgnoreCase(name)) {
                 return ts;
             }
@@ -254,5 +253,18 @@ public class GamePlayer extends Winner {
             }
         }
         return areas;
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof GamePlayer that)) return false;
+        return player.getUniqueId().equals(that.player.getUniqueId());
+    }
+
+    @Override
+    public int hashCode() {
+        return player.getUniqueId().hashCode();
     }
 }

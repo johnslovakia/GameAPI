@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.users;
 
 import cz.johnslovakia.gameapi.users.stats.Stat;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 import cz.johnslovakia.gameapi.utils.rewards.Reward;
 import lombok.Getter;
@@ -9,13 +10,15 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class PlayerManager {
 
     @Getter
-    public static final HashMap<UUID, GamePlayer> playerMap = new HashMap<>();
+    public static final Map<UUID, GamePlayer> playerMap = new ConcurrentHashMap<>();
     @Getter
-    public static final HashMap<Score, List<PlayerScore>> playerScores = new HashMap<>();
+    public static final List<Score> scores = new ArrayList<>();
 
     public static void removeGamePlayer(Player player){
         UUID uuid = player.getUniqueId();
@@ -27,81 +30,30 @@ public class PlayerManager {
     }
 
 
-    public static GamePlayer getGamePlayer(OfflinePlayer player){
-        GamePlayer pl = null;
-        if(playerMap.containsKey(player.getUniqueId())){
-            pl = playerMap.get(player.getUniqueId());
-            boolean isAdded = false;
-            for (List<PlayerScore> ts : playerScores.values()) {
-                for (PlayerScore ts2 : ts) {
-                    if (ts2.getGamePlayer().equals(pl)) {
-                        isAdded = true;
-                        break;
-                    }
-                }
+    public static GamePlayer getGamePlayer(OfflinePlayer player) {
+        UUID uuid = player.getUniqueId();
+        return playerMap.computeIfAbsent(uuid, id -> {
+            GamePlayer gamePlayer = new GamePlayer(player);
+            for (Score score : scores) {
+                gamePlayer.getPlayerData().addPlayerScore(score);
             }
-            if (!isAdded) {
-                for (Score key : playerScores.keySet()) {
-                    playerScores.get(key).add(new PlayerScore(pl, key));
-                }
-            }
-        }else{
-            GamePlayer gpl = new GamePlayer(player);
-            boolean isAdded = false;
-            for (List<PlayerScore> ts : playerScores.values()) {
-                for (PlayerScore ts2 : ts) {
-                    if (ts2.getGamePlayer().equals(gpl)) {
-                        isAdded = true;
-                        break;
-                    }
-                }
-            }
-            if (!isAdded) {
-                for (Score key : playerScores.keySet()) {
-                    playerScores.get(key).add(new PlayerScore(gpl, key));
-                }
-            }
-            playerMap.put(player.getUniqueId(), gpl);
-            pl = gpl;
-        }
-        return pl;
+            return gamePlayer;
+        });
     }
 
-    public static List<PlayerScore> getScoresByName(String scoreName) {
-        if (playerScores.containsKey(scoreName)) return  playerScores.get(scoreName);
-        return null;
-    }
-
-    public static List<PlayerScore> getScoresByPlayer(GamePlayer gp) {
-        List<PlayerScore> pls = new ArrayList<>();
-        for (List<PlayerScore> psl : playerScores.values()) {
-            for (PlayerScore ps : psl) {
-                if (!ps.getGamePlayer().equals(gp)) {
-                    continue;
-                }
-                pls.add(ps);
-            }
-        }
-        return pls;
-    }
 
     public static void registerPlayersScore(Score score){
-        if (playerScores.containsKey(score.getName()))return;
+        scores.add(score);
+        for (GamePlayer gamePlayer : playerMap.values()) {
+            PlayerScore playerScore = new PlayerScore(gamePlayer, score);
 
-        List<PlayerScore> sc = new ArrayList<>();
-        for (GamePlayer gp : playerMap.values()) {
-            PlayerScore ps = new PlayerScore(gp, score);
+            if (score.getStat() != null)
+                playerScore.setStat(score.getStat());
+            if (score.getTriggers() != null)
+                playerScore.setTriggers(score.getTriggers());
 
-            if (score.getStat() != null){
-                ps.setStat(score.getStat());
-            }
-            if (score.getTriggers() != null){
-                ps.setTriggers(score.getTriggers());
-            }
-
-            sc.add(ps);
+            gamePlayer.getPlayerData().addPlayerScore(playerScore);
         }
-        playerScores.put(score, sc);
     }
 
 

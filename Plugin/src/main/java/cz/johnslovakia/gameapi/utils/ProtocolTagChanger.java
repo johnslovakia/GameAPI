@@ -3,12 +3,12 @@ package cz.johnslovakia.gameapi.utils;
 import com.comphenix.protocol.events.*;
 import com.google.common.base.Strings;
 import com.google.gson.JsonParser;
+import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.chat.ComponentSerializer;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
-import org.bukkit.ChatColor;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.event.Listener;
 import org.bukkit.event.EventPriority;
@@ -70,29 +70,64 @@ public class ProtocolTagChanger extends PacketAdapter {
     public String convertToJson(String input, String font) {
         StringBuilder jsonOutput = new StringBuilder();
         StringBuilder currentText = new StringBuilder();
-        ChatColor currentColor = null;
+        String currentColor = null;
+        boolean isBold = false;
+        boolean isItalic = false;
 
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
 
-            if (c == '§' && i + 1 < input.length()) {
-                char colorCode = input.charAt(i + 1);
-                ChatColor color = ChatColor.getByChar(colorCode);
+            /*if (c == '#' && i + 6 < input.length()) {
+                String potentialHex = input.substring(i, i + 7);
+                if (potentialHex.matches("#[a-fA-F0-9]{6}")) {
+                    if (!currentText.isEmpty()) {
+                        appendJsonPart(jsonOutput, currentText.toString(), currentColor, font, isBold, isItalic);
+                        currentText.setLength(0);
+                    }
+                    currentColor = potentialHex;
+                    i += 6;
+                    continue;
+                }
+            }*/
 
+            if ((c == '§' || c == '&') && i + 1 < input.length()) {
+                char code = input.charAt(i + 1);
                 if (!currentText.isEmpty()) {
-                    appendJsonPart(jsonOutput, currentText.toString(), currentColor, font);
+                    appendJsonPart(jsonOutput, currentText.toString(), currentColor, font, isBold, isItalic);
                     currentText.setLength(0);
                 }
 
-                currentColor = color;
+                switch (code) {
+                    case 'r':
+                        currentColor = null;
+                        isBold = false;
+                        isItalic = false;
+                        break;
+                    case 'l':
+                        isBold = true;
+                        break;
+                    case 'o':
+                        isItalic = true;
+                        break;
+                    default:
+                        ChatColor color = ChatColor.getByChar(code);
+                        if (color != null) {
+                            currentColor = color.getName().toLowerCase();
+                            isBold = false;
+                            isItalic = false;
+                        }
+                        break;
+                }
+
                 i++;
-            } else {
-                currentText.append(c);
+                continue;
             }
+
+            currentText.append(c);
         }
 
         if (!currentText.isEmpty()) {
-            appendJsonPart(jsonOutput, currentText.toString(), currentColor, font);
+            appendJsonPart(jsonOutput, currentText.toString(), currentColor, font, isBold, isItalic);
         }
 
         String result = jsonOutput.toString();
@@ -103,13 +138,18 @@ public class ProtocolTagChanger extends PacketAdapter {
         return "[" + result + "]";
     }
 
-    private void appendJsonPart(StringBuilder jsonOutput, String text, ChatColor color, String font) {
+    private void appendJsonPart(StringBuilder jsonOutput, String text, String color, String font, boolean bold, boolean italic) {
         jsonOutput.append("{\"text\":\"")
                 .append(text)
-                .append("\",\"color\":\"")
-                .append(color != null ? color.name().toLowerCase() : "white")
-                .append("\",\"font\":\"")
-                .append(font)
-                .append("\"},");
+                .append("\"");
+
+        if (color != null) {
+            jsonOutput.append(",\"color\":\"").append(color).append("\"");
+        }
+
+        jsonOutput.append(",\"bold\":").append(bold);
+        jsonOutput.append(",\"italic\":").append(italic);
+
+        jsonOutput.append(",\"font\":\"").append(font).append("\"},");
     }
 }

@@ -12,10 +12,13 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.stats.StatsHolograms;
 import cz.johnslovakia.gameapi.utils.ConfigAPI;
 import cz.johnslovakia.gameapi.utils.UpdateChecker;
+
 import me.zort.sqllib.api.data.Row;
+
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
+
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
@@ -23,11 +26,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.Level;
 
 public class JoinQuitListener implements Listener {
 
@@ -81,7 +82,6 @@ public class JoinQuitListener implements Listener {
             if (game.isPresent() && !(game.get().getState().equals(GameState.ENDING))) {
                 game.get().joinPlayer(player);
             } else {
-                PlayerManager.removeGamePlayer(player);
                 GameManager.newArena(player, true);
             }
         }

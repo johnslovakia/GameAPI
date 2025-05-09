@@ -1,23 +1,16 @@
 package cz.johnslovakia.gameapi.messages;
 
 import cz.johnslovakia.gameapi.GameAPI;
-import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.StringUtils;
-import cz.johnslovakia.gameapi.utils.Utils;
+
 import lombok.Getter;
 import lombok.Setter;
-import me.clip.placeholderapi.PlaceholderAPI;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.chat.ComponentSerializer;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 
+import me.clip.placeholderapi.PlaceholderAPI;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 import java.util.*;
 import java.util.function.Function;
@@ -45,8 +38,8 @@ public class Message {
                 return;
             }
             String msg = MessageManager.getMessages(key).get(language);
-            if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null && msg.contains("%")) {
-                PlaceholderAPI.setPlaceholders(recipient.getOnlinePlayer(), msg);
+            if (msg != null && Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null && msg.contains("%")) {
+                msg = PlaceholderAPI.setPlaceholders(recipient.getOnlinePlayer(), msg);
             }
             messages.put(recipient, Objects.requireNonNullElseGet(msg, () -> "§cNo translation found for message key: " + key + " (Language: " + language.getName() + ")"));
         }
