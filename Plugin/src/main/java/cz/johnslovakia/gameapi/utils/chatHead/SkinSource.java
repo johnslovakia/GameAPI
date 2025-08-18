@@ -1,5 +1,8 @@
 package cz.johnslovakia.gameapi.utils.chatHead;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.format.TextColor;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -10,7 +13,9 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Abstract class to manage SkinSources
@@ -60,7 +65,7 @@ public abstract class SkinSource {
      * @return           An array of BaseComponents representing the player's head.
      *                   Each BaseComponent represents a single pixel, forming a 8x8 grid of pixels.
      */
-    abstract public BaseComponent[] getHead(OfflinePlayer player, boolean overlay);
+    abstract public Component getHead(OfflinePlayer player, boolean overlay);
 
 
     /**
@@ -69,50 +74,31 @@ public abstract class SkinSource {
      * @param hexColors The 8x8 grid in hex form.
      * @return The 8x8 grid in BaseComponent[].
      */
-    public BaseComponent[] toBaseComponent(String[] hexColors) {
-        // Check if the retrieved colors array is valid (has at least 64 elements)
+    public static Component toComponent(String[] hexColors) {
         if (hexColors == null || hexColors.length < 64) {
             throw new IllegalArgumentException("Hex colors must have at least 64 elements.");
-        } //TODO add error handling
-
-        // Initialize a 2D array to store TextComponents representing each pixel of the players head
-        TextComponent[][] components = new TextComponent[8][8];
-
-        for (int i = 0; i < 64; i++) {
-            int row = i / 8;
-            int col = i % 8;
-            char unicodeChar = (char) ('\uF000' + (i % 8) + 1);
-            TextComponent component = new TextComponent();
-
-            // Determine the character and styling based on the position of the pixel within the 8x8 grid
-            if (i == 7 || i == 15 || i == 23 || i == 31 || i == 39 || i == 47 || i == 55) {
-                component.setText(unicodeChar + Character.toString('\uF101'));
-            } else if (i == 63) {
-                component.setText(Character.toString(unicodeChar));
-            } else {
-                component.setText(unicodeChar + Character.toString('\uF102'));
-            }
-
-            // Set the color of the TextComponent based on the corresponding hexadecimal color
-            component.setColor(ChatColor.of(hexColors[i]));
-            components[row][col] = component;
         }
 
-        // Create a default TextComponent with no text and the default font.
-        TextComponent defaultFont = new TextComponent();
-        defaultFont.setText("");
-        defaultFont.setFont("minecraft:default");
+        List<Component> components = new ArrayList<>(64);
 
-        // Construct the array of BaseComponents representing the player's head by appending the TextComponents
-        BaseComponent[] baseComponents = new ComponentBuilder()
-                .append(Arrays.stream(components)
-                        .flatMap(Arrays::stream)
-                        .toArray(TextComponent[]::new))
-                .append(defaultFont)
-                .create();
+        for (int i = 0; i < 64; i++) {
+            char unicodeChar = (char) ('\uF000' + (i % 8) + 1);
+            String text;
 
-        return baseComponents; // Return the array of BaseComponents representing the players head
+            if (i == 7 || i == 15 || i == 23 || i == 31 || i == 39 || i == 47 || i == 55) {
+                text = "" + unicodeChar + '\uF101';
+            } else if (i == 63) {
+                text = "" + unicodeChar;
+            } else {
+                text = "" + unicodeChar + '\uF102';
+            }
 
+            TextColor color = TextColor.fromHexString(hexColors[i]);
+            Component pixel = Component.text(text, color);
+            components.add(pixel);
+        }
+
+        return Component.join(JoinConfiguration.noSeparators(), components);
     }
 
     /**

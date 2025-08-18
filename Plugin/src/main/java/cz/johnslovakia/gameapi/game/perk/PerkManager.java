@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.game.perk;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.users.GamePlayer;
@@ -21,7 +22,7 @@ public class PerkManager {
         this.name = name;
         this.resource = resource;
 
-        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "Perks");
+        Minigame.getInstance().getMinigameTable().createNewColumn(Type.JSON, "Perks");
     }
 
     public void registerPerk(Perk... perks){

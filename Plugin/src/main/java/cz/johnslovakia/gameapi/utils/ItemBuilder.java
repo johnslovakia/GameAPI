@@ -3,7 +3,12 @@ package cz.johnslovakia.gameapi.utils;
 
 import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GameAPI;
-import org.apache.commons.lang.Validate;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.apache.commons.lang3.Validate;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
@@ -11,13 +16,9 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.*;
-import org.bukkit.material.Wool;
 import org.bukkit.potion.PotionType;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Easily create itemstacks, without messing your hands.
@@ -58,6 +59,36 @@ public class ItemBuilder {
         this.is = is;
         is.setAmount(amount);
     }
+
+
+    public static List<Component> splitComponentByNewline(Component component) {
+        //return List.of(component);
+
+        List<Component> lines = new ArrayList<>();
+        TextComponent.Builder currentLine = Component.text();
+
+        Style parentStyle = component.style();
+
+        for (Component child : component.children()) {
+            if (child.equals(Component.newline())) {
+                lines.add(currentLine.build());
+                currentLine = Component.text();
+            } else {
+                Style childStyle = child.style();
+
+                if (childStyle.isEmpty()) {
+                    child = child.style(parentStyle);
+                }
+                currentLine.append(child);
+            }
+        }
+        lines.add(currentLine.build());
+
+        return lines;
+    }
+
+
+
     /**
      * Create a new ItemBuilder from scratch.
      * @param m The material of the item.
@@ -86,6 +117,7 @@ public class ItemBuilder {
      * Set the displayname of the item.
      * @param name The name to change it to.
      */
+    @Deprecated
     public ItemBuilder setName(String name){
         ItemMeta im = is.getItemMeta();
         im.setDisplayName(StringUtils.colorizer(name));
@@ -93,6 +125,12 @@ public class ItemBuilder {
         return this;
     }
 
+    public ItemBuilder setName(Component name){
+        ItemMeta im = is.getItemMeta();
+        im.displayName(name);
+        is.setItemMeta(im);
+        return this;
+    }
 
     public ItemBuilder setUnbreakable(){
         GameAPI.getInstance().getVersionSupport().setItemUnbreakable(is);
@@ -206,31 +244,25 @@ public class ItemBuilder {
         is.setItemMeta(im);
         return this;
     }
+
     /**
      * Re-sets the lore.
      * @param lore The lore to set it to.
      */
-    public ItemBuilder setLore(List<String> lore) {
-        List<String> finalLore = new ArrayList<>();
-
-        for (String line : lore){
-            line = StringUtils.colorizer(line);
-            if (line.contains("\n")){
-                String[] arrSplit = line.split("\n");
-                finalLore.addAll(Arrays.asList(arrSplit));
-            }else if (line.contains("/newline/")){
-                String[] arrSplit = line.split("/newline/");
-                finalLore.addAll(Arrays.asList(arrSplit));
-            }else{
-                finalLore.add(line);
-            }
+    public ItemBuilder setLore(Component... lore){
+        /*List<Component> finalLore = new ArrayList<>();
+        for (Component component : lore){
+            finalLore.addAll(splitComponentByNewline(component));
         }
 
         ItemMeta im = is.getItemMeta();
-        im.setLore(finalLore);
-        is.setItemMeta(im);
-
-        return this;
+        im.lore(finalLore);
+        is.setItemMeta(im);*/
+        return setLore(
+                Arrays.stream(lore)
+                        .map(c -> LegacyComponentSerializer.legacySection().serialize(c))
+                        .toArray(String[]::new)
+        );
     }
     /*
      * Remove a lore line.
@@ -263,6 +295,7 @@ public class ItemBuilder {
         addFlags(ItemFlag.HIDE_ENCHANTS);
         addFlags(ItemFlag.HIDE_UNBREAKABLE);
         addFlags(ItemFlag.HIDE_PLACED_ON);
+        this.is.getItemMeta().setHideTooltip(true);
         return this;
     }
 
@@ -283,6 +316,7 @@ public class ItemBuilder {
      * Add a lore line.
      * @param line The lore line to add.
      */
+
     public ItemBuilder addLoreLine(String line){
         line = StringUtils.colorizer(line);
 
@@ -306,6 +340,26 @@ public class ItemBuilder {
         im.setLore(lore);
         is.setItemMeta(im);
         return this;
+    }
+
+    /**
+     * Add a lore line.
+     * @param line The lore line to add.
+     */
+    public ItemBuilder addLoreLine(Component line){
+        /*ItemMeta im = is.getItemMeta();
+        List<Component> lore = new ArrayList<>();
+
+        if (im.hasLore()) {
+            lore.addAll(im.lore());
+        }
+
+        lore.addAll(splitComponentByNewline(line));
+
+        im.lore(lore);
+        is.setItemMeta(im);
+        return this;*/
+        return addLoreLine(LegacyComponentSerializer.legacySection().serialize(line));
     }
 
     public ItemBuilder removeLore(){
@@ -336,23 +390,6 @@ public class ItemBuilder {
     @SuppressWarnings("deprecation")
     public ItemBuilder setDyeColor(DyeColor color){
         this.is.setDurability(color.getDyeData());
-        return this;
-    }
-    /**
-     * Sets the dye color of a wool item. Works only on wool.
-     * @deprecated As of version 1.2 changed to setDyeColor.
-     * @see ItemBuilder@setDyeColor(DyeColor)
-     * @param color The DyeColor to set the wool item to.
-     */
-    @Deprecated
-    public ItemBuilder setWool(DyeColor color){
-        if(!is.getType().equals(XMaterial.WHITE_WOOL.parseMaterial()))return this;
-
-        Wool wool = new Wool();
-        wool.setColor(color);
-        wool.toItemStack().setItemMeta(is.getItemMeta());
-
-        this.is = wool.toItemStack();
         return this;
     }
 

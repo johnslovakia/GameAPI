@@ -140,30 +140,34 @@ public class GameMap {
 
     public void teleport() {
         if (game.getSettings().isUseTeams()) {
-            for (GameTeam gameTeam : game.getTeamManager().getTeams()){
+            for (GameTeam gameTeam : game.getTeamManager().getTeams()) {
                 int spawn = 0;
-                for (GamePlayer gamePlayer : gameTeam.getMembers()){
+                for (GamePlayer gamePlayer : gameTeam.getMembers()) {
                     if (!gamePlayer.isOnline()) {
-                        return;
+                        continue;
                     }
+
                     Player player = gamePlayer.getOnlinePlayer();
 
                     try {
-                        List<MapLocation> locations = getSpawns(gamePlayer.getPlayerData().getTeam().getName());
-                        if (locations.isEmpty()){
+                        List<MapLocation> locations = getSpawns(gamePlayer.getTeam().getName());
+                        if (locations.isEmpty()) {
                             continue;
                         }
-                        Location location = (locations.get(spawn) != null ? locations.get(spawn).getLocation() : locations.get(spawn - 1).getLocation());
+
+                        int index = Math.min(spawn, locations.size() - 1);
+                        Location location = locations.get(index).getLocation();
                         if (location == null) {
                             continue;
                         }
+
                         player.teleport(location);
                         getPlayerToLocation().put(gamePlayer, location);
                     } catch (Exception ex) {
-                        Logger.log("Something went wrong when teleporting " + player.getName() + " to map spawn! Team:" + gamePlayer.getPlayerData().getTeam().getName() + " GameID:" + game.getID(), Logger.LogType.ERROR);
-                        //Logger.log("The following message is for Developers: " + ex.getCause().getMessage(), Logger.LogType.ERROR);
+                        Logger.log("Something went wrong when teleporting " + player.getName() + " to map spawn! Team:" + gamePlayer.getTeam().getName() + " GameID:" + game.getID(), Logger.LogType.ERROR);
                         ex.fillInStackTrace();
                     }
+
                     spawn++;
                 }
             }
@@ -176,7 +180,7 @@ public class GameMap {
                 Player player = gamePlayer.getOnlinePlayer();
 
                 try {
-                    String s = ((spawns.size() - 1) >= spawn ? spawns.get(spawn).getId() : spawns.get((spawn - 1)).getId());
+                    String s = spawns.get(Math.min(spawn, spawns.size() - 1)).getId();
                     Location location = getSpawn(s);
                     if (location == null) {
                         continue;
@@ -185,7 +189,6 @@ public class GameMap {
                     getPlayerToLocation().put(gamePlayer, location);
                 } catch (Exception ex) {
                     Logger.log("Something went wrong when teleporting " + player.getName() + " to map spawn! GameID:" + game.getID(), Logger.LogType.ERROR);
-                    //Logger.log("The following message is for Developers: " + ex.getCause().getMessage(), Logger.LogType.ERROR);
                     ex.fillInStackTrace();
                 }
                 spawn++;
@@ -204,7 +207,7 @@ public class GameMap {
             if (settings.isLoadWorldWithGameAPI()) {
                 WorldManager.loadArenaWorld(this, game);
             }
-        }else{
+        }/*else{
             if (getWorld() != null && settings.isLoadWorldWithGameAPI()) {
                 try {
                     WorldManager.unload(this);
@@ -213,7 +216,7 @@ public class GameMap {
                     throw new RuntimeException(e);
                 }
             }
-        }
+        }*/
     }
 
     public boolean isPlaying(){

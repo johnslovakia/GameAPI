@@ -1,9 +1,12 @@
 package cz.johnslovakia.gameapi.utils.chatHead;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.UUID;
@@ -14,6 +17,7 @@ import java.util.UUID;
  * The head representation is generated based on the players UUID and skin source.
  *
  * @author Minso
+ * https://github.com/OGminso/ChatHeadFont/tree/main
  */
 public class ChatHeadAPI {
 
@@ -24,14 +28,14 @@ public class ChatHeadAPI {
 
     private static ChatHeadAPI instance;
 
-    private final JavaPlugin plugin;
+    private final Plugin plugin;
 
     /**
      * Constructs a new ChatHeadAPI instance.
      *
      * @param plugin The JavaPlugin instance associated with the ChatHeadAPI.
      */
-    public ChatHeadAPI(JavaPlugin plugin) {
+    public ChatHeadAPI(Plugin plugin) {
         this.plugin = plugin;
     }
 
@@ -54,7 +58,7 @@ public class ChatHeadAPI {
      * @param plugin The JavaPlugin instance to associate with the ChatHeadAPI.
      * @throws IllegalStateException If ChatHeadAPI has already been initialized.
      */
-    public static void initialize(JavaPlugin plugin) {
+    public static void initialize(Plugin plugin) {
         if (instance != null) {
             throw new IllegalStateException("PlayerHeadAPI has already been initialized.");
         }
@@ -73,20 +77,20 @@ public class ChatHeadAPI {
      * @return An array of BaseComponents representing the player's head.
      * Each BaseComponent represents a single pixel, forming a 8x8 grid of pixels.
      */
-    public BaseComponent[] getHead(UUID uuid, boolean overlay, SkinSource skinSource) {
+    public Component getHead(UUID uuid, boolean overlay, SkinSource skinSource) {
         return skinSource.getHead(Bukkit.getOfflinePlayer(uuid), overlay);
 
     }
 
-    public BaseComponent[] getHead(OfflinePlayer player, boolean overlay, SkinSource skinSource) {
+    public Component getHead(OfflinePlayer player, boolean overlay, SkinSource skinSource) {
         return skinSource.getHead(player, overlay);
     }
 
-    public BaseComponent[] getHead(OfflinePlayer player, boolean overlay) {
+    public Component getHead(OfflinePlayer player, boolean overlay) {
         return defaultSource.getHead(player, overlay);
     }
 
-    public BaseComponent[] getHead(OfflinePlayer player) {
+    public Component getHead(OfflinePlayer player) {
         return defaultSource.getHead(player, true);
     }
 
@@ -111,7 +115,7 @@ public class ChatHeadAPI {
      *                   Supported sources include MOJANG, MINOTAR, and CRAFATAR.
      */
     public String getHeadAsString(OfflinePlayer player, boolean overlay, SkinSource skinSource) {
-        return TextComponent.toLegacyText(
+        return LegacyComponentSerializer.legacySection().serialize(
                 this.getHead(player, overlay, skinSource)
         );
     }

@@ -1,15 +1,19 @@
 package cz.johnslovakia.gameapi.utils;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.messages.MessageManager;
+import cz.johnslovakia.gameapi.messages.MessageType;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 @Getter
@@ -19,8 +23,11 @@ public class Cooldown{
     private static List<Cooldown> list = new ArrayList<>();
 
     private final String name;
-    private final double cooldown;
-    private Map<GamePlayer, Double> players = new HashMap<>();
+    @Setter
+    private double cooldown;
+    @Setter
+    private Consumer<Cooldown> endConsumer;
+    private final Map<GamePlayer, Double> players = new HashMap<>();
 
     public Cooldown(String name, double cooldown) {
         this.name = name;
@@ -48,9 +55,11 @@ public class Cooldown{
 
                 if (actionValidation == null || actionValidation.test(gamePlayer)) {
                     if (getCountdown(gamePlayer) <= 0){
+                        if (endConsumer != null)
+                            endConsumer.accept(Cooldown.this);
                         players.remove(gamePlayer);
                         if (actionbar) {
-                            GameAPI.getInstance().getUserInterface().sendAction(gamePlayer.getOnlinePlayer(), MessageManager.get(gamePlayer, "kit_ability.countdown_is_over").getTranslated());
+                            MessageManager.get(gamePlayer, "kit_ability.countdown_is_over").send(MessageType.ACTIONBAR);
                         }
                         this.cancel();
                     }else {
@@ -60,7 +69,7 @@ public class Cooldown{
                     }
                 }
             }
-        }.runTaskTimer(GameAPI.getInstance(), 0L, 2L);
+        }.runTaskTimer(Minigame.getInstance().getPlugin(), 0L, 2L);
     }
 
 

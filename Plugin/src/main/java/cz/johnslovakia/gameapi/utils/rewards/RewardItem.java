@@ -3,14 +3,16 @@ package cz.johnslovakia.gameapi.utils.rewards;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.utils.RandomUtils;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.Random;
 
 @Getter
 public class RewardItem {
 
-    private final Resource resource;
     private final int amount;
+    @Setter
+    private String resource;
     private int chance = 100;
     private int randomMinRange = 0;
     private int randomMaxRange = 0;
@@ -26,6 +28,20 @@ public class RewardItem {
         this.randomMaxRange = builder.randomMaxRange;
     }
 
+    public Resource getResource(){
+        return Resource.getResourceByName(resource);
+    }
+
+    public RewardItem(Resource resource, int amount) {
+        this.resource = resource.getName();
+        this.amount = amount;
+    }
+
+    public RewardItem(String resourceName, int amount) {
+        this.resource = resourceName;
+        this.amount = amount;
+    }
+
     public boolean randomAmount(){
         return randomMinRange != 0 && randomMaxRange > 0;
     }
@@ -37,16 +53,6 @@ public class RewardItem {
         return amount;
     }
 
-    public RewardItem(Resource resource, int amount) {
-        this.resource = resource;
-        this.amount = amount;
-    }
-
-    public RewardItem(String resourceName, int amount) {
-        this.resource = Resource.getResourceByName(resourceName);
-        this.amount = amount;
-    }
-
     public boolean shouldApply() {
         //TODO: opravit
         /*if (chance == 100) return true;
@@ -55,19 +61,19 @@ public class RewardItem {
     }
 
 
-    public static RewardItem.Builder builder(Resource resource) { return new RewardItem.Builder(resource);}
-    public static RewardItem.Builder builder(String resourceName) { return new RewardItem.Builder(Resource.getResourceByName(resourceName));}
+    public static RewardItem.Builder builder(Resource resource) { return new RewardItem.Builder(resource.getName());}
+    public static RewardItem.Builder builder(String resourceName) { return new RewardItem.Builder(resourceName);}
 
     public static class Builder {
 
-        private final Resource resource;
+        private final String resource;
         private int amount = 1;
         private int chance = 100;
         private int randomMinRange = 0;
         private int randomMaxRange = 0;
 
-        public Builder(Resource resource) {
-            this.resource = resource;
+        public Builder(String resourceName) {
+            this.resource = resourceName;
         }
 
         public Builder setAmount(int amount) {

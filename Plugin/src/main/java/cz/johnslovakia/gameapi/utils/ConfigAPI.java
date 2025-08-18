@@ -1,5 +1,7 @@
 package cz.johnslovakia.gameapi.utils;
 
+import cz.johnslovakia.gameapi.game.Game;
+import cz.johnslovakia.gameapi.game.LobbyLocation;
 import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import cz.johnslovakia.gameapi.game.map.MapLocation;
@@ -11,7 +13,8 @@ import org.bukkit.plugin.Plugin;
 import java.io.File;
 import java.io.IOException;
 
-public class ConfigAPI {
+public class
+ConfigAPI {
 
     private File file;
     private FileConfiguration fileConfig;
@@ -108,5 +111,22 @@ public class ConfigAPI {
             return null;
         }
         return Utils.getMapLocationFromString(gameMap, id, fileConfig.getString(path), yaw_and_pitch);
+    }
+
+    public LobbyLocation getLobbyLocation(Game game, String path){
+        if (fileConfig.get(path) == null) {
+            Logger.log("getLobbyLocation: Path '" + path + "' is null!", Logger.LogType.ERROR);
+            return null;
+        }
+
+        final String[] parts = fileConfig.getString(path).split(";");
+        final String world = parts[0];
+        final double x = Double.parseDouble(parts[1]);
+        final double y = Double.parseDouble(parts[2]);
+        final double z = Double.parseDouble(parts[3]);
+        final float yaw =  Float.parseFloat(parts[4]);
+        final float pitch =  Float.parseFloat(parts[5]);
+
+        return new LobbyLocation(game, world, x, y, z, yaw, pitch);
     }
 }

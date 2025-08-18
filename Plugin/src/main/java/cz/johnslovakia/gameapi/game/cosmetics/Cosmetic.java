@@ -2,11 +2,13 @@ package cz.johnslovakia.gameapi.game.cosmetics;
 
 import com.mongodb.annotations.Sealed;
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.utils.Sounds;
+import cz.johnslovakia.gameapi.utils.StringUtils;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;
@@ -26,6 +28,7 @@ public class Cosmetic {
     private final CosmeticRarity rarity;
     @Setter
     private CosmeticsCategory category;
+    private boolean canBePurchased;
 
     private Consumer<GamePlayer> gamePlayerConsumer;
     private Consumer<Location> locationConsumer;
@@ -73,8 +76,19 @@ public class Cosmetic {
             return;
         }
 
+        Player player = gamePlayer.getOnlinePlayer();
         PlayerData data = gamePlayer.getPlayerData();
-        Resource resource = GameAPI.getInstance().getCosmeticsManager().getEconomy();
+        Resource resource = Minigame.getInstance().getCosmeticsManager().getEconomy();
+        int balance = gamePlayer.getPlayerData().getBalance(category.getManager().getEconomy());
+
+        if (balance < getPrice()){
+            player.playSound(player.getLocation(), Sounds.ANVIL_BREAK.bukkitSound(), 10.0F, 10.0F);
+            MessageManager.get(player, "chat.dont_have_enough")
+                    .replace("%need_more%", StringUtils.betterNumberFormat((getPrice() - balance)))
+                    .replace("%economy_name%", category.getManager().getEconomy().getDisplayName())
+                    .send();
+            return;
+        }
 
         data.purchaseCosmetic(this);
 
@@ -83,26 +97,30 @@ public class Cosmetic {
             public void run() {
                 resource.getResourceInterface().withdraw(gamePlayer, getPrice());
             }
-        }.runTaskAsynchronously(GameAPI.getInstance());
+        }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
 
 
         //GameAPI.getInstance().getVaultPerms().playerAdd(player, getPermission());
 
         MessageManager.get(gamePlayer, "chat.cosmetics.purchase")
                 .replace("%cosmetic%", getName())
-                .replace("%price%", "" + getPrice())
-                .replace("%economy_name%", resource.getName())
+                .replace("%price%", "" + StringUtils.betterNumberFormat(getPrice()))
+                .replace("%economy_name%", resource.getDisplayName())
                 .send();
-        //gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer().getLocation(), Sounds.LEVEL_UP.bukkitSound(), 10.0F, 10.0F); - už u select
+        //gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer().getLocation(), Sounds.CLICK.bukkitSound(), 10.0F, 10.0F); - už u select
         select(gamePlayer);
-        Bukkit.getScheduler().runTaskAsynchronously(GameAPI.getInstance(), task -> gamePlayer.getPlayerData().saveCosmetics());
+        Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> gamePlayer.getPlayerData().saveCosmetics());
     }
 
     public boolean hasPurchased(GamePlayer gamePlayer){
+        if (gamePlayer.getPlayerData().getPurchasedCosmetics() == null)
+            return false;
         return gamePlayer.getPlayerData().getPurchasedCosmetics().contains(this);
     }
 
     public boolean hasSelected(GamePlayer gamePlayer){
+        if (gamePlayer.getPlayerData().getSelectedCosmetics() == null)
+            return false;
         return gamePlayer.getPlayerData().getSelectedCosmetics().containsValue(this);
     }
 
@@ -114,6 +132,11 @@ public class Cosmetic {
 
     public Cosmetic setGamePlayerConsumer(Consumer<GamePlayer> gamePlayerConsumer) {
         this.gamePlayerConsumer = gamePlayerConsumer;
+        return this;
+    }
+
+    public Cosmetic setAsPurchasable(){
+        this.canBePurchased = true;
         return this;
     }
 

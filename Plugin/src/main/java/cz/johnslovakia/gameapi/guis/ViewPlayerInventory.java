@@ -9,6 +9,8 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.Sounds;
 import cz.johnslovakia.gameapi.utils.Utils;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -29,7 +31,7 @@ public class ViewPlayerInventory implements Listener {
         Player target = targetGamePlayer.getOnlinePlayer();
 
         PlayerInventory pInv = target.getInventory();
-        Inventory inv = Bukkit.createInventory(null, 54, "§f七七七七七七七七ㆹ");
+        Inventory inv = Bukkit.createInventory(null, 54, Component.text("§f七七七七七七七七ㆹ").font(Key.key("jsplugins", "guis")));
 
         ItemStack gray = new ItemBuilder(XMaterial.GRAY_STAINED_GLASS.parseMaterial()).setName(" ").hideAllFlags().toItemStack();
 
@@ -57,7 +59,7 @@ public class ViewPlayerInventory implements Listener {
         inv.setItem(50, (pInv.getBoots() != null ? pInv.getBoots() : new ItemBuilder(Material.BARRIER).setName(MessageManager.get(gamePlayer, "inventory.view_player_inventory.no_boots").getTranslated()).toItemStack()));
 
         ItemBuilder inf = new ItemBuilder(GameAPI.getInstance().getVersionSupport().getPlayerHead(target));
-        inf.setName((PlayerManager.getGamePlayer(target).getPlayerData().getTeam() != null ? PlayerManager.getGamePlayer(target).getPlayerData().getTeam().getChatColor() : "§r§b") + target.getName());
+        inf.setName((PlayerManager.getGamePlayer(target).getTeam() != null ? PlayerManager.getGamePlayer(target).getTeam().getChatColor() : "§r§b") + target.getName());
         inf.setLore(MessageManager.get(player, "inventory.player_inventory.health")
                 .replace("%health%", "" + (int) target.getHealth())
                 .replace("%max_health%", "" + (int) GameAPI.getInstance().getVersionSupport().getMaxPlayerHealth(target)).getTranslated());
@@ -67,9 +69,9 @@ public class ViewPlayerInventory implements Listener {
         MessageManager.get(player, "inventory.player_inventory.experience")
                 .replace("%experience%", "" + target.getLevel())
                 .addToItemLore(inf);
-        if (KitManager.getKitManager(gamePlayer.getPlayerData().getGame()) != null) {
+        if (KitManager.getKitManager(gamePlayer.getGame()) != null) {
             MessageManager.get(player, "inventory.teleporter.kit")
-                    .replace("%kit%", (PlayerManager.getGamePlayer(target).getPlayerData().getKit()) != null ? PlayerManager.getGamePlayer(target).getPlayerData().getKit().getName() : MessageManager.get(player, "word.none_kit").getTranslated())
+                    .replace("%kit%", (PlayerManager.getGamePlayer(target).getKit()) != null ? net.kyori.adventure.text.Component.text(PlayerManager.getGamePlayer(target).getKit().getName()) : MessageManager.get(player, "word.none_kit").getTranslated())
                     .addToItemLore(inf);
         }
 

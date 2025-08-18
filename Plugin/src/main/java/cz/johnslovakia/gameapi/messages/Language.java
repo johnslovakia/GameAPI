@@ -1,12 +1,14 @@
 package cz.johnslovakia.gameapi.messages;
 
+import cz.johnslovakia.gameapi.users.GamePlayer;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Language {
 
-    private String name;
+    private final String name;
     private File file;
     private boolean defaultLanguage;
 

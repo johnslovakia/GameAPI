@@ -167,16 +167,15 @@
             <version>2.11.6</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
             <groupId>com.github.cryptomorin</groupId>
             <artifactId>XSeries</artifactId>
-            <version>9.10.0</version>
+            <version>13.3.3</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.34</version>
+            <version>1.18.38</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -187,7 +186,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.15.0</version>
+            <version>3.17.0</version>
         </dependency>
         <dependency>
             <groupId>com.comphenix.protocol</groupId>

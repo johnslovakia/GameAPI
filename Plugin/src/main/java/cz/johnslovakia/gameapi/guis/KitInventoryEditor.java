@@ -2,13 +2,16 @@ package cz.johnslovakia.gameapi.guis;
 
 import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.kit.Kit;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.Sounds;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import org.bukkit.Bukkit;
@@ -62,7 +65,7 @@ public class KitInventoryEditor implements Listener {
 
 
     public static void openGUI(GamePlayer gamePlayer, Kit kit) {
-        Inventory gui = Bukkit.createInventory(null, 54, "§f七七七七七七七七ㆾ");
+        Inventory gui = Bukkit.createInventory(null, 54, Component.text("§f七七七七七七七七ㆾ").font(Key.key("jsplugins", "guis")));
 
         for (int i = 27; i <= 35; i++){
             gui.setItem(i, new ItemBuilder(XMaterial.GRAY_STAINED_GLASS_PANE.parseItem()).setName(" ").setLore(MessageManager.get(gamePlayer.getOnlinePlayer(), "inventory.set_kit_inventory.item.info").getTranslated()).toItemStack());
@@ -250,7 +253,7 @@ public class KitInventoryEditor implements Listener {
                 return;
             }
 
-            Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(),
+            Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(),
                     () -> gamePlayer.getPlayerData().getCurrentInventory().give(player, true), 2L);
 
             if (gamePlayer.getMetadata().get("set_kit_inventory.check_closing") != null && !(boolean) gamePlayer.getMetadata().get("set_kit_inventory.check_closing")){
@@ -275,10 +278,11 @@ public class KitInventoryEditor implements Listener {
                     .replace("%kit%", kit.getName())
                     .send();
 
-            ComponentBuilder message = new ComponentBuilder(MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save").getTranslated());
-            message.event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/saveinventory"));
-            message.event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save.hover").getTranslated()).create()));
-            player.spigot().sendMessage(message.create());
+            Component message = MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save").getTranslated()
+                    .hoverEvent(MessageManager.get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save.hover").getTranslated())
+                    .clickEvent(ClickEvent.runCommand("/saveinventory"));
+
+            player.sendMessage(message);
         }
     }
 
@@ -320,7 +324,7 @@ public class KitInventoryEditor implements Listener {
         return finalInventory;
     }
 
-    private static void save(GamePlayer gamePlayer, Kit kit, Inventory inventory, boolean autoArmor) {
+    public static void save(GamePlayer gamePlayer, Kit kit, Inventory inventory, boolean autoArmor) {
         gamePlayer.getPlayerData().setKitInventory(kit, getCopyOfInventory(inventory, kit, autoArmor));
 
         MessageManager.get(gamePlayer, "chat.set_kit_inventory.saved")

@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.utils.inventoryBuilder;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.GameQuitEvent;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.PlayerManager;
@@ -8,6 +9,9 @@ import cz.johnslovakia.gameapi.utils.ItemBuilder;
 
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.StringUtils;
+import lombok.Getter;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -26,21 +30,19 @@ import org.bukkit.inventory.PlayerInventory;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class InventoryManager implements Listener {
 
-    private static List<InventoryManager> managers = new ArrayList<>();
-
-    private String name;
+    private final String name;
     private int holdItemSlot;
 
-    private List<Item> items = new ArrayList<>();
-    private List<Player> players = new ArrayList<>();
+    private final List<Item> items = new ArrayList<>();
+    private final List<Player> players = new ArrayList<>();
     private ItemStack fillFreeSlots;
 
     public InventoryManager(String name) {
         this.name = name;
-        Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
-        managers.add(this);
+        Bukkit.getPluginManager().registerEvents(this, Minigame.getInstance().getPlugin());
     }
 
     public void registerItem(Item... item){
@@ -130,7 +132,7 @@ public class InventoryManager implements Listener {
         if (!e.getItem().getItemMeta().hasDisplayName()){
             return;
         }
-        if (getItemByString(e.getItem().getItemMeta().getDisplayName()) != null){
+        if (getItemByString(e.getPlayer(), e.getItem().getItemMeta().getDisplayName()) != null){
             e.setCancelled(true);
         }
     }
@@ -190,21 +192,14 @@ public class InventoryManager implements Listener {
         players.remove(p);
         Inventory inv = p.getInventory();
         for (Item ji : items) {
-            final String s = MessageManager.get(p, ji.getTranslateKey()).getTranslated();
-            if (s != null){
+            Component component = MessageManager.get(p, ji.getTranslateKey()).getTranslated();
+            if (component != null){
                 for (ItemStack item : p.getInventory().getContents()){
-                    if (item == null){
-                        continue;
-                    }
-                    if (!item.hasItemMeta()){
-                        continue;
-                    }
-                    if (item.getItemMeta().getDisplayName() == null){
+                    if (item == null || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName()){
                         continue;
                     }
 
-                    if (item.getItemMeta().getDisplayName().equalsIgnoreCase(s)){
-                        //inv.remove(item);
+                    if (item.getItemMeta().displayName().equals(component)){
                         inv.remove(item);
                     }
                 }
@@ -219,20 +214,14 @@ public class InventoryManager implements Listener {
             }
             Inventory inv = p.getInventory();
             for (Item ji : items) {
-                final String s = MessageManager.get(p, ji.getTranslateKey()).getTranslated();
-                if (s != null){
+                Component component = MessageManager.get(p, ji.getTranslateKey()).getTranslated();
+                if (component != null){
                     for (ItemStack item : p.getInventory().getContents()){
-                        if (item == null){
-                            continue;
-                        }
-                        if (!item.hasItemMeta()){
-                            continue;
-                        }
-                        if (item.getItemMeta().getDisplayName() == null){
+                        if (item == null || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName()){
                             continue;
                         }
 
-                        if (item.getItemMeta().getDisplayName().equalsIgnoreCase(s)){
+                        if (item.getItemMeta().displayName().equals(component)){
                             inv.remove(item);
                         }
                     }
@@ -245,13 +234,15 @@ public class InventoryManager implements Listener {
 
 
 
-    public Item getItemByString(Player player, String name){
-        for (Item item : items){
-            final String s = ChatColor.stripColor(MessageManager.get(player, item.getTranslateKey()).getTranslated());
-            if (s != null) {
-                if (ChatColor.stripColor(name).equals(s)) {
-                    return item;
-                }
+    public Item getItemByString(Player player, String name) {
+        for (Item item : items) {
+            final String s = ChatColor.stripColor(
+                    LegacyComponentSerializer.legacySection().serialize(
+                            MessageManager.get(player, item.getTranslateKey()).getTranslated()
+                    )
+            );
+            if (ChatColor.stripColor(name).equalsIgnoreCase(s)) {
+                return item;
             }
         }
         return null;
@@ -266,17 +257,6 @@ public class InventoryManager implements Listener {
         return null;
     }
 
-    public Item getItemByString(String name){
-        for (Item item : items){
-            for (String translated : MessageManager.getMessagesByName(item.getTranslateKey())){
-                if (MessageManager.getMessagesByMSG(name).contains(translated)){
-                    return item;
-                }
-            }
-        }
-        return null;
-    }
-
     public boolean containsItem(String displayName){
         List<String> translatedList = new ArrayList<>();
         for (Item item : getItems()){
@@ -286,33 +266,5 @@ public class InventoryManager implements Listener {
         }
 
         return translatedList.contains(displayName);
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public List<Item> getItems() {
-        return items;
-    }
-
-    public List<Player> getPlayers() {
-        return players;
-    }
-
-
-
-
-    public static InventoryManager getInventoryByName(String name){
-        for (InventoryManager manager : getManagers()){
-            if (manager.getName().equalsIgnoreCase(name)){
-                return manager;
-            }
-        }
-        return null;
-    }
-
-    public static List<InventoryManager> getManagers() {
-        return managers;
     }
 }

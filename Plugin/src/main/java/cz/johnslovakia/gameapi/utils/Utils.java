@@ -1,6 +1,10 @@
 package cz.johnslovakia.gameapi.utils;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.game.map.MapLocation;
@@ -21,17 +25,18 @@ import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.FireworkMeta;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.inventory.meta.*;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
+import org.bukkit.profile.PlayerTextures;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.*;
 import java.lang.reflect.Field;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.time.LocalDateTime;
 import java.util.*;
 
 public class Utils {
@@ -152,6 +157,7 @@ public class Utils {
                 return new MapLocation(gameMap, id, x, y, z);
             }
         }
+        Logger.log("getMapLocationFromString Error: " + parts.length + " " + id + " " + s + " " + gameMap.getName(), Logger.LogType.ERROR);
         return null;
     }
 
@@ -175,6 +181,7 @@ public class Utils {
             final float pitch =  Float.parseFloat(parts[5]);
             return new Location(w, x, y, z, yaw, pitch);
         }
+        Logger.log("getLocationString Error: " + parts.length + " " + s, Logger.LogType.ERROR);
         return null;
     }
 
@@ -182,13 +189,13 @@ public class Utils {
         Player player = gamePlayer.getOnlinePlayer();
 
         for (Player serverPlayer : Bukkit.getOnlinePlayers()){
-            GameAPI.getInstance().getVersionSupport().hidePlayer(GameAPI.getInstance(), serverPlayer, player);
-            GameAPI.getInstance().getVersionSupport().hidePlayer(GameAPI.getInstance(), player, serverPlayer);
+            GameAPI.getInstance().getVersionSupport().hidePlayer(Minigame.getInstance().getPlugin(), serverPlayer, player);
+            GameAPI.getInstance().getVersionSupport().hidePlayer(Minigame.getInstance().getPlugin(), player, serverPlayer);
 
-            for (GamePlayer gp : gamePlayer.getPlayerData().getGame().getParticipants()){
+            for (GamePlayer gp : gamePlayer.getGame().getParticipants()){
                 Player p = gp.getOnlinePlayer();
-                GameAPI.getInstance().getVersionSupport().showPlayer(GameAPI.getInstance(), p, player);
-                GameAPI.getInstance().getVersionSupport().showPlayer(GameAPI.getInstance(), player, p);
+                GameAPI.getInstance().getVersionSupport().showPlayer(Minigame.getInstance().getPlugin(), p, player);
+                GameAPI.getInstance().getVersionSupport().showPlayer(Minigame.getInstance().getPlugin(), player, p);
             }
         }
     }
@@ -198,21 +205,15 @@ public class Utils {
     }
 
     public static void sendToLobby(Player player, boolean message){
-        ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", GameAPI.getInstance());
+        ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", Minigame.getInstance().getPlugin());
         List<String> lobbies = config.getConfig().getStringList("lobby_servers");
 
-        if (message)
-            MessageManager.get(player
-                    , "chat.sending_to_lobby").send();
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                Collections.shuffle(lobbies);
-                send(player, (lobbies.isEmpty() ? "Lobby" : lobbies.get(0)));
-            }
-        }.runTaskAsynchronously(GameAPI.getInstance());
+        if (message) MessageManager.get(player, "chat.sending_to_lobby").send();
 
-        Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> player.kickPlayer(MessageManager.get(player, "kick.offline_server").getTranslated()), 60L);
+        Collections.shuffle(lobbies);
+        send(player, (lobbies.isEmpty() ? "Lobby" : lobbies.get(0)));
+
+        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> player.kick(MessageManager.get(player, "kick.offline_server").getTranslated()), 60L);
     }
 
     public static void send(Player player, String server) {
@@ -221,16 +222,16 @@ public class Utils {
         try {
             out.writeUTF("Connect");
             out.writeUTF(server.toLowerCase());
-        } catch (IOException localIOException) {
-            player.kickPlayer(MessageManager.get(player, "kick.offline_server").getTranslated());
+        } catch (Exception exception) {
+            player.kick(MessageManager.get(player, "kick.offline_server").add(" §8(" + exception.getMessage() + ")§r").getTranslated());
         }
-        player.sendPluginMessage(GameAPI.getInstance(), "BungeeCord", b.toByteArray());
+        player.sendPluginMessage(Minigame.getInstance().getPlugin(), "BungeeCord", b.toByteArray());
     }
 
     public static void colorizeArmor(GamePlayer gamePlayer) {
         Player player = gamePlayer.getOnlinePlayer();
         PlayerInventory inv = player.getInventory();
-        GameTeam team = gamePlayer.getPlayerData().getTeam();
+        GameTeam team = gamePlayer.getTeam();
 
         if (team == null || inv.getArmorContents() == null){
             return;
@@ -275,8 +276,65 @@ public class Utils {
         return result;
     }
 
+    public static String getStringProgressBar(int current, int required) {
+        int totalBars = 25;
+        float progress = (float) current / required;
+        int filledBars = Math.round(progress * totalBars);
+
+        StringBuilder bar = new StringBuilder();
+
+        for (int i = 0; i < totalBars; i++) {
+            if (i > 0 && i % 5 == 0) {
+                bar.append(" ");
+            }
+
+            if (i < filledBars) {
+                bar.append(ChatColor.GREEN + "|");
+            } else {
+                bar.append(ChatColor.DARK_GRAY + "|");
+            }
+        }
+
+        int percent = Math.round(progress * 100);
+        bar.append(" ").append(ChatColor.GRAY).append(percent).append("%");
+
+        return bar.toString();
+    }
+
     public static void countdownTimerBar(GamePlayer gamePlayer, double startTime, double timeRemaining){
         countdownTimerBar(gamePlayer, "", startTime, timeRemaining);
+    }
+
+    public static ItemStack getCustomHead(String url) {
+        url = url.toLowerCase();
+        url = url.replace("http://textures.minecraft.net/texture/", "");
+        url = url.replace("https://textures.minecraft.net/texture/", "");
+
+
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
+
+        PlayerProfile pp = Bukkit.createProfile(UUID.fromString("4fbecd49-c7d4-4c18-8410-adf7a7348728"));
+        PlayerTextures pt = pp.getTextures();
+
+        try {
+            pt.setSkin(new URL("http://textures.minecraft.net/texture/" + url));
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+
+        pp.setTextures(pt);
+        skullMeta.setPlayerProfile(pp);
+        item.setItemMeta(skullMeta);
+        return item;
+    }
+
+    public static ItemStack getPlayerHead(Player player) {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta meta = (SkullMeta) item.getItemMeta();
+        meta.setOwningPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()));
+        item.setItemMeta(meta);
+        return item;
     }
 
     public static void countdownTimerBar(GamePlayer gamePlayer, String name, double startTime, double timeRemaining){
@@ -305,7 +363,7 @@ public class Utils {
         text.append(roundedDouble);
         text.append("s");
 
-        if (gamePlayer != null && gamePlayer.isOnline()) GameAPI.getInstance().getUserInterface().sendAction(gamePlayer.getOnlinePlayer(), text.toString());
+        if (gamePlayer != null && gamePlayer.isOnline()) ActionBarManager.sendActionBar(gamePlayer.getOnlinePlayer(), text.toString());
     }
 
     public static boolean isPlayerDamager(EntityDamageByEntityEvent e){
@@ -351,10 +409,10 @@ public class Utils {
         }
 
         double points = Objects.requireNonNull(
-                player.getAttribute(Attribute.GENERIC_ARMOR)
+                player.getAttribute(Attribute.ARMOR)
         ).getValue();
         double toughness = Objects.requireNonNull(
-                player.getAttribute(Attribute.GENERIC_ARMOR_TOUGHNESS)
+                player.getAttribute(Attribute.ARMOR_TOUGHNESS)
         ).getValue();
 
 
@@ -363,32 +421,5 @@ public class Utils {
         int epf = getEPF(player.getInventory());
 
         player.damage(calculateDamageApplied(damage, points, toughness, resistance, epf));
-    }
-
-    public static File getResourceAsFile(String resourcePath) {
-        try {
-            InputStream in = ClassLoader.getSystemClassLoader().getResourceAsStream(resourcePath);
-            if (in == null) {
-                return null;
-            }
-
-            File tempFile = File.createTempFile(String.valueOf(in.hashCode()), ".tmp");
-            tempFile.deleteOnExit();
-
-            try (FileOutputStream out = new FileOutputStream(tempFile)) {
-                //copy stream
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = in.read(buffer)) != -1) {
-                    out.write(buffer, 0, bytesRead);
-                }
-            }
-
-            in.close();
-            return tempFile;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
     }
 }

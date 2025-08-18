@@ -1,8 +1,9 @@
 package cz.johnslovakia.gameapi.game.cosmetics.defaultCosmetics;
 
 import com.cryptomorin.xseries.particles.ParticleDisplay;
-import com.cryptomorin.xseries.particles.XParticle;
+import com.cryptomorin.xseries.particles.Particles;
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.GamePlayerDeathEvent;
 import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
 import cz.johnslovakia.gameapi.game.cosmetics.CosmeticRarity;
@@ -38,7 +39,7 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
     public KillEffectsCategory() {
         super("Kill Effects", new ItemStack(Material.IRON_SWORD));
 
-        FileConfiguration config = GameAPI.getInstance().getMinigame().getPlugin().getConfig();
+        FileConfiguration config = Minigame.getInstance().getPlugin().getConfig();
         
         int LEGENDARY_PRICE = Utils.getPrice(config, "kill_effects.legendary", 18000);
         int EPIC_PRICE = Utils.getPrice(config, "kill_effects.epic", 14000);
@@ -47,10 +48,11 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
         int COMMON_PRICE = Utils.getPrice(config, "kill_effects.common", 4000);
 
         Cosmetic hearth = new Cosmetic("Hearth", new ItemStack(Material.REDSTONE), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setAsPurchasable()
                 .setLocationConsumer(location -> {
                     //Location finalLocation = location.add(0.5, 0.5, 0.5);
                     for (double height = 0.0; height < 1.0; height += 0.2) {
-                        location.getWorld().spawnParticle(Particle.HEART, location.clone().add((double) MathUtils.randomRange(-1.0f, 1.0f), height, (double)MathUtils.randomRange(-1.0f, 1.0f)), 1);
+                        location.getWorld().spawnParticle(Particle.HEART, location.clone().add((double) RandomUtils.randomFloat(-1.0f, 1.0f), height, (double)RandomUtils.randomFloat(-1.0f, 1.0f)), 1);
                     }
                 });
         Cosmetic squid = new Cosmetic("Squid", new ItemStack(Material.SQUID_SPAWN_EGG), EPIC_PRICE, CosmeticRarity.EPIC)
@@ -85,15 +87,16 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                                 cancel();
                             }
                         }
-                    }.runTaskTimer(GameAPI.getInstance(), 1, 0);
+                    }.runTaskTimer(Minigame.getInstance().getPlugin(), 1, 0);
                 });
         Cosmetic ball = new Cosmetic("Ball", new ItemStack(Material.SNOWBALL), UNCOMMON_PRICE, CosmeticRarity.UNCOMMON)
+                .setAsPurchasable()
                 .setLocationConsumer(location -> {
-                    XParticle.sphere(1.5, 12, ParticleDisplay.of(Particle.DUST).withColor(Color.RED, 0.75f).withLocation(location.add(0, 0.4, 0)));
+                    Particles.sphere(1.5, 12, ParticleDisplay.of(Particle.DUST).withColor(Color.RED, 0.75f).withLocation(location.add(0, 0.4, 0)));
                 });
         Cosmetic line = new Cosmetic("Line into the sky", new ItemStack(Material.BLAZE_ROD), RARE_PRICE, CosmeticRarity.RARE)
                 .setLocationConsumer(location -> {
-                    XParticle.line(location.subtract(0, 1, 0),  location.add(0, 60, 0), 12, ParticleDisplay.of(Particle.DUST).withColor(Color.RED, 0.75f).withLocation(location.add(0, 0.4, 0)));
+                    Particles.line(location.subtract(0, 1, 0),  location.add(0, 60, 0), 12, ParticleDisplay.of(Particle.DUST).withColor(Color.RED, 0.75f).withLocation(location.add(0, 0.4, 0)));
                 });
         Cosmetic tornado = new Cosmetic("Tornado", new ItemStack(Material.LIGHT_GRAY_DYE), LEGENDARY_PRICE, CosmeticRarity.LEGENDARY)
                 .setLocationConsumer(location -> {
@@ -124,13 +127,14 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                                 this.cancel();
                             }
                         }
-                    }.runTaskTimer(GameAPI.getInstance(), 2L, 0L);
+                    }.runTaskTimer(Minigame.getInstance().getPlugin(), 2L, 0L);
                 });
         Cosmetic rainbow = new Cosmetic("Rainbow", new ItemStack(Material.RED_DYE), EPIC_PRICE, CosmeticRarity.EPIC)
                 .setLocationConsumer(location -> {
-                    XParticle.rainbow(0.5, 15, 3, 4, 0.3, ParticleDisplay.of(Particle.DUST).withLocation(location.add(0, 0.4, 0)));
+                    Particles.rainbow(0.5, 15, 3, 4, 0.3, ParticleDisplay.of(Particle.DUST).withLocation(location.add(0, 0.4, 0)));
                 });
         Cosmetic blood = new Cosmetic("Blood", new ItemStack(Material.RED_DYE), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setAsPurchasable()
                 .setLocationConsumer(location -> {
                     Particle.DustOptions dustOptions = new Particle.DustOptions(org.bukkit.Color.RED, 1.0f);
                     location.getWorld().spawnParticle(Particle.DUST, location, 50, 0.5, 1, 0.5, dustOptions);
@@ -141,9 +145,10 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                 });
         Cosmetic glow = new Cosmetic("Glow", new ItemStack(Material.GLOW_SQUID_SPAWN_EGG), RARE_PRICE, CosmeticRarity.RARE)
                 .setLocationConsumer(location -> {
-                    location.getWorld().spawnParticle(Particle.GLOW, location, 20, MathUtils.randomRange(-0.7f, 0.7f), 0.5, MathUtils.randomRange(-0.7f, 0.7f));
+                    location.getWorld().spawnParticle(Particle.GLOW, location, 20, RandomUtils.randomFloat(-0.7f, 0.7f), 0.5, RandomUtils.randomFloat(-0.7f, 0.7f));
                 });
         Cosmetic musical = new Cosmetic("Musical", new ItemStack(Material.JUKEBOX), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setAsPurchasable()
                 .setLocationConsumer(location -> {
                     location.getWorld().spawnParticle(Particle.NOTE, location, 25, 1, 1, 1);
                 });
@@ -168,9 +173,10 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                         entity.setVelocity(direction.multiply(0.2));
                         items.add(entity);
                     }
-                    Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> items.forEach(Entity::remove), 30L);
+                    Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> items.forEach(Entity::remove), 30L);
                 });
         Cosmetic pumpkinExplosion = new Cosmetic("Pumpkin Explosion", new ItemStack(Material.PUMPKIN), RARE_PRICE, CosmeticRarity.RARE)
+                .setAsPurchasable()
                 .setLocationConsumer(location -> {
                     List<Item> items = new ArrayList<>();
 
@@ -185,21 +191,10 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                         entity.setVelocity(direction.multiply(0.2));
                         items.add(entity);
                     }
-                    Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> items.forEach(Entity::remove), 30L);
+                    Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> items.forEach(Entity::remove), 30L);
                 });
 
         addCosmetic(hearth, squid, ball, tornado, blood, sparkle, musical, blossom, presentExplosion, pumpkinExplosion, glow);
-
-
-        Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
     }
 
-
-    @EventHandler
-    public void onGamePlayerDeath(GamePlayerDeathEvent e) {
-        GamePlayer killer = e.getKiller();
-        if (killer != null && getSelectedCosmetic(killer) != null){
-            getSelectedCosmetic(killer).getLocationConsumer().accept(e.getGamePlayer().getOnlinePlayer().getLocation());
-        }
-    }
 }

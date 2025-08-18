@@ -181,7 +181,7 @@ public class Task {
 
     public static Task getTask(Game game, String id){
         for (Task task : tasks){
-            if (task.getGame().equals(game)) {
+            if (task.getGame().getID().equals(game.getID())) {
                 if (task.getId().equals(id)) {
                     return task;
                 }

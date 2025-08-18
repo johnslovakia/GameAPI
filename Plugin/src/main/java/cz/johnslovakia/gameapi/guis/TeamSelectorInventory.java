@@ -15,6 +15,7 @@ import me.zort.containr.Component;
 import me.zort.containr.Element;
 import me.zort.containr.GUI;
 
+import net.kyori.adventure.key.Key;
 import org.bukkit.Material;
 import org.bukkit.event.Listener;
 
@@ -22,11 +23,10 @@ public class TeamSelectorInventory implements Listener {
 
     public static void openGUI(GamePlayer gamePlayer) {
         GUI inventory = Component.gui()
-                .title("§f七七七七七七七七ẝ")
+                .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七ẝ").font(Key.key("jsplugins", "guis")))
                 .rows(3)
                 .prepare((gui, player) -> {
-                    PlayerData playerData = gamePlayer.getPlayerData();
-                    Game game = playerData.getGame();
+                    Game game = gamePlayer.getGame();
 
                     ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
                     close.setCustomModelData(1017);

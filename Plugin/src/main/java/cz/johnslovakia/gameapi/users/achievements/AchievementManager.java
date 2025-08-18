@@ -1,16 +1,17 @@
 package cz.johnslovakia.gameapi.users.achievements;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 
-import cz.johnslovakia.gameapi.utils.rewards.Reward;
-import cz.johnslovakia.gameapi.utils.rewards.RewardItem;
 import lombok.Getter;
 
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -38,8 +39,8 @@ public class AchievementManager {
                 this.achievements.add(achievement);
 
                 for (Trigger<?> t : achievement.getTriggers()) {
-                    GameAPI.getInstance().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() {
-                    }, EventPriority.NORMAL, (listener, event) -> onEventCall(achievement, event), GameAPI.getInstance());
+                    Minigame.getInstance().getPlugin().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() {
+                    }, EventPriority.NORMAL, (listener, event) -> onEventCall(achievement, event), Minigame.getInstance().getPlugin());
                 }
             }
         }

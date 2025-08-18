@@ -14,6 +14,7 @@ import me.zort.containr.Component;
 import me.zort.containr.Element;
 import me.zort.containr.GUI;
 
+import net.kyori.adventure.key.Key;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -24,7 +25,7 @@ public class TeleporterInventory {
         PlayerData data = gamePlayer.getPlayerData();
 
         GUI inventory = Component.gui()
-                .title("§f七七七七七七七七ㆿ")
+                .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七ㆿ").font(Key.key("jsplugins", "guis")))
                 .rows(6)
                 .prepare((gui, player) -> {
                     ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
@@ -50,10 +51,10 @@ public class TeleporterInventory {
                     gui.setContainer(9, Component.staticContainer()
                             .size(9, 5)
                             .init(container -> {
-                                for (GamePlayer aliveGamePlayer : data.getGame().getPlayers()){
+                                for (GamePlayer aliveGamePlayer : gamePlayer.getGame().getPlayers()){
                                     Element element = Component.element(getAlivePlayerItemStack(gamePlayer, aliveGamePlayer)).addClick(i -> {
                                         if (i.getClickType().isLeftClick()) {
-                                            player.teleport((!(aliveGamePlayer.isSpectator()) ? aliveGamePlayer.getOnlinePlayer().getLocation() : data.getGame().getCurrentMap().getSpectatorSpawn().getLocation()));
+                                            player.teleport((!(aliveGamePlayer.isSpectator()) ? aliveGamePlayer.getOnlinePlayer().getLocation() : gamePlayer.getGame().getCurrentMap().getSpectatorSpawn().getLocation()));
                                         } else if (i.getClickType().isRightClick()){
                                             ViewPlayerInventory.openGUI(gamePlayer, aliveGamePlayer);
                                         }
@@ -70,9 +71,9 @@ public class TeleporterInventory {
 
     public static ItemStack getAlivePlayerItemStack(GamePlayer forGamePlayer, GamePlayer aliveGamePlayer){
         Player alivePlayer = aliveGamePlayer.getOnlinePlayer();
-        GameTeam team = aliveGamePlayer.getPlayerData().getTeam();
+        GameTeam team = aliveGamePlayer.getTeam();
 
-        KitManager kitManager = KitManager.getKitManager(forGamePlayer.getPlayerData().getGame());
+        KitManager kitManager = KitManager.getKitManager(forGamePlayer.getGame());
 
         ItemBuilder alivePlayerItem = new ItemBuilder(GameAPI.getInstance().getVersionSupport().getPlayerHead(aliveGamePlayer.getOnlinePlayer()));
         alivePlayerItem.hideAllFlags();
@@ -94,10 +95,10 @@ public class TeleporterInventory {
                 .addToItemLore(alivePlayerItem);
         alivePlayerItem.addLoreLine("");
         if (kitManager != null) {
-            Kit kit = aliveGamePlayer.getPlayerData().getKit();
+            Kit kit = aliveGamePlayer.getKit();
 
             MessageManager.get(forGamePlayer, "inventory.teleporter.kit")
-                    .replace("%kit%", (kit != null ? kit.getName() : MessageManager.get(forGamePlayer, "word.none_kit").getTranslated()))
+                    .replace("%kit%", (kit != null ? net.kyori.adventure.text.Component.text(kit.getName()) : MessageManager.get(forGamePlayer, "word.none_kit").getTranslated()))
                     .addToItemLore(alivePlayerItem);
             alivePlayerItem.addLoreLine("");
         }

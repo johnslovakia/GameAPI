@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.listeners;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.GameJoinEvent;
 import cz.johnslovakia.gameapi.events.GameQuitEvent;
 import cz.johnslovakia.gameapi.events.GameStartEvent;
@@ -23,24 +24,25 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-//Not fully my code, source code: https://github.com/Neast1337/AntiAFK/blob/main/src/main/java/org/neast/antiafk/Antiafk.java
-//Edited by me (john.slovakia)
+//source code: https://github.com/Neast1337/AntiAFK/blob/main/src/main/java/org/neast/antiafk/Antiafk.java
 
 public class AntiAFK implements Listener {
 
-    private Map<GamePlayer, BukkitRunnable> afkTasks = new ConcurrentHashMap<>();
-    private Map<GamePlayer, Boolean> isAfk = new ConcurrentHashMap<>();
-    private Map<GamePlayer, Boolean> afkByJoin = new ConcurrentHashMap<>();
+
+    //TODO: optimalizovat, někdy to bere jako AFK i když se hýbe, možná když nehýbe myší
+    private final Map<GamePlayer, BukkitRunnable> afkTasks = new ConcurrentHashMap<>();
+    private final Map<GamePlayer, Boolean> isAfk = new ConcurrentHashMap<>();
+    private final Map<GamePlayer, Boolean> afkByJoin = new ConcurrentHashMap<>();
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
-        if (gamePlayer.getPlayerData() == null || event.getTo() == null){
+        if (gamePlayer.getPlayerData() == null){
             return;
         }
-        Game game = gamePlayer.getPlayerData().getGame();
+        Game game = gamePlayer.getGame();
         if (game == null){
             return;
         }
@@ -70,7 +72,7 @@ public class AntiAFK implements Listener {
                     }
                 };
                 afkTasks.put(gamePlayer, task);
-                task.runTaskLaterAsynchronously(GameAPI.getInstance(), afkCheckDelay);
+                task.runTaskLaterAsynchronously(Minigame.getInstance().getPlugin(), afkCheckDelay);
             }
             }
         }
@@ -84,7 +86,7 @@ public class AntiAFK implements Listener {
             if (gamePlayer.getPlayerData() == null) {
                 return;
             }
-            Game game = gamePlayer.getPlayerData().getGame();
+            Game game = gamePlayer.getGame();
             if (game == null) {
                 return;
             }
@@ -105,7 +107,7 @@ public class AntiAFK implements Listener {
                 }
             };
             afkTasks.put(gamePlayer, task);
-            task.runTaskLaterAsynchronously(GameAPI.getInstance(), afkCheckDelay);
+            task.runTaskLaterAsynchronously(Minigame.getInstance().getPlugin(), afkCheckDelay);
         }
     }
 
@@ -132,7 +134,7 @@ public class AntiAFK implements Listener {
         if (gamePlayer.getPlayerData() == null){
             return;
         }
-        if (gamePlayer.getPlayerData().getGame() == null){
+        if (gamePlayer.getGame() == null){
             return;
         }
         player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 1.0f, 1.0f);
@@ -162,7 +164,7 @@ public class AntiAFK implements Listener {
                 }
                 i--;
             }
-        }.runTaskTimer(GameAPI.getInstance(), 0L, 20L);
+        }.runTaskTimer(Minigame.getInstance().getPlugin(), 0L, 20L);
 
     }
 }

@@ -1,7 +1,9 @@
 package cz.johnslovakia.gameapi.game.cosmetics;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.inventory.ItemStack;
@@ -20,7 +22,7 @@ public class CosmeticsCategory {
     @Setter
     private Set<CTrigger<?>> triggers;
 
-    private List<Cosmetic> cosmetics = new ArrayList<>();
+    private final List<Cosmetic> cosmetics = new ArrayList<>();
 
     public CosmeticsCategory(String name, ItemStack icon) {
         this.name = name;
@@ -30,7 +32,7 @@ public class CosmeticsCategory {
     public void addCosmetic(Cosmetic... cosmetics) {
         for (Cosmetic cosmetic : cosmetics) {
             if (this.cosmetics.contains(cosmetic)) {
-                GameAPI.getInstance().getLogger().warning("Cosmetic " + cosmetic.getName() + " is already added!");
+                Logger.log("Cosmetic " + cosmetic.getName() + " is already added!", Logger.LogType.WARNING);
                 return;
             }
             this.cosmetics.add(cosmetic);
@@ -62,7 +64,7 @@ public class CosmeticsCategory {
     }
 
     public Cosmetic getSelectedCosmetic(GamePlayer gamePlayer){
-        return gamePlayer.getPlayerData().getSelectedCosmetics().get(this);
+        return gamePlayer.getPlayerData().getSelectedCosmetic(this);
     }
 
 }

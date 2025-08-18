@@ -19,9 +19,9 @@ public class UpdateChecker {
     private final String URL; //= "https://example.com/version.json";
 
     private final String currentVersion;
-    private String latestVersion, updateMessage;
+    private String latestVersion, updateMessage, announcement;
 
-    private boolean outdated = false;
+    private boolean outdated, unreleased = false;
 
     public UpdateChecker(Minigame minigame, String URL) {
         this.minigame = minigame;
@@ -45,23 +45,51 @@ public class UpdateChecker {
 
                 String latestVersion = json.get("latest_version").getAsString();
                 this.latestVersion = latestVersion;
+
                 String updateMessage = json.has("update_message") ? json.get("update_message").getAsString() : "";
+                this.updateMessage = updateMessage;
+
+                announcement = json.has("announcement") ? json.get("announcement").getAsString() : null;
 
                 if (!currentVersion.equalsIgnoreCase(latestVersion)) {
-                    outdated = true;
-                    Bukkit.getLogger().log(Level.WARNING, "Your version of the " + minigame.getName() + " plugin is outdated! We recommend updating to the latest version! Latest Version: " + latestVersion + ", Your Current version: " + currentVersion);
-                    if (!updateMessage.isEmpty()) {
-                        Bukkit.getLogger().log(Level.INFO,"Update Message: " + updateMessage);
-                        this.updateMessage = updateMessage;
+                    if (isNewerVersion(currentVersion, latestVersion)) {
+                        unreleased = true;
+                        Logger.log("[" + minigame.getName() + "] You are running an unreleased version (" + currentVersion + ")! Latest public version: " + latestVersion, Logger.LogType.WARNING);
+                        Logger.log("[" + minigame.getName() + "] This version may not be stable.", Logger.LogType.WARNING);
+                    } else {
+                        outdated = true;
+                        Logger.log("[" + minigame.getName() + "] Your version is outdated! Current: " + currentVersion + ", Latest: " + latestVersion, Logger.LogType.WARNING);
+                        if (!updateMessage.isEmpty()) {
+                            Logger.log("Update Message: " + updateMessage, Logger.LogType.INFO);
+                        }
                     }
                 }
             } else {
-                Bukkit.getLogger().log(Level.WARNING, "Failed to check the version. HTTP code: " + connection.getResponseCode());
+                Logger.log("Failed to check the version. HTTP code: " + connection.getResponseCode(), Logger.LogType.WARNING);
             }
 
             connection.disconnect();
         } catch (Exception e) {
+            Logger.log("Error while checking for updates: " + e.getMessage(), Logger.LogType.ERROR);
             e.printStackTrace();
         }
+    }
+    
+    private boolean isNewerVersion(String current, String latest) {
+        try {
+            String[] currentParts = current.split("\\.");
+            String[] latestParts = latest.split("\\.");
+
+            for (int i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
+                int currentVal = i < currentParts.length ? Integer.parseInt(currentParts[i]) : 0;
+                int latestVal = i < latestParts.length ? Integer.parseInt(latestParts[i]) : 0;
+
+                if (currentVal > latestVal) return true;
+                if (currentVal < latestVal) return false;
+            }
+        } catch (NumberFormatException ignored) {
+        }
+
+        return false;
     }
 }

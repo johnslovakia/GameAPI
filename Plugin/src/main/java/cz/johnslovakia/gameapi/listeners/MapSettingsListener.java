@@ -3,6 +3,7 @@ package cz.johnslovakia.gameapi.listeners;
 
 import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.game.map.Area;
@@ -39,7 +40,7 @@ public class MapSettingsListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void playerInteract(PlayerInteractEvent e){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
-        Game game = gamePlayer.getPlayerData().getGame();
+        Game game = gamePlayer.getGame();
 
         if (gamePlayer.isSpectator()){
             if (e.getAction().equals(Action.RIGHT_CLICK_BLOCK) || e.getAction().equals(Action.LEFT_CLICK_BLOCK)) {
@@ -183,7 +184,7 @@ public class MapSettingsListener implements Listener {
         }
         Player player = (Player) e.getEntity();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        Game game = gamePlayer.getPlayerData().getGame();
+        Game game = gamePlayer.getGame();
 
         if (game != null) {
             if (game.getState() == GameState.WAITING || game.getState() == GameState.STARTING || game.getState() == GameState.ENDING) {
@@ -193,7 +194,7 @@ public class MapSettingsListener implements Listener {
                         if (game.getState() == GameState.ENDING && !game.getSettings().teleportPlayersAfterEnd()) {
                             player.teleport(RespawnListener.getNonRespawnLocation(game));
                         }else{
-                            e.getEntity().teleport(game.getLobbyPoint());
+                            e.getEntity().teleport(game.getLobbyManager().getLobbyLocation().getLocation());
                         }
                     }
                 }
@@ -307,7 +308,7 @@ public class MapSettingsListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void blockPlace(BlockPlaceEvent e){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
-        Game game = gamePlayer.getPlayerData().getGame();
+        Game game = gamePlayer.getGame();
 
         AreaSettings settings = AreaManager.getActiveSettings(e.getBlockPlaced().getLocation());
         if(settings != null){
@@ -323,7 +324,7 @@ public class MapSettingsListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void blockBreak(BlockBreakEvent e){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
-        Game game = gamePlayer.getPlayerData().getGame();
+        Game game = gamePlayer.getGame();
 
         AreaSettings settings = AreaManager.getActiveSettings(e.getBlock().getLocation());
         if(settings != null){
@@ -480,7 +481,7 @@ public class MapSettingsListener implements Listener {
     public void playerDamagePlayer(EntityDamageByEntityEvent e){
         if (e.getDamager() instanceof Player) {
             GamePlayer damager = PlayerManager.getGamePlayer((Player) e.getDamager());
-            Game game = damager.getPlayerData().getGame();
+            Game game = damager.getGame();
             ;
             if (damager.isSpectator()) {
                 e.setCancelled(true);
@@ -493,11 +494,11 @@ public class MapSettingsListener implements Listener {
 
 
 
-        if(Utils.isPlayerDamager(e) && e.getEntity() instanceof Player){
+        if(e.getDamager() instanceof Player && e.getEntity() instanceof Player){
             GamePlayer damaged = PlayerManager.getGamePlayer((Player) e.getEntity());
-            GamePlayer damager = Utils.getDamager(e);
-            Game damagedGame = damaged.getPlayerData().getGame();
-            Game damagerGame = damager.getPlayerData().getGame();;
+            GamePlayer damager = PlayerManager.getGamePlayer((Player) e.getDamager());
+            Game damagedGame = damaged.getGame();
+            Game damagerGame = damager.getGame();;
 
             if (damager.isSpectator()){
                 e.setCancelled(true);
@@ -508,16 +509,6 @@ public class MapSettingsListener implements Listener {
                 if(settings != null){
                     if(!settings.isCanPvP()){
                         e.setCancelled(true);
-                    }else{
-                        if(damagedGame != null){
-                            if(damagedGame.equals(damagerGame)){
-                                if(damaged.getPlayerData().getTeam() != null && damager.getPlayerData().getTeam() != null && damaged.getPlayerData().getTeam().equals(damager.getPlayerData().getTeam())){
-                                    e.setCancelled(true);
-                                }
-                            }else{
-                                e.setCancelled(true);
-                            }
-                        }
                     }
                 }
             }
@@ -533,7 +524,7 @@ public class MapSettingsListener implements Listener {
     @EventHandler
     public void onPlayerArmorStandManipulate(PlayerArmorStandManipulateEvent e) {
         Player player = e.getPlayer();
-        Game game = PlayerManager.getGamePlayer(player).getPlayerData().getGame();
+        Game game = PlayerManager.getGamePlayer(player).getGame();
 
         if (game != null){
             e.setCancelled(true);
@@ -544,7 +535,7 @@ public class MapSettingsListener implements Listener {
     public void onEntityDamage(EntityDamageEvent e) {
         if (e.getEntity() instanceof Player player) {
             GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-            Game game = PlayerManager.getGamePlayer(player).getPlayerData().getGame();
+            Game game = PlayerManager.getGamePlayer(player).getGame();
 
             if ((game != null && game.getState() != GameState.INGAME) || gamePlayer.isSpectator()) {
                 e.setCancelled(true);
@@ -570,10 +561,9 @@ public class MapSettingsListener implements Listener {
     public void onPlayerMove(PlayerMoveEvent e) {
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        Game game = PlayerManager.getGamePlayer(player).getPlayerData().getGame();
+        Game game = PlayerManager.getGamePlayer(player).getGame();
 
         if (game == null || game.getState() != GameState.INGAME) return;
-        if (e.getTo() == null) return;
 
         AreaSettings settings = AreaManager.getActiveSettings(gamePlayer);
         if(game.getCurrentMap().getMainArea() != null && settings != null) {
@@ -586,7 +576,7 @@ public class MapSettingsListener implements Listener {
                 if (e.getTo().getY() < lowestAreaY - 20){
                     player.teleport(RespawnListener.getNonRespawnLocation(game));
                     if (!gamePlayer.isSpectator()) {
-                        Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> {
+                        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
                             player.getInventory().clear();
                             player.damage(player.getHealth());
                         }, 1L);

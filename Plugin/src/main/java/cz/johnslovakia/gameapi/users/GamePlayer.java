@@ -1,10 +1,13 @@
 package cz.johnslovakia.gameapi.users;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.game.Winner;
+import cz.johnslovakia.gameapi.game.kit.Kit;
 import cz.johnslovakia.gameapi.game.map.Area;
+import cz.johnslovakia.gameapi.game.map.GameMap;
 import cz.johnslovakia.gameapi.game.team.GameTeam;
 import cz.johnslovakia.gameapi.messages.Language;
 import cz.johnslovakia.gameapi.messages.MessageManager;
@@ -34,11 +37,16 @@ public class GamePlayer extends Winner {
     private OfflinePlayer player;
     private GamePlayerType type;
 
+    private Game game;
+    private GameTeam team;
+    private Kit kit;
+
     private boolean enabledPVP = true;
     private boolean enabledMovement = true;
     private boolean limited = false;
 
     private final PlayerData playerData;
+    @Deprecated
     private FastBoard scoreboard;
 
     private FriendsInterface friends;
@@ -113,12 +121,12 @@ public class GamePlayer extends Winner {
 
 
     public boolean isRespawning(){
-        if (getPlayerData().getGame().getSettings().useTeams() && getPlayerData().getGame().getSettings().isEnabledRespawning()){
-            GameTeam team = getPlayerData().getTeam();
+        if (getGame().getSettings().useTeams() && getGame().getSettings().isEnabledRespawning()){
+            GameTeam team = getTeam();
 
             return !team.isDead();
         }else{
-            return getPlayerData().getGame().getSettings().isEnabledRespawning();
+            return getGame().getSettings().isEnabledRespawning();
         }
     }
 
@@ -127,7 +135,7 @@ public class GamePlayer extends Winner {
     }
 
     public void setSpectator(boolean spectator, boolean teamSelector){
-        Game game = getPlayerData().getGame();
+        Game game = getGame();
 
         if (spectator){
             setType(GamePlayerType.SPECTATOR);
@@ -138,17 +146,22 @@ public class GamePlayer extends Winner {
             getOnlinePlayer().addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
 
             for (GamePlayer alivePlayer : game.getPlayers()) {
-                GameAPI.getInstance().getVersionSupport().hidePlayer(GameAPI.getInstance(), alivePlayer.getOnlinePlayer(), getOnlinePlayer());
+                GameAPI.getInstance().getVersionSupport().hidePlayer(Minigame.getInstance().getPlugin(), alivePlayer.getOnlinePlayer(), getOnlinePlayer());
             }
             for (GamePlayer otherSpectator : game.getSpectators()) {
-                GameAPI.getInstance().getVersionSupport().showPlayer(GameAPI.getInstance(), otherSpectator.getOnlinePlayer(), getOnlinePlayer());
+                GameAPI.getInstance().getVersionSupport().showPlayer(Minigame.getInstance().getPlugin(), otherSpectator.getOnlinePlayer(), getOnlinePlayer());
+            }
+
+            GameMap currentMap = game.getCurrentMap();
+            if (currentMap != null){
+                currentMap.getPlayerToLocation().remove(this);
             }
 
             if (game.getState().equals(GameState.INGAME)) {
                 if (teamSelector) {
-                    getPlayerData().getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().give(getOnlinePlayer());
+                    getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().give(getOnlinePlayer());
                 } else {
-                    getPlayerData().getGame().getSpectatorManager().getInventoryManager().give(getOnlinePlayer());
+                    getGame().getSpectatorManager().getInventoryManager().give(getOnlinePlayer());
                 }
             }
 
@@ -159,18 +172,18 @@ public class GamePlayer extends Winner {
 
             for (GamePlayer gamePlayer : game.getPlayers()){
                 if (!gamePlayer.equals(this)){
-                    GameAPI.getInstance().getVersionSupport().showPlayer(GameAPI.getInstance(), gamePlayer.getOnlinePlayer(), getOnlinePlayer());
+                    GameAPI.getInstance().getVersionSupport().showPlayer(Minigame.getInstance().getPlugin(), gamePlayer.getOnlinePlayer(), getOnlinePlayer());
                 }
             }
             for (GamePlayer otherSpectator : game.getSpectators()) {
-                GameAPI.getInstance().getVersionSupport().hidePlayer(GameAPI.getInstance(), otherSpectator.getOnlinePlayer(), getOnlinePlayer());
+                GameAPI.getInstance().getVersionSupport().hidePlayer(Minigame.getInstance().getPlugin(), otherSpectator.getOnlinePlayer(), getOnlinePlayer());
             }
 
-            if (getPlayerData().getGame().getSpectatorManager().getInventoryManager().getPlayers().contains(getOnlinePlayer())){
-                getPlayerData().getGame().getSpectatorManager().getInventoryManager().unloadInventory(getOnlinePlayer());
+            if (getGame().getSpectatorManager().getInventoryManager().getPlayers().contains(getOnlinePlayer())){
+                getGame().getSpectatorManager().getInventoryManager().unloadInventory(getOnlinePlayer());
             }
-            if (getPlayerData().getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().getPlayers().contains(getOnlinePlayer())){
-                getPlayerData().getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().unloadInventory(getOnlinePlayer());
+            if (getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().getPlayers().contains(getOnlinePlayer())){
+                getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().unloadInventory(getOnlinePlayer());
             }
 
             getOnlinePlayer().setAllowFlight(false);
@@ -193,13 +206,15 @@ public class GamePlayer extends Winner {
     }
 
     public void resetAttributes(){
-        getOnlinePlayer().getInventory().setArmorContents(null);
         getOnlinePlayer().getInventory().clear();
         GameAPI.getInstance().getVersionSupport().setMaxPlayerHealth(getOnlinePlayer(), 20D);
         getOnlinePlayer().setHealth(20);
         getOnlinePlayer().setFoodLevel(20);
-        getOnlinePlayer().setLevel(0);
-        getOnlinePlayer().setExp(0);
+        //TODO: vymyslet lépe pro level system
+        if (getGame().getState().equals(GameState.INGAME)) {
+            getOnlinePlayer().setLevel(0);
+            getOnlinePlayer().setExp(0);
+        }
         getOnlinePlayer().setAllowFlight(false);
         getOnlinePlayer().setFlying(false);
         getOnlinePlayer().setFireTicks(0);
@@ -222,7 +237,7 @@ public class GamePlayer extends Winner {
     }
 
     public boolean isOnline(){
-        return getOnlinePlayer() != null;
+        return getOnlinePlayer() != null || getType().equals(GamePlayerType.DISCONNECTED);
     }
 
     public boolean isSpectator() {
@@ -230,11 +245,11 @@ public class GamePlayer extends Winner {
     }
 
     public boolean hasKit(){
-        return getPlayerData().getKit() != null;
+        return getKit() != null;
     }
 
     public boolean isInGame(){
-        return getPlayerData().getGame() != null;
+        return getGame() != null;
     }
 
     public OfflinePlayer getOfflinePlayer() {
@@ -244,10 +259,10 @@ public class GamePlayer extends Winner {
     public List<Area> getAreas(){
         if(!isInGame()) return null;
         if(!isOnline()) return null;
-        if (getPlayerData().getGame().getCurrentMap() == null) return null;
+        if (getGame().getCurrentMap() == null) return null;
 
         List<Area> areas = new ArrayList<>();
-        for(Area area : getPlayerData().getGame().getCurrentMap().getAreas()){
+        for(Area area : getGame().getCurrentMap().getAreas()){
             if(area.isInArea(getOnlinePlayer().getLocation())) {
                 areas.add(area);
             }

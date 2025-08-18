@@ -24,7 +24,7 @@ public class AreaListener implements Listener {
     @EventHandler
     public void onBlockBreak(BlockBreakEvent e) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
-        Game game = gamePlayer.getPlayerData().getGame();
+        Game game = gamePlayer.getGame();
         Player player = gamePlayer.getOnlinePlayer();
         if (game != null) {
             if (game.getState() != GameState.INGAME) return;
@@ -45,7 +45,7 @@ public class AreaListener implements Listener {
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent e) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
-        Game game = gamePlayer.getPlayerData().getGame();
+        Game game = gamePlayer.getGame();
         Player player = gamePlayer.getOnlinePlayer();
         if (game != null) {
             if (game.getState() != GameState.INGAME) return;
@@ -67,16 +67,16 @@ public class AreaListener implements Listener {
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent e) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
-        Game game = gamePlayer.getPlayerData().getGame();
-
-        Location from = e.getFrom();
-        Location to = e.getTo();
+        Game game = gamePlayer.getGame();
 
         if (!gamePlayer.isEnabledMovement()) {
+            Location from = e.getFrom();
+            Location to = e.getTo();
 
             if (from.getX() != to.getX() || from.getZ() != to.getZ()) {
                 Location loc = e.getFrom();
-                e.getPlayer().teleport(loc.setDirection(to.getDirection()));
+                //e.getPlayer().teleport(loc.setDirection(to.getDirection()));
+                e.setTo(loc.setDirection(to.getDirection()));
             }
         }
 
@@ -84,17 +84,18 @@ public class AreaListener implements Listener {
             if (game.getState() != GameState.INGAME) return;
             if (game.getCurrentMap() == null) return;
 
+            Location from = e.getFrom();
+            Location to = e.getTo();
+
 
             if (game.getCurrentMap().getMainArea() != null) {
                 Area borderArea = game.getCurrentMap().getMainArea();
-                if (to != null) {
-                    if (borderArea.isBorder() && !borderArea.isInArea(to, 12) && from.getY() <= to.getY()) {
-                        Vector direction = borderArea.getCenter().clone().subtract(from).toVector();
-                        direction.normalize().multiply(0.5);
+                if (borderArea.isBorder() && !borderArea.isInArea(to, 12) && from.getY() <= to.getY()) {
+                    Vector direction = borderArea.getCenter().clone().subtract(from).toVector();
+                    direction.normalize().multiply(0.5);
 
-                        gamePlayer.getOnlinePlayer().teleport(to.clone().add(direction));
-                        MessageManager.get(gamePlayer, "chat.move_border").send();
-                    }
+                    gamePlayer.getOnlinePlayer().teleport(to.clone().add(direction));
+                    MessageManager.get(gamePlayer, "chat.move_border").send();
                 }
             }
 
@@ -106,7 +107,6 @@ public class AreaListener implements Listener {
                 if (area.isInArea(from)) {
                     fromIsIn = true;
                 }
-                assert to != null;
                 if (area.isInArea(to)) {
                     toIsIn = true;
                 }

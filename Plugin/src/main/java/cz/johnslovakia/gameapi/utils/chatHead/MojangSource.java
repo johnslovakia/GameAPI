@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.utils.chatHead;
 
+import net.kyori.adventure.text.Component;
 import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.OfflinePlayer;
 import org.json.JSONArray;
@@ -12,10 +13,12 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Base64;
+import java.util.Objects;
 
 /**
  * SkinSource implementation to retrieve heads from Mojang.
  */
+//https://github.com/OGminso/ChatHeadFont/tree/main
 public class MojangSource extends SkinSource {
 
 
@@ -31,14 +34,14 @@ public class MojangSource extends SkinSource {
      * {@inheritDoc}
      */
     @Override
-    public BaseComponent[] getHead(OfflinePlayer player, boolean overlay) {
+    public Component getHead(OfflinePlayer player, boolean overlay) {
 
-        if (useUUIDWhenRetrieve()) {
-            return toBaseComponent(getPixelColorsFromSkin(getPlayerSkinFromMojang(player.getUniqueId().toString()), overlay));
-        } else {
-            return toBaseComponent(getPixelColorsFromSkin(getPlayerSkinFromMojang(getUUIDFromName(player)), overlay));
+        String skin = getPlayerSkinFromMojang((useUUIDWhenRetrieve() ? player.getUniqueId().toString() : getUUIDFromName(player)));
+        if (Objects.equals(skin, "Unable to retrieve player skin URL.")){
+            return toComponent(getPixelColorsFromSkin(getPlayerSkinFromMojang("9cb6a52c-55bc-456b-9513-f4cf19cdf9e3"), overlay));
+        }else {
+            return toComponent(getPixelColorsFromSkin(getPlayerSkinFromMojang(player.getUniqueId().toString()), overlay));
         }
-
     }
 
     /**
@@ -53,6 +56,13 @@ public class MojangSource extends SkinSource {
             URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + offlinePlayer.getName());
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 200) {
+                return getPlayerSkinFromMojang("9cb6a52c-55bc-456b-9513-f4cf19cdf9e3");
+            }
 
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                 StringBuilder response = new StringBuilder();
@@ -90,6 +100,13 @@ public class MojangSource extends SkinSource {
             URL url = new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + uuid);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 200) {
+                return getPlayerSkinFromMojang("9cb6a52c-55bc-456b-9513-f4cf19cdf9e3");
+            }
 
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                 StringBuilder response = new StringBuilder();
@@ -118,11 +135,10 @@ public class MojangSource extends SkinSource {
                     }
                 }
             }
-        } catch (IOException | JSONException e) {
-            e.printStackTrace();
+        } catch (IOException | JSONException ignored) {
+            //e.printStackTrace();
         }
         return "Unable to retrieve player skin URL."; //TODO Add error handling
     }
-
 
 }

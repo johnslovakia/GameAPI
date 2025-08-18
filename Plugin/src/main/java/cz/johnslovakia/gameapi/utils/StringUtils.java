@@ -2,10 +2,14 @@ package cz.johnslovakia.gameapi.utils;
 
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+
+import lombok.Getter;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.chat.ComponentSerializer;
-import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.enchantments.Enchantment;
@@ -15,16 +19,39 @@ import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import java.awt.*;
 import java.text.NumberFormat;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.IntStream;
 
 public class StringUtils {
+
+    public static String getTimeLeftUntil(LocalDateTime targetDateTime) {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (targetDateTime.isBefore(now)) {
+            return "-";
+        }
+
+        Duration duration = Duration.between(now, targetDateTime);
+
+        long totalSeconds = duration.getSeconds();
+        long days = totalSeconds / (24 * 3600);
+        long hours = (totalSeconds % (24 * 3600)) / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+
+        List<String> parts = new ArrayList<>();
+
+        if (days > 0) parts.add(days + " " + (days == 1 ? "day" : "days"));
+        if (hours > 0) parts.add(hours + " " + (hours == 1 ? "hour" : "hours"));
+        if (minutes > 0 && days == 0) parts.add(minutes + " " + (minutes == 1 ? "minute" : "minutes"));
+
+        return String.join(", ", parts);
+    }
 
     public static String stylizeText(String text) {
         if (text == null || text.isEmpty()) {
@@ -55,7 +82,7 @@ public class StringUtils {
             }
         }
         if (formatedName == null){
-            formatedName = WordUtils.capitalize(item.getType().name().toLowerCase().replaceAll("_", " "));
+            formatedName = org.apache.commons.lang3.StringUtils.capitalize(item.getType().name().toLowerCase().replaceAll("_", " "));
         }
 
         formatedName = (item.getAmount() > 1 ? item.getAmount() + "x " : "") + formatedName;
@@ -66,7 +93,7 @@ public class StringUtils {
             StringBuilder stringBuilder = new StringBuilder(" (");
             int i = 1;
             for (Enchantment enchantment : item.getEnchantments().keySet()){
-                String formatedEnchantment = WordUtils.capitalize(enchantment.getKey().getKey().toLowerCase().replaceAll("_", " "));
+                String formatedEnchantment = org.apache.commons.lang3.StringUtils.capitalize(enchantment.getKey().getKey().toLowerCase().replaceAll("_", " "));
                 formatedEnchantment += " " + numeral(item.getEnchantmentLevel(enchantment));
                 stringBuilder.append(formatedEnchantment);
                 if (item.getEnchantments().size() > i){
@@ -98,7 +125,7 @@ public class StringUtils {
                 PotionEffectType effectType = effect.getType();
                 int duration = effect.getDuration();
 
-                String formatedPotion = WordUtils.capitalize(effectType.getKey().getKey().toLowerCase().replaceAll("_", " ")) + " " + numeral(effect.getAmplifier());
+                String formatedPotion = org.apache.commons.lang3.StringUtils.capitalize(effectType.getKey().getKey().toLowerCase().replaceAll("_", " ")) + " " + numeral(effect.getAmplifier());
                 formatedPotion += " " + getDurationString(duration);
                 stringBuilder.append(formatedPotion);
                 if (item.getEnchantments().size() > i){
@@ -185,15 +212,31 @@ public class StringUtils {
         return ChatColor.translateAlternateColorCodes('&', message);
     }
 
-    public static String colorize(String str) {
-        Pattern HEX_PATTERN = Pattern.compile("&(#\\w{6})");
-        Matcher matcher = HEX_PATTERN.matcher(ChatColor.translateAlternateColorCodes('&', str));
-        StringBuffer buffer = new StringBuffer();
+    public static Component colorizerComponent(String input) {
+        Matcher matcher = Pattern.compile("#[a-fA-F0-9]{6}").matcher(input);
 
-        while (matcher.find())
-            matcher.appendReplacement(buffer, net.md_5.bungee.api.ChatColor.of(matcher.group(1)).toString());
+        Component result = Component.empty();
+        int lastIndex = 0;
+        TextColor currentColor = null;
 
-        return matcher.appendTail(buffer).toString();
+        while (matcher.find()) {
+            if (matcher.start() > lastIndex) {
+                String textBefore = input.substring(lastIndex, matcher.start());
+                result = result.append(Component.text(textBefore, currentColor));
+            }
+
+            String hex = matcher.group();
+            currentColor = TextColor.fromHexString(hex);
+
+            lastIndex = matcher.end();
+        }
+
+        if (lastIndex < input.length()) {
+            String textAfter = input.substring(lastIndex);
+            result = result.append(Component.text(textAfter, currentColor));
+        }
+
+        return result;
     }
 
     private final static int CENTER_PX = 154;
@@ -265,14 +308,19 @@ public class StringUtils {
 
 
     //Source: SirSpoodles on Spigot
+    @Getter
     public enum DefaultFontInfo{
 
         A('A', 5),
+        long_A('Á', 5),
         a('a', 5),
+        long_a('á', 5),
         B('B', 5),
         b('b', 5),
         C('C', 5),
+        caron_C('C', 5),
         c('c', 5),
+        caron_c('č', 5),
         D('D', 5),
         d('d', 5),
         E('E', 5),
@@ -284,13 +332,15 @@ public class StringUtils {
         H('H', 5),
         h('h', 5),
         I('I', 3),
+        long_I('Í', 3),
         i('i', 1),
+        long_i('í', 1),
         J('J', 5),
         j('j', 5),
         K('K', 5),
         k('k', 4),
         L('L', 5),
-        l('l', 1),
+        l('l', 2),
         M('M', 5),
         m('m', 5),
         N('N', 5),
@@ -308,7 +358,11 @@ public class StringUtils {
         T('T', 5),
         t('t', 4),
         U('U', 5),
+        ring_U('Ů', 5),
+        long_U('Ú', 5),
         u('u', 5),
+        ring_u('ů', 5),
+        long_u('ú', 5),
         V('V', 5),
         v('v', 5),
         W('W', 5),
@@ -316,9 +370,13 @@ public class StringUtils {
         X('X', 5),
         x('x', 5),
         Y('Y', 5),
+        long_Y('Ý', 5),
         y('y', 5),
+        long_y('ý', 5),
         Z('Z', 5),
+        caron_Z('Ž', 5),
         z('z', 5),
+        caron_z('ž', 5),
         NUM_1('1', 5),
         NUM_2('2', 5),
         NUM_3('3', 5),
@@ -337,8 +395,8 @@ public class StringUtils {
         UP_ARROW('^', 5),
         AMPERSAND('&', 5),
         ASTERISK('*', 5),
-        LEFT_PARENTHESIS('(', 4),
-        RIGHT_PERENTHESIS(')', 4),
+        LEFT_PARENTHESIS('(', 3),
+        RIGHT_PERENTHESIS(')', 3),
         MINUS('-', 5),
         UNDERSCORE('_', 5),
         PLUS_SIGN('+', 5),
@@ -361,23 +419,17 @@ public class StringUtils {
         TICK('`', 2),
         PERIOD('.', 1),
         COMMA(',', 1),
-        SPACE(' ', 3),
+        SPACE(' ', 5),
+        SWORD('ẍ', 6),
+        SKULL('Ẍ', 6),
         DEFAULT('a', 4);
 
-        private char character;
-        private int length;
+        private final char character;
+        private final int length;
 
         DefaultFontInfo(char character, int length) {
             this.character = character;
             this.length = length;
-        }
-
-        public char getCharacter(){
-            return this.character;
-        }
-
-        public int getLength(){
-            return this.length;
         }
 
         public int getBoldLength(){
@@ -562,26 +614,64 @@ public class StringUtils {
     }
 
     public static String calculateNegativeSpaces(int value) {
+        if (value == 0) {
+            return "";
+        }
+
         StringBuilder result = new StringBuilder();
+        int remainder = value;
 
-        for (String symbol : advances.keySet()) {
-            int advanceValue = advances.get(symbol);
+        List<Map.Entry<String, Integer>> denoms = new ArrayList<>(advances.entrySet());
+        denoms.sort((e1, e2) ->
+                Integer.compare(Math.abs(e2.getValue()), Math.abs(e1.getValue()))
+        );
 
-            if (advanceValue != 0) {
-                if (advanceValue <= value) {
-                    int times = value / advanceValue;
-                    result.append(String.valueOf(symbol).repeat(Math.max(0, times)));
-                    value -= times * advanceValue;
+        while (remainder != 0) {
+            boolean usedOne = false;
+
+            for (Map.Entry<String, Integer> entry : denoms) {
+                int adv = entry.getValue();
+                if ((adv > 0 && remainder > 0) || (adv < 0 && remainder < 0)) {
+                    int absAdv = Math.abs(adv);
+                    int absRem = Math.abs(remainder);
+
+                    if (absAdv <= absRem) {
+                        int times = absRem / absAdv;
+                        String symbol = entry.getKey();
+                        for (int i = 0; i < times; i++) {
+                            result.append(symbol);
+                        }
+                        remainder -= adv * times;
+                        usedOne = true;
+                        break;
+                    }
                 }
-            } else {
-                Bukkit.getLogger().log(Level.WARNING, "AdvanceValue is zero for symbol: " + symbol);
+            }
+
+            if (!usedOne) {
+                Bukkit.getLogger().warning("calculateNegativeSpaces: zbytek " + remainder + " nelze pokrýt.");
+                break;
             }
         }
 
-        if (result.isEmpty()) {
-            return "Žádný symbol neodpovídá";
-        }
-
         return result.toString();
+    }
+
+    public static int getLength(Component component){
+        if (component == null)
+            return 0;
+
+        String text = ChatColor.stripColor(LegacyComponentSerializer.legacySection().serialize(component));
+
+        double textWidth = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            textWidth += StringUtils.DefaultFontInfo.getDefaultFontInfo(ch).getLength();
+
+            if (ch != ' ' && i < text.length() - 1 && text.charAt(i + 1) != ' ') {
+                textWidth += 1;
+            }
+        }
+        return (int) textWidth;
     }
 }

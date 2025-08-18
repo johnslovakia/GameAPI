@@ -12,9 +12,9 @@ import org.bukkit.event.HandlerList;
 public class PlayerScoreEvent extends Event {
 
     private static final HandlerList handlers = new HandlerList();
-    private GamePlayer gamePlayer;
-    private PlayerScore score;
-    private ScoreAction action;
+    private final GamePlayer gamePlayer;
+    private final PlayerScore score;
+    private final ScoreAction action;
 
 
     public PlayerScoreEvent(GamePlayer gamePlayer, PlayerScore score, ScoreAction action) {
@@ -24,7 +24,7 @@ public class PlayerScoreEvent extends Event {
     }
 
     public Game getGame() {
-        return gamePlayer.getPlayerData().getGame();
+        return gamePlayer.getGame();
     }
 
     public HandlerList getHandlers() {

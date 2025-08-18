@@ -1,32 +1,37 @@
 package cz.johnslovakia.gameapi.utils;
 
-import cz.johnslovakia.gameapi.GameAPI;
-import cz.johnslovakia.gameapi.game.GameState;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.messages.Language;
-import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 
 import lombok.Getter;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityPickupItemEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
+@Getter
 public class AbilityItem implements Listener {
+
+    public static final NamespacedKey ABILITY_ITEM_KEY = new NamespacedKey(Minigame.getInstance().getPlugin(), "ability_item");
+
+    public static boolean isAbilityItem(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return false;
+        ItemMeta meta = item.getItemMeta();
+        return meta.getPersistentDataContainer().has(ABILITY_ITEM_KEY, PersistentDataType.BYTE);
+    }
+
 
     @Getter
     public static List<AbilityItem> abilityItems = new ArrayList<>();
@@ -40,13 +45,18 @@ public class AbilityItem implements Listener {
         return null;
     }
 
+    public static Optional<AbilityItem> getAbilityItem(ItemStack item){
+        return abilityItems.stream().filter(abilityItem -> abilityItem.getFinalItemStack().getItemMeta().getDisplayName().equals(item.getItemMeta().getDisplayName())).findAny();
+    }
 
-    @Getter
+
     private final String name;
     private final ItemStack itemStack;
 
-    private final Map<Action, Consumer<GamePlayer>> actions;
+    private final List<Validator<?>> validators;
+    private final Map<Action, Consumer<ActionContext>> actions;
     private final Map<Action, Cooldown> cooldowns;
+    private final Map<GamePlayer, Cooldown> playerCooldowns = new HashMap<>();
     private final String loreTranslationKey;
     private final boolean consumable;
 
@@ -55,14 +65,21 @@ public class AbilityItem implements Listener {
         this.name = builder.name;
         this.itemStack = builder.itemStack;
 
+        this.validators = builder.validators;
         this.actions = builder.actions;
         this.cooldowns = builder.cooldowns;
         this.loreTranslationKey = builder.loreTranslationKey;
         this.consumable = builder.consumable;
 
         abilityItems.add(this);
+    }
 
-        Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
+    public void consume(Player player, ItemStack itemStack){
+        if (itemStack.getAmount() > 1) {
+            itemStack.setAmount(itemStack.getAmount() - 1);
+        } else {
+            player.getInventory().remove(itemStack);
+        }
     }
 
     public ItemStack getFinalItemStack(){
@@ -75,7 +92,13 @@ public class AbilityItem implements Listener {
         if (loreTranslationKey != null) {
             finalItem.setLore(MessageManager.get(Language.getDefaultLanguage(), loreTranslationKey));
         }
-        return finalItem.toItemStack();
+
+        ItemStack itemStack = finalItem.toItemStack();
+        ItemMeta meta = itemStack.getItemMeta();
+        meta.getPersistentDataContainer().set(ABILITY_ITEM_KEY, PersistentDataType.BYTE, (byte) 1);
+        itemStack.setItemMeta(meta);
+
+        return itemStack;
     }
 
     public ItemStack getFinalItemStack(GamePlayer gamePlayer){
@@ -88,170 +111,29 @@ public class AbilityItem implements Listener {
         if (loreTranslationKey != null) {
             finalItem.setLore(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated());
         }
-        return finalItem.toItemStack();
-    }
 
-    @EventHandler
-    public void onInventoryOpen(InventoryOpenEvent e) {
-        if (!(e.getPlayer() instanceof Player player)){
-            return;
-        }
-        if (!e.getInventory().getType().equals(InventoryType.CHEST) || e.getInventory().getLocation() == null){
-            return;
-        }
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        ItemStack itemStack = finalItem.toItemStack();
+        ItemMeta meta = itemStack.getItemMeta();
+        meta.getPersistentDataContainer().set(ABILITY_ITEM_KEY, PersistentDataType.BYTE, (byte) 1);
+        itemStack.setItemMeta(meta);
 
-        Arrays.stream(e.getInventory().getContents()).toList().forEach(itemStack -> {
-            if (itemStack == null){
-                return;
-            }
-            if (itemStack.getType().equals(Material.AIR)){
-                return;
-            }
-            if (itemStack.equals(getFinalItemStack())){
-                itemStack.setItemMeta(getFinalItemStack(gamePlayer).getItemMeta());
-            }
-        });
-    }
-
-    @EventHandler
-    public void onInventoryPickupItem(EntityPickupItemEvent e) {
-        if (!(e.getEntity() instanceof Player player)){
-            return;
-        }
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        if (e.getItem().getItemStack().getItemMeta() == null){
-            return;
-        }
-        ItemMeta meta = e.getItem().getItemStack().getItemMeta();
-
-        if (meta == null){
-            return;
-        }
-
-        if (meta.getDisplayName().contains(name)){
-            if (loreTranslationKey != null) {
-                meta.setLore(Collections.singletonList(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated()));
-                ItemBuilder item = new ItemBuilder(e.getItem().getItemStack());
-                item.setLore(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated());
-                e.getItem().setItemStack(item.toItemStack());
-            }
-        }
-    }
-
-    @EventHandler
-    public void onInventoryClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player player)){
-            return;
-        }
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        if (e.getCurrentItem() == null){
-            return;
-        }
-        if (e.getCurrentItem().getItemMeta() == null){
-            return;
-        }
-        ItemMeta meta = e.getCurrentItem().getItemMeta();
-
-        if (meta == null){
-            return;
-        }
-
-        if (meta.getDisplayName().contains(name)){
-            if (loreTranslationKey != null) {
-                meta.setLore(Collections.singletonList(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated()));
-                ItemBuilder item = new ItemBuilder(e.getCurrentItem());
-                item.setLore(MessageManager.get(gamePlayer, loreTranslationKey).getTranslated());
-                e.setCurrentItem(item.toItemStack());
-            }
-        }
-    }
-
-    @EventHandler
-    private void onInventoryInteract(PlayerInteractEvent e) {
-        Player player = e.getPlayer();
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        ItemStack item = e.getItem();
-
-        if (item == null || item.getItemMeta() == null){
-            return;
-        }
-
-        if (!item.getItemMeta().getDisplayName().equals(getFinalItemStack(gamePlayer).getItemMeta().getDisplayName())
-        || !item.getItemMeta().getLore().equals(getFinalItemStack(gamePlayer).getItemMeta().getLore())){
-            return;
-        }
-        if (gamePlayer.getPlayerData().getGame().getState() != GameState.INGAME){
-            e.setCancelled(true);
-            return;
-        }
-
-
-        for (Action action : actions.keySet()){
-
-            if (!action.equals(Action.DEFAULT)) {
-                if (action.equals(Action.LEFT_CLICK) && !(e.getAction().equals(org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) || e.getAction().equals(org.bukkit.event.block.Action.LEFT_CLICK_AIR))) {
-                    continue;
-                } else if (action.equals(Action.RIGHT_CLICK) && !(e.getAction().equals(org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) || e.getAction().equals(org.bukkit.event.block.Action.RIGHT_CLICK_AIR))) {
-                    continue;
-                }
-            }
-
-            /*if (!e.getAction().equals(action)){
-                continue;
-            }*/
-
-            Block block = e.getClickedBlock();
-            if (block != null){
-                List<Material> materials = Arrays.asList(Material.CHEST, Material.CRAFTING_TABLE, Material.ENCHANTING_TABLE, Material.ANVIL, Material.CHIPPED_ANVIL, Material.DAMAGED_ANVIL);
-                if (materials.contains(block.getType())){
-                    return;
-                }
-            }
-
-            if (!action.equals(Action.DEFAULT)) {
-                e.setCancelled(true);
-            }
-
-
-            Cooldown cooldown = null;
-            if (!cooldowns.isEmpty() && cooldowns.get(action) != null){
-                cooldown = cooldowns.get(action);
-            }
-            if (cooldown != null && cooldown.contains(gamePlayer)){
-                String roundedDouble = String.valueOf(Math.round(cooldown.getCountdown(gamePlayer) * 100.0) / 100.0);
-                MessageManager.get(player, "chat.delay").replace("%countdown%", roundedDouble).send();
-                e.setCancelled(true);
-                return;
-            }
-
-
-            actions.get(action).accept(gamePlayer);
-            if (consumable && e.getHand() != null){
-                if (item.getAmount() > 1) {
-                    item.setAmount(item.getAmount() - 1);
-                } else {
-                    player.getInventory().remove(item);
-                }
-
-            }
-            if (cooldown != null) {
-                cooldown.startCooldown(gamePlayer);
-            }
-        }
+        return itemStack;
     }
 
     public enum Action{
-        LEFT_CLICK, RIGHT_CLICK, DEFAULT;
+        LEFT_CLICK, RIGHT_CLICK, RIGHT_CLICK_ENTITY, ENTITY_DAMAGE, DEFAULT;
     }
 
+    public record ActionContext(GamePlayer gamePlayer, AbilityItem abilityItem, PlayerInteractEvent playerInteractEvent, PlayerInteractEntityEvent playerInteractEntityEvent, EntityDamageByEntityEvent entityDamageByEntityEvent){}
+    public record Validator<T>(Class<T> type, Predicate<T> validator, Consumer<T> consumer) {}
 
     public static class Builder {
 
         private final String name;
         private final ItemStack itemStack;
 
-        private final Map<Action, Consumer<GamePlayer>> actions = new HashMap<>();
+        private final List<Validator<?>> validators = new ArrayList<>();
+        private final Map<Action, Consumer<ActionContext>> actions = new HashMap<>();
         private final Map<Action, Cooldown> cooldowns = new HashMap<>();
         private String loreTranslationKey;
         private boolean consumable = false;
@@ -261,7 +143,12 @@ public class AbilityItem implements Listener {
             this.itemStack = itemStack;
         }
 
-        public Builder addAction(Action action, Consumer<GamePlayer> consumer) {
+        public <T> Builder addValidator(Class<T> type, Predicate<T> predicate, Consumer<T> consumer) {
+            validators.add(new Validator<>(type, predicate, consumer));
+            return this;
+        }
+
+        public Builder addAction(Action action, Consumer<ActionContext> consumer) {
             actions.put(action, consumer);
             return this;
         }

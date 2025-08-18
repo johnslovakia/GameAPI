@@ -10,7 +10,7 @@ public class NewArenaEvent extends Event {
 
     private boolean isCancelled = false;
 
-    private GamePlayer gamePlayer;
+    private final GamePlayer gamePlayer;
 
     public NewArenaEvent(GamePlayer gamePlayer){
         this.gamePlayer = gamePlayer;

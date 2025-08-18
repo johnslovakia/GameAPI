@@ -42,13 +42,19 @@ public class MapLocation {
 
     public World getWorld(){
         World world = gameMap.getWorld();
-        if (world == null) Logger.log("GameLocation (getLocation): World is null!", Logger.LogType.ERROR);
+        if (world == null){
+            Logger.log("MapLocation (getLocation): World is null!", Logger.LogType.ERROR);
+            return null;
+        }
         return world;
     }
 
     public Location getLocation(){
         World world = gameMap.getWorld();
-        if (world == null) Logger.log("GameLocation (getLocation): World is null!", Logger.LogType.ERROR);
+        if (world == null) {
+            Logger.log("MapLocation (getLocation): World is null!", Logger.LogType.ERROR);
+            return null;
+        }
 
         Location location = new Location(world, x, y, z);
         if (getYaw() != 0 && getPitch() != 0){

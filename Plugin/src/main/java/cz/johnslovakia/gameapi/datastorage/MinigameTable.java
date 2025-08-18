@@ -8,7 +8,9 @@ import cz.johnslovakia.gameapi.utils.Logger;
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
+import org.bukkit.Bukkit;
 
+import java.sql.*;
 import java.util.*;
 
 public class MinigameTable {
@@ -43,22 +45,46 @@ public class MinigameTable {
     }
 
     public MinigameTable createNewColumn(Type type, String name) {
-        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
+        SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
         if (connection != null) {
-            QueryResult result = connection.exec(() ->
-                    "ALTER TABLE " + TABLE_NAME +
-                            " ADD IF NOT EXISTS " + name + " " + type.getB() + (type.equals(Type.INT) ? " DEFAULT 0" : ""));
+            Connection conn = Minigame.getInstance().getDatabase().getConnection().getConnection();
 
-            if (!result.isSuccessful()) {
-                Logger.log("Failed to add new column " + TABLE_NAME + " table!", Logger.LogType.ERROR);
-                Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+            try (
+                    PreparedStatement checkStmt = conn.prepareStatement(
+                            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?"
+                    )
+            ) {
+                checkStmt.setString(1, Minigame.getInstance().getDatabase().getDatabase());
+                checkStmt.setString(2, TABLE_NAME);
+                checkStmt.setString(3, name);
+
+                ResultSet rs = checkStmt.executeQuery();
+                boolean exists = false;
+
+                if (rs.next()) {
+                    exists = rs.getInt(1) > 0;
+                }
+
+                rs.close();
+
+                if (!exists) {
+                    try (Statement alterStmt = conn.createStatement()) {
+                        String sql = "ALTER TABLE `" + TABLE_NAME + "` ADD `" + name + "` " + type.b + (type == Type.INT ? " DEFAULT 0" : "");
+                        alterStmt.executeUpdate(sql);
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         }
         return this;
     }
 
     public void newUser(GamePlayer gamePlayer){
-        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
+        SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
         if (connection == null){
             return;
         }
@@ -119,11 +145,11 @@ public class MinigameTable {
         }
 
 
-        if (GameAPI.getInstance().getMinigame().getDatabase() == null){
+        if (Minigame.getInstance().getDatabase() == null){
             Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
             return;
         }
-        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
+        SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
         if (connection == null){
             return;
         }

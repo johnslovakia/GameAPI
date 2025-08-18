@@ -31,6 +31,7 @@ public class AchievementsStorage {
             achievementJson.put("name", achievementData.getAchievement().getName());
             achievementJson.put("status", achievementData.getStatus().name());
             achievementJson.put("progress", achievementData.getProgress());
+            achievementJson.put("stage", achievementData.getStage().stage());
 
             jsonArray.put(achievementJson);
             i++;

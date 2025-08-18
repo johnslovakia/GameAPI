@@ -9,8 +9,10 @@ import java.util.*;
 public class TeamManager {
 
     private final Game game;
+
+    private final Map<Integer, GameTeam> teamPlacement = new HashMap<>();
     private List<GameTeam> teams = new ArrayList<>();
-    private HashMap<String, List<TeamScore>> scores = new HashMap<>();
+    private HashMap<String, List<TeamScore>> scores;// = new HashMap<>();
 
     public TeamManager(Game game) {
         this.game = game;
@@ -58,27 +60,6 @@ public class TeamManager {
         return highest;
     }
 
-
-    public void resetTeamsAndRegisterForNewGame(Game newGame){
-        TeamManager newTeamManager = new TeamManager(newGame);
-
-        for (GameTeam t : teams){
-            GameTeam newTeam = new GameTeam(newGame, t.getTeamColor());
-            newTeamManager.registerTeam(newTeam);
-        }
-
-        for (String s : scores.keySet()){
-            newTeamManager.registerNewScore(s);
-        }
-
-        newGame.setTeamManager(newTeamManager);
-
-        teams.clear();
-        scores.clear();
-        //Collections.sort(teams);
-    }
-
-
     public GameTeam getTeam(String name){
         for (GameTeam team : teams){
             if (team.getName().equals(name)) {
@@ -98,6 +79,10 @@ public class TeamManager {
     }
 
     public List<TeamScore> getScoresByName(String name) {
+        if (scores == null){
+            return Collections.emptyList();
+        }
+
         if (scores.containsKey(name)) {
             return scores.get(name);
         }
@@ -105,6 +90,10 @@ public class TeamManager {
     }
 
     public List<TeamScore> getScoresByTeam(GameTeam team) {
+        if (scores == null){
+            return Collections.emptyList();
+        }
+
         List<TeamScore> teamScores = new ArrayList<>();
         for (List<TeamScore> ts : scores.values()) {
             for (TeamScore ts2 : ts) {
@@ -117,6 +106,10 @@ public class TeamManager {
     }
 
     public void registerNewScore(String name) {
+        if (scores == null){
+            scores = new HashMap<>();
+        }
+
         if (scores.containsKey(name)) return;
         List<TeamScore> sc = new ArrayList<>();
         for (GameTeam t : teams) {

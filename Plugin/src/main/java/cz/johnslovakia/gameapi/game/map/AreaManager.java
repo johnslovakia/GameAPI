@@ -29,7 +29,7 @@ public class AreaManager {
         settings.setAllowPlayerSleep(false);
         settings.setAllowFoodLevelChange(false);
         settings.setAllowDurabilityChange(false);
-        if (!gamePlayer.getPlayerData().getGame().isPreparation()) {
+        if (!gamePlayer.getGame().isPreparation()) {
             settings.setAllowInventoryChange(false);
         }
         settings.setAllowItemPicking(false);
@@ -68,7 +68,7 @@ public class AreaManager {
      * @return AreaSettings object with active settings, or null if the player is not in a game.
      */
     public static AreaSettings getActiveSettings(GamePlayer gamePlayer) {
-        Game game = gamePlayer.getPlayerData().getGame();
+        Game game = gamePlayer.getGame();
 
         if (gamePlayer.isLimited()) return getLimitedSettings(gamePlayer);
         if (game == null) return null;

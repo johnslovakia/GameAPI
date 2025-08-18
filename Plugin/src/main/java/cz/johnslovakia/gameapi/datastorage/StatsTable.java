@@ -2,10 +2,11 @@ package cz.johnslovakia.gameapi.datastorage;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
-import cz.johnslovakia.gameapi.messages.Language;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.stats.Stat;
 import cz.johnslovakia.gameapi.utils.Logger;
+
+import lombok.Getter;
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
@@ -13,18 +14,18 @@ import me.zort.sqllib.api.data.Row;
 import java.sql.*;
 import java.util.*;
 
+@Getter
 public class StatsTable {
-
 
     private Minigame minigame;
     private String TABLE_NAME;
 
     public StatsTable() {
-        this.minigame = GameAPI.getInstance().getMinigame();
-        this.TABLE_NAME = GameAPI.getInstance().getMinigame().getName() + "_stats";
+        this.minigame = Minigame.getInstance();
+        this.TABLE_NAME = Minigame.getInstance().getName() + "_stats";
     }
     public void createTable() {
-        if (GameAPI.getInstance().getMinigame().getDatabase() == null) {
+        if (Minigame.getInstance().getDatabase() == null) {
             Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
             return;
         }
@@ -32,21 +33,22 @@ public class StatsTable {
         StringBuilder stats_s = new StringBuilder("`id` INT AUTO_INCREMENT PRIMARY KEY, `Nickname` VARCHAR(32) NOT NULL");
 
         List<String> stats = new ArrayList<>();
-        for (Stat stat : GameAPI.getInstance().getStatsManager().getStats()){
+        for (Stat stat : Minigame.getInstance().getStatsManager().getStats()){
             if (stat.getName().equalsIgnoreCase("Winstreak")){
                 continue;
             }
             stats.add(stat.getName().replace(" ", "_"));
         }
 
-        stats.add("Winstreak");
+        //stats.add("Winstreak");
+        //stats.add("LastDailyWinReward");
 
 
         for (String s : stats) {
             stats_s.append(", `").append(s).append("` int DEFAULT 0");
         }
 
-        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
+        SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
         if (connection == null){
             return;
         }
@@ -61,29 +63,47 @@ public class StatsTable {
         }
     }
 
-    public void newUser(GamePlayer gamePlayer) {
-        /*List<String> stats = new ArrayList<>();
-        for (Stat stat : GameAPI.getInstance().getStatsManager().getStats()){
-            stats.add(stat.getName());
-        }
+    public StatsTable createNewColumn(Type type, String name) {
+        SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
+        if (connection != null) {
+            Connection conn = Minigame.getInstance().getDatabase().getConnection().getConnection();
 
-        String stats_s = "`Nickname`";
-        String stats_s_1 = "";
-        int i = 0;
-        for (String s : stats) {
-            i++;
-            stats_s = stats_s + ", `" + s + "`";
-            if (stats.size() == i) {
-                stats_s_1 = stats_s_1 + "?";
-            } else {
-                stats_s_1 = stats_s_1 + "?, ";
+            try (
+                    PreparedStatement checkStmt = conn.prepareStatement(
+                            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?"
+                    )
+            ) {
+                checkStmt.setString(1, Minigame.getInstance().getDatabase().getDatabase());
+                checkStmt.setString(2, TABLE_NAME);
+                checkStmt.setString(3, name);
+
+                ResultSet rs = checkStmt.executeQuery();
+                boolean exists = false;
+
+                if (rs.next()) {
+                    exists = rs.getInt(1) > 0;
+                }
+
+                rs.close();
+
+                if (!exists) {
+                    try (Statement alterStmt = conn.createStatement()) {
+                        String sql = "ALTER TABLE `" + TABLE_NAME + "` ADD `" + name + "` " + type.b + (type == Type.INT ? " DEFAULT 0" : "");
+                        alterStmt.executeUpdate(sql);
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         }
+        return this;
+    }
 
-        String query = "INSERT IGNORE INTO `" + TABLE_NAME + "` (" + stats_s + ") VALUES (?, " + stats_s_1 + ")";
-        minigame.getDatabase().getConnection().exec(query);*/
-
-        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
+    public void newUser(GamePlayer gamePlayer) {
+        SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
         if (connection == null){
             return;
         }
@@ -147,7 +167,7 @@ public class StatsTable {
         HashMap<String, Integer> stats = new HashMap<String, Integer>();
 
         List<String> stats2 = new ArrayList<>();
-        for (Stat stat : GameAPI.getInstance().getStatsManager().getStats()){
+        for (Stat stat : Minigame.getInstance().getStatsManager().getStats()){
             stats2.add(stat.getName().replace(" ", "_"));
         }
 

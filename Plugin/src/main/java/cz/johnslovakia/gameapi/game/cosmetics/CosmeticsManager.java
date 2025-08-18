@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.game.cosmetics;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.game.cosmetics.defaultCosmetics.*;
 import cz.johnslovakia.gameapi.users.resources.Resource;
@@ -23,15 +24,15 @@ import java.util.List;
 public class CosmeticsManager implements Listener{
 
     private final String name;
-    private List<CosmeticsCategory> categories = new ArrayList<>();
+    private final List<CosmeticsCategory> categories = new ArrayList<>();
 
-    private Resource resource;
+    private final Resource resource;
 
     public CosmeticsManager(String name, Resource resource) {
         this.name = name;
         this.resource = resource;
 
-        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "Cosmetics");
+        Minigame.getInstance().getMinigameTable().createNewColumn(Type.JSON, "Cosmetics");
 
         addCategory(new KillMessagesCategory());
         addCategory(new KillSoundsCategory());
@@ -82,8 +83,8 @@ public class CosmeticsManager implements Listener{
         category.setManager(this);
         if (category.getTriggers() != null) {
             for (CTrigger<?> t : category.getTriggers()) {
-                GameAPI.getInstance().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() {
-                }, EventPriority.NORMAL, (listener, event) -> onEventCall(category, event), GameAPI.getInstance());
+                Minigame.getInstance().getPlugin().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() {
+                }, EventPriority.NORMAL, (listener, event) -> onEventCall(category, event), Minigame.getInstance().getPlugin());
             }
         }
     }

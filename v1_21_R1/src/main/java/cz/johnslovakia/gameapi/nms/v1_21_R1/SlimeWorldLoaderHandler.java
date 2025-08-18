@@ -32,22 +32,22 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
     }
 
     @Override
-    public boolean cloneSlimeArenaWorld(Plugin bukkitPlugin, String arenaID, String gameID) {
+    public boolean cloneSlimeArenaWorld(Plugin bukkitPlugin, String worldName, String gameID) {
         AdvancedSlimePaperAPI asp = AdvancedSlimePaperAPI.instance();
 
-        String newWorldName = arenaID + "_" + gameID;
+        String newWorldName = worldName + "_" + gameID;
 
         if (Bukkit.getPluginManager().getPlugin("SlimeWorldPlugin"/*"SlimeWorldManager"*/) == null) {
             return false;
         }
 
         try {
-            if (!loader.worldExists(arenaID)){
-                if (arenaID.contains(" ")){
-                    cloneSlimeArenaWorld(bukkitPlugin, arenaID.replaceAll(" ", "_"), gameID);
+            if (!loader.worldExists(worldName)){
+                if (worldName.contains(" ")){
+                    cloneSlimeArenaWorld(bukkitPlugin, worldName.replaceAll(" ", "_"), gameID);
                     return true;
                 }
-                Bukkit.getLogger().warning("I can't upload a World: " + arenaID + " using Slime World Manager because the world is not imported! I'll try to load the world in a different way.");
+                Bukkit.getLogger().warning("I can't upload a World: " + worldName + " using Slime World Manager because the world is not imported! I'll try to load the world in a different way.");
                 //TODO: ClassicWorldLoader.loadClassicArenaWorld(arena, game);
                 return false;
             }
@@ -63,10 +63,10 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
 
         Bukkit.getScheduler().runTaskAsynchronously(bukkitPlugin, () -> {
             try {
-                SlimeWorld world = asp.readWorld(loader, arenaID, false, properties);
+                SlimeWorld world = asp.readWorld(loader, worldName, false, properties);
 
                 Bukkit.getScheduler().runTask(bukkitPlugin, () -> {
-                    if (/*asp.worldLoaded(world)*/ Bukkit.getWorld(arenaID) != null){
+                    if (/*asp.worldLoaded(world)*/ Bukkit.getWorld(worldName) != null){
                         asp.loadWorld(world.clone(newWorldName), true);
                     }else{
                         asp.loadWorld(world, true).clone(newWorldName);
@@ -79,7 +79,7 @@ public class SlimeWorldLoaderHandler implements SlimeWorldLoader {
                     }
                 });
             } catch(UnknownWorldException e){
-                Bukkit.getLogger().warning("I can't upload a World: " + arenaID + " using Slime World Manager because the world is not imported! I'll try to load the world in a different way.");
+                Bukkit.getLogger().warning("I can't upload a World: " + worldName + " using Slime World Manager because the world is not imported! I'll try to load the world in a different way.");
                 throw new RuntimeException(e);
             }catch (IOException | CorruptedWorldException | NewerFormatException e) {
                 throw new RuntimeException(e);

@@ -3,6 +3,7 @@ package cz.johnslovakia.gameapi.game.map;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;
@@ -92,6 +93,14 @@ public class Area {
 
         if (!Objects.equals(location.getWorld(), getWorld())){
             return false;
+        }
+
+        if (loc2 == null){
+            Logger.log("Area.isInArea(): loc2 is null! (" + map.getName() + " " + map.getGame().getName() + " " + map.getGame().getID() + ")", Logger.LogType.WARNING);
+            return true;
+        }else if (loc1 == null){
+            Logger.log("Area.isInArea(): loc1 is null! (" + map.getName() + " " + map.getGame().getName() + " " + map.getGame().getID() + ")", Logger.LogType.WARNING);
+            return true;
         }
 
         double x1 = Math.min(loc1.getX(), loc2.getX()) - buffer;

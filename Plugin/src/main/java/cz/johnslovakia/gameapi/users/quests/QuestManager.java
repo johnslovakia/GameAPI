@@ -1,11 +1,16 @@
 package cz.johnslovakia.gameapi.users.quests;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
+import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
+import cz.johnslovakia.gameapi.utils.rewards.unclaimed.QuestUnclaimedReward;
+import cz.johnslovakia.gameapi.utils.rewards.unclaimed.UnclaimedReward;
 import lombok.Getter;
+import net.bytebuddy.asm.Advice;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -13,9 +18,8 @@ import org.bukkit.event.Listener;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.time.temporal.WeekFields;
+import java.util.*;
 
 @Getter
 public class QuestManager {
@@ -25,6 +29,8 @@ public class QuestManager {
 
     public QuestManager(String name) {
         this.name = name;
+
+        Minigame.getInstance().getMinigameTable().createNewColumn(Type.JSON, "Quests");
     }
 
     public void registerQuest(Quest... quests){
@@ -33,8 +39,8 @@ public class QuestManager {
                 this.quests.add(quest);
 
                 for (Trigger<?> t : quest.getTriggers()) {
-                    GameAPI.getInstance().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() {
-                    }, EventPriority.NORMAL, (listener, event) -> onEventCall(quest, event), GameAPI.getInstance());
+                    Minigame.getInstance().getPlugin().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() {
+                    }, EventPriority.NORMAL, (listener, event) -> onEventCall(quest, event), Minigame.getInstance().getPlugin());
                 }
             }
         }
@@ -68,8 +74,7 @@ public class QuestManager {
     public void check(GamePlayer gamePlayer){
         PlayerData playerData = gamePlayer.getPlayerData();
 
-        playerData.getQuestData().removeIf(quest -> quest.isCompleted() && hasTimeElapsedSinceCompletion(quest));
-
+        playerData.getQuestData().removeIf(this::shouldReset);
 
 
         int dailyQuestCount = (int) playerData.getQuestData().stream()
@@ -83,7 +88,7 @@ public class QuestManager {
             List<Quest> freeDailyQuests = getFreeQuests(gamePlayer, QuestType.DAILY);
             if (!freeDailyQuests.isEmpty()) {
                 Quest newQuest = freeDailyQuests.get(0);
-                playerData.getQuestData().add(new PlayerQuestData(newQuest, gamePlayer));
+                playerData.getQuestData().add(new PlayerQuestData(newQuest, gamePlayer, LocalDate.now(), 0));
                 dailyQuestCount++;
             } else {
                 break;
@@ -94,7 +99,7 @@ public class QuestManager {
             List<Quest> freeWeeklyQuests = getFreeQuests(gamePlayer, QuestType.WEEKLY);
             if (!freeWeeklyQuests.isEmpty()) {
                 Quest newQuest = freeWeeklyQuests.get(0);
-                playerData.getQuestData().add(new PlayerQuestData(newQuest, gamePlayer));
+                playerData.getQuestData().add(new PlayerQuestData(newQuest, gamePlayer, LocalDate.now(), 0));
                 weeklyQuestCount++;
             } else {
                 break;
@@ -102,19 +107,33 @@ public class QuestManager {
         }
     }
 
-    public static boolean hasTimeElapsedSinceCompletion(PlayerQuestData questData){
-        LocalDate now = LocalDate.now();
+    public boolean shouldReset(PlayerQuestData data){
+        Optional<QuestUnclaimedReward> unclaimedReward = data.getGamePlayer().getPlayerData()
+                .getUnclaimedRewards(UnclaimedReward.Type.QUEST).stream()
+                .filter(r -> r instanceof QuestUnclaimedReward)
+                .map(r -> (QuestUnclaimedReward) r)
+                .filter(r -> r.getQuestName().equals(data.getQuest().getName()))
+                .findFirst();
+        if (unclaimedReward.isPresent())
+            return false;
 
-        if (questData.getCompletionDate() == null){
+
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = data.getStartDate();
+        if (startDate == null)
             return true;
-        }
 
-        if (questData.getQuest().getType().equals(QuestType.DAILY)){
-            LocalDate oneDayAfterCompletion = questData.getCompletionDate().plusDays(1);
-            return now.isEqual(oneDayAfterCompletion) || now.isAfter(oneDayAfterCompletion);
-        }else{
-            LocalDate oneWeekAfterCompletion = questData.getCompletionDate().plusWeeks(1);
-            return now.isEqual(oneWeekAfterCompletion) || now.isAfter(oneWeekAfterCompletion);
+        if (data.getQuest().getType().equals(QuestType.WEEKLY)) {
+            WeekFields weekFields = WeekFields.of(Locale.getDefault());
+            int startWeek = startDate.get(weekFields.weekOfWeekBasedYear());
+            int currentWeek = today.get(weekFields.weekOfWeekBasedYear());
+
+            int startYear = startDate.getYear();
+            int currentYear = today.getYear();
+
+            return startWeek != currentWeek || startYear != currentYear;
+        } else {
+            return !startDate.isEqual(today);
         }
     }
 

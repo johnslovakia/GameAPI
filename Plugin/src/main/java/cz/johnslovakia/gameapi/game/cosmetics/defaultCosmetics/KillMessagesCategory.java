@@ -29,7 +29,7 @@ public class KillMessagesCategory extends CosmeticsCategory {
         super("Kill Messages", new ItemStack(Material.OAK_SIGN));
 
 
-        FileConfiguration config = GameAPI.getInstance().getMinigame().getPlugin().getConfig();
+        FileConfiguration config = Minigame.getInstance().getPlugin().getConfig();
 
         int LEGENDARY_PRICE = Utils.getPrice(config, "kill_messages.legendary", 18000);
         int EPIC_PRICE = Utils.getPrice(config, "kill_messages.epic", 14000);
@@ -115,6 +115,7 @@ public class KillMessagesCategory extends CosmeticsCategory {
                 });
 
         Cosmetic enchanted = new Cosmetic("Enchanted", new ItemStack(Material.ENCHANTING_TABLE), UNCOMMON_PRICE, CosmeticRarity.UNCOMMON)
+                .setAsPurchasable()
                 .setSelectConsumer(gamePlayer -> {
                     KillMessage killMessage = new KillMessage(gamePlayer);
                     killMessage.addMessage(EntityDamageEvent.DamageCause.KILL, "chat.kill_message.enchanted.melee");
@@ -126,6 +127,7 @@ public class KillMessagesCategory extends CosmeticsCategory {
                 });
 
         Cosmetic dramatic = new Cosmetic("Dramatic", new ItemStack(Material.INK_SAC), COMMON_PRICE, CosmeticRarity.COMMON)
+                .setAsPurchasable()
                 .setSelectConsumer(gamePlayer -> {
                     KillMessage killMessage = new KillMessage(gamePlayer);
                     killMessage.addMessage(EntityDamageEvent.DamageCause.KILL, "chat.kill_message.dramatic.melee");

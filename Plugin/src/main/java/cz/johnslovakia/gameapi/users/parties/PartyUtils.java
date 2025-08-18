@@ -15,7 +15,7 @@ public class PartyUtils {
         List<GamePlayer> leftedAlone = new ArrayList<>();
 
         for (GamePlayer gamePlayer : members) {
-            Game game = gamePlayer.getPlayerData().getGame();;
+            Game game = gamePlayer.getGame();;
             GameTeam team = game.getTeamManager().getSmallestTeam();
 
             if (team.getMembers().size() < game.getSettings().getMaxTeamPlayers()) {

@@ -7,23 +7,24 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 
-@Getter
+@Getter @Setter
 public class PlayerAchievementData {
 
     private final Achievement achievement;
-
     private final GamePlayer gamePlayer;
-    @Setter
+
     private Status status;
+    private AchievementStage stage;
     private int progress;
-    @Setter
     private LocalDate completionDate;
 
-    public PlayerAchievementData(Achievement achievement, GamePlayer gamePlayer, int progress) {
+    public PlayerAchievementData(Achievement achievement, GamePlayer gamePlayer, AchievementStage stage, int progress) {
         this.gamePlayer = gamePlayer;
         this.achievement = achievement;
-        this.status = Status.LOCKED;
+        this.stage = stage;
         this.progress = progress;
+
+        this.status = Status.LOCKED;
     }
 
     public PlayerAchievementData(Achievement achievement, GamePlayer gamePlayer, Status status) {
@@ -33,13 +34,9 @@ public class PlayerAchievementData {
     }
 
     public void increaseProgress(){
-        if (progress < achievement.getCompletionGoal()) {
+        if (progress < stage.goal()) {
             progress++;
         }
-    }
-
-    public boolean isCompleted(){
-        return progress >= achievement.getCompletionGoal();
     }
 
     public enum Status{

@@ -30,6 +30,7 @@ public class MinigameSettings {
     private boolean allowDefaultKitSelection = true;
     private boolean canDropCosmeticHat = false;
 
+    private int gamesPerServer = 1;
     private int maxPlayers = 16;
     private int minPlayers = 12;
     private int maxTeams = 4;

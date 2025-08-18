@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.task.tasks;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.task.Task;
@@ -8,8 +9,12 @@ import cz.johnslovakia.gameapi.task.TaskInterface;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.utils.Logger;
+import cz.johnslovakia.gameapi.utils.PlayerBossBar;
 import cz.johnslovakia.gameapi.utils.Utils;
 import cz.johnslovakia.gameapi.utils.Sounds;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
@@ -25,41 +30,17 @@ import java.util.Map;
 
 public class PreparationCountdown implements TaskInterface {
 
-    private void createBossBar(GamePlayer gamePlayer, Task task){
-        if (gamePlayer.getPlayerData().getCurrentBossBar() != null){
-            gamePlayer.getPlayerData().getCurrentBossBar().removeAll();
-        }
-
-        BossBar bossBar = Bukkit.createBossBar("Battle begins in:", BarColor.WHITE, BarStyle.SOLID);
-
-        bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.battle_begings_in")
-                .replace("%time%", Utils.getDurationString(task.getCounter()))
-                .getFontTextComponentJSON("gameapi:bossbar_offset"));
-        bossBar.setVisible(true);
-        bossBar.addPlayer(gamePlayer.getOnlinePlayer());
-        gamePlayer.getPlayerData().setCurrentBossBar(bossBar);
-    }
-
-    @Override
-    public void onStart(Task task) {
-        for (GamePlayer gamePlayer : task.getGame().getParticipants()){
-            createBossBar(gamePlayer, task);
-        }
-    }
-
     @Override
     public void onCount(Task task) {
         Game game = task.getGame();
 
         for (GamePlayer gamePlayer : game.getParticipants()){
-            BossBar bossBar = gamePlayer.getPlayerData().getCurrentBossBar();
-            if(bossBar == null){
-                createBossBar(gamePlayer, task);
-                bossBar = gamePlayer.getPlayerData().getCurrentBossBar();
-            }
-            bossBar.setTitle(MessageManager.get(gamePlayer, "bossbar.battle_begings_in")
-                    .replace("%time%", Utils.getDurationString(task.getCounter()))
-                    .getFontTextComponentJSON("gameapi:bossbar_offset"));
+            PlayerBossBar playerBossBar = PlayerBossBar.getOrCreateBossBar(gamePlayer.getOnlinePlayer().getUniqueId(), Component.text(""));
+
+            Component component = MessageManager.get(gamePlayer, "bossbar.battle_begings_in")
+                        .replace("%time%", Utils.getDurationString(task.getCounter())).getTranslated()
+                    .font(Key.key("jsplugins", "bossbar_offset"));
+            playerBossBar.setName(component);
             
 
             Player player = gamePlayer.getOnlinePlayer();
@@ -71,7 +52,8 @@ public class PreparationCountdown implements TaskInterface {
 
             if (task.getCounter() <= 3 && task.getCounter() > 0) {
                 ChatColor[] colors = {ChatColor.GREEN, ChatColor.AQUA, ChatColor.YELLOW};
-                GameAPI.getInstance().getUserInterface().sendTitle(player, colors[task.getCounter() - 1] + "► " + task.getCounter() + " ◄", MessageManager.get(player, "title.battle_begings_in.subtitle").getTranslated());
+                //GameAPI.getInstance().getUserInterface().sendTitle(player, colors[task.getCounter() - 1] + "► " + task.getCounter() + " ◄", MessageManager.get(player, "title.battle_begings_in.subtitle").getTranslated());
+                player.showTitle(Title.title(Component.text(colors[task.getCounter() - 1] + "► " + task.getCounter() + " ◄"), MessageManager.get(player, "title.battle_begings_in.subtitle").getTranslated()));
             }
         }
     }
@@ -81,34 +63,20 @@ public class PreparationCountdown implements TaskInterface {
         Game game = task.getGame();
 
         for (GamePlayer gamePlayer : game.getParticipants()) {
-            BossBar bossBar = gamePlayer.getPlayerData().getCurrentBossBar();
-            if (bossBar != null) {
-                bossBar.removeAll();
-            }
             Player player = gamePlayer.getOnlinePlayer();
             MessageManager.get(gamePlayer, "title.battle_started")
                     .send();
-            player.playSound(player, "custom:gamestart", 20.0F, 20.0F);
+            player.playSound(player, "jsplugins:gamestart", 20.0F, 20.0F);
 
             PlayerData data = gamePlayer.getPlayerData();
             if (gamePlayer.getMetadata().containsKey("edited_kit_inventory") && (boolean) gamePlayer.getMetadata().get("edited_kit_inventory")){
-                data.setKitInventory(data.getKit(), Utils.copyPlayerInventory(player));
-                Bukkit.getScheduler().runTaskAsynchronously(GameAPI.getInstance(), task2 -> data.saveKitInventories());
+                data.setKitInventory(gamePlayer.getKit(), Utils.copyPlayerInventory(player));
+                Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task2 -> data.saveKitInventories());
                 gamePlayer.getMetadata().remove("edited_kit_inventory");
             }
 
             gamePlayer.getMetadata().remove("last_opened_cosmetic_category");
         }
         game.getStartingProcessHandler().startGame();
-    }
-
-    @Override
-    public void onCancel(Task task) {
-        for (GamePlayer gamePlayer : task.getGame().getParticipants()) {
-            BossBar bossBar = gamePlayer.getPlayerData().getCurrentBossBar();
-            if (bossBar != null) {
-                bossBar.removeAll();
-            }
-        }
     }
 }

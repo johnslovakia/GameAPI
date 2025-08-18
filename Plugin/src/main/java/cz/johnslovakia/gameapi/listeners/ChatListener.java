@@ -1,14 +1,19 @@
 package cz.johnslovakia.gameapi.listeners;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.game.team.GameTeam;
+import cz.johnslovakia.gameapi.levelSystem.LevelManager;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.StringUtils;
+import io.papermc.paper.event.player.AsyncChatEvent;
 import me.clip.placeholderapi.PlaceholderAPI;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
@@ -23,136 +28,112 @@ public class ChatListener implements Listener {
     public void onAsyncPlayerChat(AsyncPlayerChatEvent e) {
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        Game game = gamePlayer.getPlayerData().getGame();
-        GameTeam team = gamePlayer.getPlayerData().getTeam();
+        Game game = gamePlayer.getGame();
+        GameTeam team = gamePlayer.getTeam();
         World world = player.getWorld();
         GameAPI plugin = GameAPI.getInstance();
         
 
-        String word_all = MessageManager.get(gamePlayer, "word.all_chat").getTranslated();
-        String word_team = MessageManager.get(gamePlayer, "word.team_chat").getTranslated();
+        Component word_all = MessageManager.get(gamePlayer, "word.all_chat").getTranslated();
+        Component word_team = MessageManager.get(gamePlayer, "word.team_chat").getTranslated();
+
 
         String prefix = "";
         String suffix = "";
         if (plugin.getVaultChat() != null) {
             String g = plugin.getVaultPerms().getPrimaryGroup(Bukkit.getPlayer(player.getName()));
             prefix = plugin.getVaultChat().getGroupPrefix(world, g);
-            if (prefix.endsWith(" ")){
-                prefix = prefix.substring(0, prefix.length() - 1);
+            if (!prefix.endsWith(" ")){
+                prefix = prefix + " ";
             }
             suffix = plugin.getVaultChat().getGroupSuffix(world, g);
         }
+
+        e.setMessage(ChatColor.stripColor(e.getMessage()));
 
         if (game != null) {
             if (gamePlayer.isSpectator() && game.getState() == GameState.INGAME) {
                 e.setCancelled(true);
                 if (!MessageManager.existMessage("chat.format.spectator")) {
-                    String msg = "§8[§7Spectator Chat§8] " + StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null ? "" : " ") + player.getDisplayName() + "§r: " + e.getMessage();
-                    e.setMessage(msg);
-                    for (GamePlayer t : game.getSpectators()) {
-                        t.getOnlinePlayer().sendMessage(e.getMessage());
-                    }
+                    String msg = "§8[§7Spectator Chat§8] " + StringUtils.colorizer(prefix) + player.getName() + "§r: " + e.getMessage();
+                    game.getSpectators().forEach(gp -> gp.getOnlinePlayer().sendMessage(msg));
                 }else {
-                    for (GamePlayer t : game.getSpectators()) {
-                        MessageManager.get(t, "chat.format.spectator")
-                                .replace("%prefix%", StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " "))
-                                .replace("%name%", player.getDisplayName())
-                                .replace("%message%", e.getMessage())
-                                .send();
-                    }
+                    MessageManager.get(game.getSpectators(), "chat.format.spectator")
+                            .replace("%prefix%", StringUtils.colorizer(prefix))
+                            .replace("%name%", player.getName())
+                            .replace("%message%", e.getMessage())
+                            .replace("%level_evolution_icon%", Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon())
+                            .send();
                 }
-
-                return;
-            }
-            if (game.getState() == GameState.INGAME) {
-
+            }else if (game.getState() == GameState.INGAME) {
                 if (game.getSettings().isUseTeams() && game.getSettings().getMaxTeamPlayers() > 1) {
                     if (team != null) {
                         if (e.getMessage().startsWith("!")) {
                             e.setCancelled(true);
                             e.setMessage(e.getMessage().substring(1));
                             if (!MessageManager.existMessage("chat.format.all")) {
-                                String all = "§8[" + team.getChatColor() + word_all + "§8] " + StringUtils.colorizer(prefix) + "§r" + team.getChatColor() + player.getName() + "§r: " + e.getMessage();
-                                e.setMessage(all);
-                                for (GamePlayer allGPs : game.getParticipants()) {
-                                    allGPs.getOnlinePlayer().sendMessage(e.getMessage());
-                                }
+                                String msg = "§8[" + team.getChatColor() + word_all + "§8] " + StringUtils.colorizer(prefix) + "§r" + team.getChatColor() + player.getName() + "§r: " + e.getMessage();
+                                game.getParticipants().forEach(gp -> gp.getOnlinePlayer().sendMessage(msg));
                             }else {
-                                for (GamePlayer allGPs : game.getParticipants()) {
-                                    MessageManager.get(allGPs, "chat.format.all")
-                                            .replace("%prefix%", StringUtils.colorizer(prefix))
-                                            .replace("%name%", player.getDisplayName())
-                                            .replace("%team_color%", "" + team.getChatColor())
-                                            .replace("%team%", team.getName())
-                                            .replace("%message%", e.getMessage())
-                                            .send();
-                                }
+                                MessageManager.get(game.getParticipants(), "chat.format.all")
+                                        .replace("%prefix%", StringUtils.colorizer(prefix))
+                                        .replace("%name%", player.getName())
+                                        .replace("%team_color%", Component.empty().color(team.getTeamColor().getTextColor()))
+                                        .replace("%team%", Component.text(team.getName()).color(team.getTeamColor().getTextColor()))
+                                        .replace("%message%", e.getMessage())
+                                        .replace("%level_evolution_icon%", Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon())
+                                        .send();
                             }
                         } else {
                             e.setCancelled(true);
                             if (!MessageManager.existMessage("chat.format.team")) {
-                                String teamMSG = "§8[" + team.getChatColor() + word_team + "§8] " +StringUtils.colorizer(prefix) + "§r" + team.getChatColor() + player.getName() + "§r: " + e.getMessage();
-                                e.setMessage(teamMSG);
-                                for (GamePlayer t : team.getAllMembers()) {
-                                    t.getOnlinePlayer().sendMessage(teamMSG);
-                                }
+                                String msg = "§8[" + team.getChatColor() + word_team + "§8] " +StringUtils.colorizer(prefix) + "§r" + team.getChatColor() + player.getName() + "§r: " + e.getMessage();
+                                team.getAllMembers().forEach(gp -> gp.getOnlinePlayer().sendMessage(msg));
                             }else {
-                                for (GamePlayer t : team.getAllMembers()) {
-                                    MessageManager.get(t, "chat.format.team")
-                                            .replace("%prefix%", StringUtils.colorizer(prefix))
-                                            .replace("%name%", player.getDisplayName())
-                                            .replace("%team_color%", "" + team.getChatColor())
-                                            .replace("%team%", team.getName())
-                                            .replace("%message%", e.getMessage())
-                                            .send();
-                                }
+                                MessageManager.get(team.getAllMembers(), "chat.format.team")
+                                        .replace("%prefix%", StringUtils.colorizer(prefix))
+                                        .replace("%name%", player.getName())
+                                        .replace("%team_color%", Component.text("").color(team.getTeamColor().getTextColor()))
+                                        .replace("%team%", Component.text(team.getName()).color(team.getTeamColor().getTextColor()))
+                                        .replace("%message%", e.getMessage())
+                                        .replace("%level_evolution_icon%", Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon())
+                                        .send();
                             }
                         }
                     } else {
                         e.setCancelled(true);
-                        String msg = StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " ") + "§7" + player.getName() + "§r: " + e.getMessage();
-                        e.setMessage(msg);
-                        for (GamePlayer allGPs : game.getParticipants()){
-                            allGPs.getOnlinePlayer().sendMessage(e.getMessage());
-                        }
+                        String msg = StringUtils.colorizer(prefix) + "§7" + player.getName() + "§r: " + e.getMessage();
+                        game.getParticipants().forEach(gp -> gp.getOnlinePlayer().sendMessage(msg));
                     }
 
                 } else {
                     e.setCancelled(true);
                     if (!MessageManager.existMessage("chat.format.all")){
-                        String solo = "§8[§a" + word_all + "§8] " + StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " ") + "§r" + player.getName() +  "§r: " + e.getMessage();
-                        e.setMessage(solo);
-                        for (GamePlayer allGPs : game.getParticipants()) {
-                            allGPs.getOnlinePlayer().sendMessage(e.getMessage());
-                        }
+                        String msg = "§8[§a" + word_all + "§8] " + StringUtils.colorizer(prefix) + "§r" + player.getName() +  "§r: " + e.getMessage();
+                        game.getParticipants().forEach(gp -> gp.getOnlinePlayer().sendMessage(msg));
                     }else {
-                        for (GamePlayer allGPs : game.getParticipants()) {
-                            MessageManager.get(allGPs, "chat.format.all")
-                                    .replace("%prefix%", StringUtils.colorizer(prefix))
-                                    .replace("%name%", player.getDisplayName())
-                                    .replace("%message%", e.getMessage())
-                                    .replace("%team_color%", "§a")
-                                    .replace("%team%", "")
-                                    .send();
-                        }
+                        MessageManager.get(game.getParticipants(), "chat.format.all")
+                                .replace("%prefix%", StringUtils.colorizer(prefix))
+                                .replace("%name%", player.getName())
+                                .replace("%message%", e.getMessage())
+                                .replace("%team_color%", "§a")
+                                .replace("%team%", "")
+                                .replace("%level_evolution_icon%", Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon())
+                                .send();
                     }
                 }
             }else{
                 e.setCancelled(true);
                 if (!MessageManager.existMessage("chat.format.default")) {
-                    String lobby = StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " ") + "§r" + player.getName() + "§r: " + e.getMessage();
-                    e.setMessage(lobby);
-                    for (GamePlayer allGPs : game.getParticipants()) {
-                        allGPs.getOnlinePlayer().sendMessage(e.getMessage());
-                    }
+                    String msg = StringUtils.colorizer(prefix) + "§r" + player.getName() + "§r: " + e.getMessage();
+                    game.getParticipants().forEach(gp -> gp.getOnlinePlayer().sendMessage(msg));
                 }else {
-                    for (GamePlayer allGPs : game.getParticipants()) {
-                        MessageManager.get(allGPs, "chat.format.default")
-                                .replace("%prefix%", StringUtils.colorizer(prefix) + (prefix.endsWith(" ") || GameAPI.getInstance().getVaultChat() == null || prefix.equals("") ? "" : " "))
-                                .replace("%name%", player.getDisplayName())
-                                .replace("%message%", e.getMessage())
-                                .send();
-                    }
+                    MessageManager.get(game.getParticipants(), "chat.format.default")
+                            .replace("%prefix%", StringUtils.colorizer(prefix))
+                            .replace("%name%", player.getName())
+                            .replace("%message%", e.getMessage())
+                            .replace("%level_evolution_icon%", Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon())
+                            .send();
                 }
             }
         }else{

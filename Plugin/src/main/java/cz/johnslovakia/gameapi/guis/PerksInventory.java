@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.guis;
 
 import com.cryptomorin.xseries.XEnchantment;
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.game.perk.Perk;
 import cz.johnslovakia.gameapi.game.perk.PerkLevel;
@@ -16,15 +17,18 @@ import cz.johnslovakia.gameapi.utils.StringUtils;
 import me.zort.containr.Component;
 import me.zort.containr.Element;
 import me.zort.containr.GUI;
+import net.kyori.adventure.key.Key;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 
 public class PerksInventory {
 
     private static ItemStack getEditedItem(GamePlayer gamePlayer, Perk perk){
-        PerkManager perkManager = GameAPI.getInstance().getPerkManager();
+        PerkManager perkManager = Minigame.getInstance().getPerkManager();
         Resource resource = perkManager.getResource();
 
         PlayerData data = gamePlayer.getPlayerData();
@@ -36,7 +40,7 @@ public class PerksInventory {
         ItemBuilder item = new ItemBuilder(perk.getIcon());
         item.hideAllFlags();
 
-        item.removeEnchantment(XEnchantment.ARROW_INFINITE.getEnchant());
+        item.removeEnchantment(Enchantment.INFINITY);
         item.setName((canUpgrade && balance <= nextLevel.price() ? "§c§l" : "§a§l") + perk.getName() + " §8(" + Objects.requireNonNullElse(currentLevel, 0) + "/" + perk.getLevels().size() + ")");
         item.removeLore();
 
@@ -54,20 +58,20 @@ public class PerksInventory {
             MessageManager.get(gamePlayer, "inventory.perks.price")
                     .replace("%balance%", (balance >= nextLevel.price() ? "§a" : "§c") + StringUtils.betterNumberFormat(balance))
                     .replace("%price%", StringUtils.betterNumberFormat(nextLevel.price()))
-                    .replace("%economy_name%", resource.getName())
+                    .replace("%economy_name%", resource.getDisplayName())
                     .addToItemLore(item);
             if (balance <= nextLevel.price()){
                 MessageManager.get(gamePlayer, "inventory.perks.dont_have_enough")
-                        .replace("%economy_name%", resource.getName())
+                        .replace("%economy_name%", resource.getDisplayName())
                         .addToItemLore(item);
             }else {
                 if (currentLevel != null && currentLevel.level() != 0) {
                     MessageManager.get(gamePlayer, "inventory.perks.click_to_upgrade")
-                            .replace("%economy_name%", resource.getName())
+                            .replace("%economy_name%", resource.getDisplayName())
                             .addToItemLore(item);
                 } else {
                     MessageManager.get(gamePlayer, "inventory.perks.click_to_purchase")
-                            .replace("%economy_name%", resource.getName())
+                            .replace("%economy_name%", resource.getDisplayName())
                             .addToItemLore(item);
                 }
             }
@@ -80,8 +84,13 @@ public class PerksInventory {
     }
 
     public static void openGUI(GamePlayer gamePlayer){
+        PerkManager perkManager = Minigame.getInstance().getPerkManager();
+
+        Resource resource = perkManager.getResource();
+        int balance = gamePlayer.getPlayerData().getBalance(resource);
+
         GUI inventory = Component.gui()
-                .title("§f七七七七七七七七ㆻ")
+                .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七ㆻ").font(Key.key("jsplugins", "guis")))
                 .rows(2)
                 .prepare((gui, player) -> {
                     ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
@@ -107,10 +116,30 @@ public class PerksInventory {
                     gui.setContainer(9, Component.staticContainer()
                             .size(9, 1)
                             .init(container -> {
-                                for (Perk perk : GameAPI.getInstance().getPerkManager().getPerks()){
+                                for (Perk perk : Minigame.getInstance().getPerkManager().getPerks()){
                                     Element element = Component.element(getEditedItem(gamePlayer, perk)).addClick(i -> {
-                                        perk.purchase(gamePlayer);
-                                        player.closeInventory();
+                                        PerkLevel nextLevel = perkManager.getNextPlayerPerkLevel(gamePlayer, perk);
+                                        if (balance <= nextLevel.price()) {
+                                            player.closeInventory();
+                                            player.playSound(player.getLocation(), Sounds.ANVIL_BREAK.bukkitSound(), 10.0F, 10.0F);
+                                            MessageManager.get(player, "chat.dont_have_enough")
+                                                    .replace("%need_more%", "" + (nextLevel.price() - balance))
+                                                    .replace("%economy_name%", resource.getDisplayName())
+                                                    .send();
+                                        }else {
+                                            new ConfirmInventory(gamePlayer, getEditedItem(gamePlayer, perk), resource, nextLevel.price(), new Consumer<GamePlayer>() {
+                                                @Override
+                                                public void accept(GamePlayer gamePlayer) {
+                                                    perk.purchase(gamePlayer);
+                                                    player.closeInventory();
+                                                }
+                                            }, new Consumer<GamePlayer>() {
+                                                @Override
+                                                public void accept(GamePlayer gamePlayer) {
+                                                    openGUI(gamePlayer);
+                                                }
+                                            }).openGUI();
+                                        }
                                     }).build();
 
                                     container.appendElement(element);

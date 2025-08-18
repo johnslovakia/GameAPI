@@ -32,10 +32,7 @@ public class QuestsStorage {
             questJson.put("type", questData.getQuest().getType().name());
             questJson.put("status", questData.getStatus().name());
             questJson.put("progress", questData.getProgress());
-
-            if (questData.getStatus() == PlayerQuestData.Status.COMPLETED) {
-                questJson.put("completion_date", (questData.getCompletionDate() != null ? questData.getCompletionDate().toString() : LocalDate.now().toString()));
-            }
+            questJson.put("start_date", (questData.getStartDate() != null ? questData.getStartDate().toString() : LocalDate.now().toString()));
 
             jsonArray.put(questJson);
             i++;

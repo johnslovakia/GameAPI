@@ -1,20 +1,26 @@
 package cz.johnslovakia.gameapi.game;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.events.GameResetEvent;
 import cz.johnslovakia.gameapi.events.NewArenaEvent;
+import cz.johnslovakia.gameapi.game.kit.KitManager;
 import cz.johnslovakia.gameapi.game.map.GameMap;
+import cz.johnslovakia.gameapi.serverManagement.DataManager;
 import cz.johnslovakia.gameapi.serverManagement.IGame;
 import cz.johnslovakia.gameapi.serverManagement.gameData.GameDataManager;
+import cz.johnslovakia.gameapi.task.Task;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.game.team.TeamManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.Utils;
 import cz.johnslovakia.gameapi.utils.Logger;
+import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import lombok.Getter;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -31,14 +37,19 @@ public class GameManager {
     public static void registerGame(Game game){
         if (games.contains(game)) return;
 
-        games.add(game);
-        game.finishSetup();
-        Logger.log("Added Game " + game.getID(), Logger.LogType.INFO);
+        game.finishSetup(success -> {
+            if (!success){
+                Logger.log("Game (" + game.getID() + ") setup failed.", Logger.LogType.INFO);
+            }else{
+                games.add(game);
+                Logger.log("Added Game " + game.getID(), Logger.LogType.INFO);
+            }
+        });
 
-        if (games.size() > 1 && GameAPI.getInstance().getMinigame().getDatabase() != null){
-            GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.VARCHAR128, "game");
-        }
-
+        /*if (games.size() > 1 && Minigame.getInstance().getDatabase() != null){
+            //TODO: dát jinde
+            Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> Minigame.getInstance().getMinigameTable().createNewColumn(Type.VARCHAR128, "game"));
+        }*/
     }
 
     public static void newArena(Player player, boolean sendToLobbyIfNoArena) {
@@ -53,21 +64,23 @@ public class GameManager {
         if (gamePlayer.getParty().isInParty()){
             for (GamePlayer partyMember : gamePlayer.getParty().getAllOnlinePlayers()){
                 if (partyMember.isInGame()){
-                    game = partyMember.getPlayerData().getGame();
+                    game = partyMember.getGame();
                 }
             }
         }
         if (game != null) {
-            if (gamePlayer.getPlayerData().getGame() != null) {
-                gamePlayer.getPlayerData().getGame().quitPlayer(player);
+            if (gamePlayer.getGame() != null) {
+                gamePlayer.getGame().quitPlayer(player);
             }
             game.joinPlayer(player);
             return;
-        }else if (GameAPI.getInstance().getMinigame().getDataManager() != null){
-            IGame bestArena = GameAPI.getInstance().getMinigame().getDataManager().getBestServer();
-            if ((GameAPI.getInstance().getMinigame().getServerDataMySQL() != null || GameAPI.getInstance().getMinigame().getServerDataRedis() != null) && bestArena != null) {
-                bestArena.sendPlayerToServer(gamePlayer);
-                return;
+        }else if (DataManager.getInstance() != null){
+            if (DataManager.getInstance().getMinigame(Minigame.getInstance().getName()).isPresent()) {
+                IGame bestArena = DataManager.getInstance().getMinigame(Minigame.getInstance().getName()).get().getBestServer();
+                if ((DataManager.getInstance().getServerDataMySQL() != null || DataManager.getInstance().getServerDataRedis() != null) && bestArena != null) {
+                    bestArena.sendPlayerToServer(gamePlayer);
+                    return;
+                }
             }
         }
 
@@ -102,6 +115,8 @@ public class GameManager {
     }
 
     public static void resetGame(Game game){
+        game.setState(GameState.RESTARTING);
+
         if (game.getSettings().restartServerAfterEnd()){
             game.getParticipants().forEach(gp -> GameManager.newArena(gp.getOnlinePlayer(), true));
             new BukkitRunnable(){
@@ -112,43 +127,30 @@ public class GameManager {
                     }
                     Bukkit.shutdown();
                 }
-            }.runTaskLater(GameAPI.getInstance(), 40L);
+            }.runTaskLater(Minigame.getInstance().getPlugin(), 80L);
             return;
         }
 
+        //TODO: zkontrolovat
+        KitManager.removeKitManager(game);
 
-        Game newGame = new Game(game.getName(), game.getLobbyInventory(), game.getLobbyPoint());
-        if (game.getTeamManager() != null)
-            game.getTeamManager().resetTeamsAndRegisterForNewGame(newGame);
 
-        newGame.setMapManager(game.getMapManager());
-        game.getMapManager().setVoting(true);
-        game.getMapManager().setGame(newGame);
-        for (GameMap map : newGame.getMapManager().getMaps()) {
-            map.setGame(newGame);
-            map.setVotes(0);
-            map.setPlayed(false);
-            map.setWinned(false);
-            map.setWorld(null);
-        }
+        Game newGame = Minigame.getInstance().setupGame(game.getName());
 
+        //TODO: udělat lépe
+        game.setName("ToRemove-" + game.getID());
 
         List<Player> players = new ArrayList<>();
         if (!game.getParticipants().isEmpty()) {
-            for (int i = 0; i < game.getParticipants().size(); i++) {
-                GamePlayer gamePlayer = game.getParticipants().get(i);
-                Player player = gamePlayer.getOnlinePlayer();
-
+            game.getParticipants().forEach(gamePlayer -> {
                 if (gamePlayer.getOnlinePlayer().isOnline()) {
-                    players.add(player);
+                    players.add(gamePlayer.getOnlinePlayer());
+                }else{
+                    PlayerManager.removeGamePlayer(gamePlayer.getOnlinePlayer());
                 }
-                gamePlayer.getPlayerData().flushSomeData();
-                gamePlayer.getPlayerData().setGame(null);
-                PlayerManager.removeGamePlayer(player);
-            }
+            });
         }
 
-        registerGame(newGame);
 
         GameResetEvent ev = new GameResetEvent(game, newGame);
         Bukkit.getPluginManager().callEvent(ev);
@@ -156,14 +158,22 @@ public class GameManager {
         if (!players.isEmpty()) {
             for (Player player : players) {
                 MessageManager.get(player, "chat.finding_new_game").send();
-                Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), task -> {
+                Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
+                    PlayerManager.removeGamePlayer(player);
                     GameManager.newArena(player, true);
-                }, 25L);
+                }, 20L);
             }
         }
 
 
-        games.remove(game);
+        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
+            try {
+                WorldManager.unload(game.getCurrentMap().getWorld());
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            games.remove(game);
+        }, 70L);
     }
 
     public static Game getGameByID(String id){

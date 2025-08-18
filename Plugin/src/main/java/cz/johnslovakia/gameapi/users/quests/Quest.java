@@ -1,12 +1,15 @@
 package cz.johnslovakia.gameapi.users.quests;
 
+import com.google.gson.JsonObject;
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
 import cz.johnslovakia.gameapi.utils.rewards.Reward;
+import cz.johnslovakia.gameapi.utils.rewards.unclaimed.UnclaimedReward;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -29,20 +32,24 @@ public interface Quest {
         Player player = gamePlayer.getOnlinePlayer();
 
         gamePlayer.getPlayerData().getQuestData(this).setStatus(PlayerQuestData.Status.COMPLETED);
-        gamePlayer.getPlayerData().getQuestData(this).setCompletionDate(LocalDate.now());
 
         new BukkitRunnable(){
             @Override
             public void run() {
-                gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "custom:completed", 20.0F, 20.0F);
+                gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "jsplugins:completed", 20.0F, 20.0F);
                 player.sendMessage(MessageManager.get(player, "chat.quests.completed")
                         .replace("%type%", MessageManager.get(player, "quest_type." + getType().toString().toLowerCase()).getTranslated())
                         .replace("%quest_name%", getName())
                         .replace("%description%", MessageManager.get(player, getTranslationKey()).getTranslated())
                         .getTranslated());
-                getReward().applyReward(gamePlayer);
+
+                JsonObject json = new JsonObject();
+                json.addProperty("questName", getName());
+                json.addProperty("questType", getType().name());
+
+                getReward().setAsClaimable(gamePlayer, UnclaimedReward.Type.QUEST, json);
             }
-        }.runTaskLater(GameAPI.getInstance(), 1L);
+        }.runTaskLater(Minigame.getInstance().getPlugin(), 1L);
     }
 
     default void addProgress(GamePlayer gamePlayer){

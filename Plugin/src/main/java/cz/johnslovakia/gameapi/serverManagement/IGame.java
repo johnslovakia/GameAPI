@@ -9,6 +9,7 @@ import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Utils;
 
 import lombok.Getter;
+import lombok.Setter;
 import me.zort.sqllib.api.data.QueryResult;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -18,20 +19,22 @@ import java.util.List;
 @Getter
 public class IGame {
 
-    @Getter
-    public static List<IGame> servers = new ArrayList<>();
 
-    private final String minigameName, name;
+    private final IMinigame minigame;
+    private final String name;
 
-    public IGame(String minigame, String name) {
-        this.minigameName = minigame;
+    @Setter
+    private GameData gameData;
+
+    public IGame(IMinigame minigame, String name) {
+        this.minigame = minigame;
         this.name = name;
     }
 
     public boolean isOpen(){
-        GameData gameData = GameAPI.getInstance().getMinigame().getDataManager().getGameDataByGame(this);
+        GameData gameData = minigame.getGameDataByGame(this);
 
-        if (GameAPI.getInstance().getMinigame().getName().toLowerCase().contains("minianni")){
+        if (Minigame.getInstance().getName().toLowerCase().contains("minianni")){
             if (gameData.getGameState().equals(GameState.INGAME)){
                 if (gameData.getJsonObject().get("Phase") != null){
                     int phase = gameData.getJsonObject().get("Phase").getAsInt();
@@ -64,26 +67,25 @@ public class IGame {
     }
 
     public void sendPlayerToServer(GamePlayer gamePlayer){
-        Minigame minigame = GameAPI.getInstance().getMinigame();
-
         String server = getBungeecordServerName();
         new BukkitRunnable(){
             @Override
             public void run() {
                 if (isMultiArena()) {
                     try {
-                        if (GameAPI.getInstance().getMinigame().useRedisForServerData()) {
+                        if (DataManager.getInstance().useRedisForServerData()) {
                             String key = "player:" + gamePlayer.getOnlinePlayer().getName() + ":game";
-                            minigame.getServerDataRedis().getPool().getResource().setex(key, 60, getArenaID());
+                            minigame.getDataManager().getServerDataRedis().getPool().getResource().setex(key, 60, getArenaID());
                         } else {
-                            QueryResult perksResult = minigame.getDatabase().getConnection().update()
+                            //TODO: připojování na arénu přes MySQL
+                            /*QueryResult result = minigame.getDataManager().getServerDataMySQL().getConnection().update()
                                     .table(minigame.getMinigameTable().getTableName())
                                     .set("game", getArenaID())
                                     .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                                     .execute();
-                            if (!perksResult.isSuccessful()) {
-                                Logger.log(perksResult.getRejectMessage(), Logger.LogType.ERROR);
-                            }
+                            if (!result.isSuccessful()) {
+                                Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+                            }*/
                         }
                         Utils.send(gamePlayer.getOnlinePlayer(), server);
                     }catch (Exception exception){
@@ -93,15 +95,6 @@ public class IGame {
                     }
                 }
             }
-        }.runTaskAsynchronously(GameAPI.getInstance());
+        }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
     }
-
-
-
-
-
-    public static  void addGame(IGame server){
-        if (!servers.contains(server)) servers.add(server);
-    }
-
 }

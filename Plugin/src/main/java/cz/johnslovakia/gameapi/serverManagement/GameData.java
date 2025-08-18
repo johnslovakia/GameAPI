@@ -30,7 +30,7 @@ public class GameData {
         }
         LocalTime localTime = LocalTime.now();
         Duration dur = Duration.between(lastUpdate, localTime);
-        return dur.getSeconds() >= 3; //3 seconds
+        return dur.getSeconds() >= 3;
     }
 
 

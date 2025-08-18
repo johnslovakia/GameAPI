@@ -2,12 +2,13 @@ package cz.johnslovakia.gameapi.users.stats;
 
 import cz.johnslovakia.gameapi.datastorage.StatsTable;
 import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.utils.Logger;
+import lombok.Getter;
 
+@Getter
 public class PlayerStat {
 
-    private GamePlayer gamePlayer;
-    private Stat stat;
+    private final GamePlayer gamePlayer;
+    private final Stat stat;
     private int score;
     private boolean updated;
 
@@ -18,22 +19,19 @@ public class PlayerStat {
         this.updated = false;
     }
 
-    public PlayerStat increase(){
+    public void increase(){
         updated = true;
         score++;
-        return this;
     }
 
-    public PlayerStat decrease(){
+    public void decrease(){
         updated = true;
         score--;
-        return this;
     }
 
-    public PlayerStat setStat(int stat){
+    public void setStat(int stat){
         updated = true;
         score = stat;
-        return this;
     }
 
     public int getStatScore() {

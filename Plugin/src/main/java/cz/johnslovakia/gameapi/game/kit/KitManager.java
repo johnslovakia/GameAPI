@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.game.kit;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.datastorage.Type;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.game.Game;
@@ -14,6 +15,7 @@ import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,12 +28,17 @@ public class KitManager implements Listener {
     @Getter
     public static List<KitManager> kitManagers = new ArrayList<>();
 
+    public static void removeKitManager(Game game){
+        if (getKitManager(game) != null && getKitManager(game).getGame() != null) {
+            kitManagers.remove(getKitManager(game));
+        }
+    }
+
     public static void addKitManager(KitManager manager){
         if (!kitManagers.contains(manager)){
             kitManagers.add(manager);
 
-            Bukkit.getPluginManager().registerEvents(manager, GameAPI.getInstance());
-            Objects.requireNonNull(GameAPI.getInstance().getCommand("saveinventory")).setExecutor(new KitInventoryEditor.SaveCommand());
+            //Bukkit.getPluginManager().registerEvents(manager, Minigame.getInstance().getPlugin());
         }
     }
 
@@ -54,6 +61,7 @@ public class KitManager implements Listener {
     }
 
 
+    @Setter
     private Game game;
     private String gameMap;
     private final Resource resource;
@@ -68,8 +76,8 @@ public class KitManager implements Listener {
         this.resource = resource;
         this.purchaseKitForever = buyingForever;
 
-        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
-        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
+        Minigame.getInstance().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
+        Minigame.getInstance().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
 
         addKitManager(this);
     }
@@ -79,8 +87,8 @@ public class KitManager implements Listener {
         this.resource = resource;
         this.purchaseKitForever = buyingForever;
 
-        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
-        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
+        Minigame.getInstance().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
+        Minigame.getInstance().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
 
         addKitManager(this);
     }
@@ -90,8 +98,8 @@ public class KitManager implements Listener {
         this.resource = resource;
         this.purchaseKitForever = buyingForever;
 
-        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
-        GameAPI.getInstance().getMinigame().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
+        Minigame.getInstance().getMinigameTable().createNewColumn(Type.JSON, "KitInventories");
+        Minigame.getInstance().getMinigameTable().createNewColumn(Type.VARCHAR128, "DefaultKit");
 
         addKitManager(this);
     }
@@ -123,7 +131,7 @@ public class KitManager implements Listener {
 
     public void activeKitsForEveryone(Game game){
         for (GamePlayer gamePlayer : game.getPlayers()) {
-            Kit selected = gamePlayer.getPlayerData().getKit();
+            Kit selected = gamePlayer.getKit();
             if (selected != null) {
                 selected.activate(gamePlayer);
             }

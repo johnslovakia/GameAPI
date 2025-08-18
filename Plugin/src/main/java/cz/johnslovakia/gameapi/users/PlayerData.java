@@ -1,8 +1,11 @@
 package cz.johnslovakia.gameapi.users;
 
-import cz.johnslovakia.gameapi.GameAPI;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.datastorage.*;
+import cz.johnslovakia.gameapi.levelSystem.DailyMeter;
+import cz.johnslovakia.gameapi.levelSystem.LevelProgress;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.achievements.Achievement;
 import cz.johnslovakia.gameapi.users.achievements.PlayerAchievementData;
@@ -25,11 +28,18 @@ import cz.johnslovakia.gameapi.users.stats.Stat;
 import cz.johnslovakia.gameapi.utils.BukkitSerialization;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.inventoryBuilder.InventoryManager;
+import cz.johnslovakia.gameapi.utils.rewards.Reward;
+import cz.johnslovakia.gameapi.utils.rewards.unclaimed.DailyMeterUnclaimedReward;
+import cz.johnslovakia.gameapi.utils.rewards.unclaimed.LevelUpUnclaimedReward;
+import cz.johnslovakia.gameapi.utils.rewards.unclaimed.QuestUnclaimedReward;
+import cz.johnslovakia.gameapi.utils.rewards.unclaimed.UnclaimedReward;
 import lombok.Getter;
 import lombok.Setter;
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
+import me.zort.sqllib.api.data.QueryRowsResult;
 import me.zort.sqllib.api.data.Row;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BossBar;
 import org.bukkit.inventory.Inventory;
@@ -38,28 +48,33 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
-import java.util.logging.Level;
 
 @Getter @Setter
 public class PlayerData {
 
     private final GamePlayer gamePlayer;
 
-    private Game game;
-    private GameTeam team;
-    private Kit kit;
-    private String prefix;
-    private Language language;
-    private BossBar currentBossBar;
+    private String prefix = "";
+    private Language language = Language.getDefaultLanguage();
     private KillMessage killMessage;
+    private int level;
+    private int dailyRewardsClaims = 0;
 
     private List<PlayerScore> scores = new ArrayList<>();
+    private List<PlayerStat> stats = new ArrayList<>();
     private List<GameMap> votesForMaps = new ArrayList<>();
 
+    //TODO: psalo to chybu při saving když nebyl hashmap v default a při killu
     private Map<CosmeticsCategory, Cosmetic> selectedCosmetics = new HashMap<>();
     private List<Cosmetic> purchasedCosmetics = new ArrayList<>();
+
+    private List<UnclaimedReward> unclaimedRewards;// = new ArrayList<>();
 
     private List<Kit> purchasedKitsThisGame = new ArrayList<>();
     private Map<Kit, Inventory> kitInventories = new HashMap<>();
@@ -70,6 +85,7 @@ public class PlayerData {
 
     private List<PlayerAchievementData> achievementData = new ArrayList<>();
 
+    //TODO: psalo to chybu při saving když nebyl hashmap v default
     private Map<Perk, Integer> perksLevel = new HashMap<>();
 
 
@@ -79,67 +95,386 @@ public class PlayerData {
         new BukkitRunnable(){
             @Override
             public void run() {
-                PlayerTable playerTable = new PlayerTable(gamePlayer);
+                try {
+                    if (Minigame.getInstance().getDatabase() == null){
+                        return;
+                    }
+
+                    Optional<Row> result = Minigame.getInstance().getDatabase().getConnection().select()
+                            .from(PlayerTable.TABLE_NAME)
+                            .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                            .obtainOne();
+
+                    result.ifPresent(row -> language = Language.getLanguage(row.getString("Language")));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+
+                PlayerTable playerTable = new PlayerTable();
                 playerTable.newUser(gamePlayer);
 
-                GameAPI.getInstance().getMinigame().getMinigameTable().newUser(gamePlayer);
-                GameAPI.getInstance().getStatsManager().getStatsTable().newUser(gamePlayer);
+                Minigame.getInstance().getMinigameTable().newUser(gamePlayer);
+                Minigame.getInstance().getStatsManager().getTable().newUser(gamePlayer);
                 loadData();
             }
-        }.runTaskAsynchronously(GameAPI.getInstance());
-
-
-        try {
-            if (GameAPI.getInstance().getMinigame().getDatabase() == null){
-                Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
-                return;
-            }
-            Optional<Row> result = GameAPI.getInstance().getMinigame().getDatabase().getConnection().select()
-                    .from(PlayerTable.TABLE_NAME)
-                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
-                    .obtainOne();
-
-            if (result.isPresent()){
-                String lang = result.get().getString("Language");
-                language = Language.getLanguage(lang);
-            }else{
-                language = Language.getDefaultLanguage();
-            }
-        } catch (Exception e) {
-            language = Language.getDefaultLanguage();
-            e.printStackTrace();
-        }
-
+        }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
     }
 
+    public PlayerStat getPlayerStat(Stat stat){
+        Optional<PlayerStat> optionalStat = stats.stream()
+                .filter(playerStat -> playerStat.getStat().equals(stat))
+                .findFirst();
 
+        if (optionalStat.isPresent()) {
+            return optionalStat.get();
+        } else {
+            PlayerStat playerStat = new PlayerStat(gamePlayer, stat);
+            stats.add(playerStat);
+            return playerStat;
+        }
+    }
+
+    public PlayerStat getPlayerStat(String statName){
+        Stat stat = Minigame.getInstance().getStatsManager().getStat(statName);
+
+        Optional<PlayerStat> optionalStat = stats.stream()
+                .filter(playerStat -> playerStat.getStat().equals(stat))
+                .findFirst();
+
+        if (optionalStat.isPresent()) {
+            return optionalStat.get();
+        } else {
+            PlayerStat playerStat = new PlayerStat(gamePlayer, stat);
+            stats.add(playerStat);
+            return playerStat;
+        }
+    }
+
+    public void setLanguage(Language language){
+        setLanguage(language, false);
+    }
+
+    public void setLanguage(Language language, boolean message){
+        Language oldLanguage = this.language;
+        this.language = language;
+        Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> {
+            SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
+            if (connection == null) {
+                return;
+            }
+            QueryResult result = connection.update()
+                    .table(PlayerTable.TABLE_NAME)
+                    .set("Language", language.getName())
+                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .execute();
+
+            if (result.isSuccessful()) {
+                this.language = language;
+                if (message)
+                    MessageManager.get(gamePlayer, "chat.language.changed")
+                            .replace("%language%", StringUtils.capitalize(language.getName()))
+                            .send();
+            } else {
+                if (message)
+                    gamePlayer.getOnlinePlayer().sendMessage("§cSomething went wrong. I can't change your language.");
+                this.language = oldLanguage;
+                Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+            }
+        });
+    }
+
+    //TODO: dát jako async možná
+    /*public boolean grantDailyFirstWinReward(){
+        String nick = getGamePlayer().getOnlinePlayer().getName();
+        Minigame minigame = Minigame.getInstance();
+
+        if (minigame.getDatabase() == null){
+            return false;
+        }
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
+        if (connection == null){
+            return false;
+        }
+
+        Optional<Row> result = connection.select()
+                .from(Minigame.getInstance().getMinigameTable().getTableName())
+                .where().isEqual("Nickname", nick)
+                .obtainOne();
+
+        if (result.isPresent()) {
+            String lastRewardDateStr = result.get().getString("LastDailyWinReward");
+            LocalDate today = LocalDate.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+            boolean shouldReward = true;
+
+            if (lastRewardDateStr != null) {
+                try {
+                    LocalDate lastRewardDate = LocalDate.parse(lastRewardDateStr, formatter);
+                    if (!lastRewardDate.isBefore(today)) {
+                        shouldReward = false;
+                    }
+                } catch (DateTimeParseException ignored) {
+                }
+            }
+
+            if (shouldReward) {
+                String todayStr = today.format(formatter);
+                connection.update()
+                        .table(minigame.getStatsManager().getTable().getTABLE_NAME())
+                        .set("LastDailyWinReward", todayStr)
+                        .where().isEqual("Nickname", nick)
+                        .execute();
+            }
+            return shouldReward;
+        }
+        return false;
+    }*/
+
+    public void addUnclaimedReward(UnclaimedReward unclaimedReward){
+        if (unclaimedRewards == null)
+            unclaimedRewards = new ArrayList<>();
+
+        unclaimedRewards.add(unclaimedReward);
+    }
+
+    public List<UnclaimedReward> getUnclaimedRewards(UnclaimedReward.Type type){
+        if (unclaimedRewards == null)
+            return Collections.emptyList();
+
+        return unclaimedRewards.stream().filter(unclaimedReward -> unclaimedReward.getType().equals(type)).toList();
+    }
+
+    public void loadUnclaimedRewards(){
+        Minigame minigame = Minigame.getInstance();
+        SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
+
+        QueryRowsResult<Row> result = connection.select()
+                .from("unclaimed_rewards")
+                .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
+                .obtainAll();
+        if (!result.isEmpty()){
+            try{
+                for (Row row : result){
+                    LocalDateTime createdAt = null;
+                    Object timestampObj = row.get("created_at");
+                    if (timestampObj instanceof Timestamp timestamp)
+                        createdAt = timestamp.toLocalDateTime();
+                    if (createdAt == null)
+                        return;
+                    String rewardJson = row.getString("reward_json");
+                    JsonObject dataJson = JsonParser.parseString(row.getString("data_json")).getAsJsonObject();
+                    UnclaimedReward.Type type = UnclaimedReward.Type.valueOf(row.getString("type"));
+
+                    switch (type){
+                        case QUEST:
+                            QuestUnclaimedReward questUnclaimedReward = new QuestUnclaimedReward(gamePlayer, createdAt, rewardJson, dataJson, type);
+                            addUnclaimedReward(questUnclaimedReward);
+                            break;
+                        case DAILYMETER:
+                            DailyMeterUnclaimedReward dailyMeterUnclaimedReward = new DailyMeterUnclaimedReward(gamePlayer, createdAt, rewardJson, dataJson, type);
+                            addUnclaimedReward(dailyMeterUnclaimedReward);
+                            break;
+                        case LEVELUP:
+                            LevelUpUnclaimedReward levelUpUnclaimedReward = new LevelUpUnclaimedReward(gamePlayer, createdAt, rewardJson, dataJson, type);
+                            addUnclaimedReward(levelUpUnclaimedReward);
+                            break;
+                        default:
+                            throw new IllegalArgumentException("Unknown reward type: " + type);
+                    }
+                }
+            } catch (Exception exception) {
+                Logger.log("I can't get unclaimed rewards data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
+            }
+        }
+    }
 
 
     public void loadData(){
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                //loadKits(); //Přesunuto do Game, protože to zavísí na Game
-                loadCosmetics();
-                loadPerks();
-                loadQuests();
-                loadAchievements();
+        //loadKits(); //Přesunuto do Game, protože to může zavíset na Game
+        loadLevelSystem();
+        loadCosmetics();
+        loadPerks();
+        loadQuests();
+        loadAchievements();
+        loadUnclaimedRewards();
 
-                if (GameAPI.getInstance().getQuestManager() != null) {
-                    GameAPI.getInstance().getQuestManager().check(gamePlayer);
-                }
-            }
-        }.runTaskAsynchronously(GameAPI.getInstance());
+
+        if (Minigame.getInstance().getLevelManager() != null) {
+            Optional<Row> result = Minigame.getInstance().getDatabase().getConnection().select()
+                    .from(PlayerTable.TABLE_NAME)
+                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .obtainOne();
+            result.ifPresent(row -> {
+                level = row.getInt("Level");
+
+                LevelProgress levelProgress = Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer);
+                float xpProgress = (float) levelProgress.xpOnCurrentLevel() / levelProgress.levelRange().neededXP();
+
+                Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task -> {
+                    gamePlayer.getOnlinePlayer().setExp(Math.min(xpProgress, 1.0f));
+                    gamePlayer.getOnlinePlayer().setLevel(levelProgress.level());
+                });
+            });
+        }
     }
 
     public void flushSomeData(){
-        game = null;
-        team = null;
-        kit = defaultKit;
+        getGamePlayer().setKit(getDefaultKit());
         currentInventory = null;
         votesForMaps.clear();
     }
 
+
+    public void setLevel(int newLevel){
+        level = newLevel;
+        Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> {
+            QueryResult kitInventoriesResult = Minigame.getInstance().getDatabase().getConnection().update()
+                    .table(PlayerTable.TABLE_NAME)
+                    .set("Level", newLevel)
+                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .execute();
+            if (!kitInventoriesResult.isSuccessful()) {
+                Logger.log(kitInventoriesResult.getRejectMessage(), Logger.LogType.ERROR);
+            }
+        });
+    }
+
+    public int getDailyXP(){
+        if (Minigame.getInstance().getDatabase() != null) {
+            SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
+            String tableName = PlayerTable.TABLE_NAME;
+
+            Optional<Row> result = connection.select()
+                    .from(tableName)
+                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .obtainOne();
+            if (result.isPresent()){
+                return result.get().getInt("DailyXP");
+            }
+        }
+        return 0;
+    }
+
+    public void addDailyXP(int amount){
+        Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> {
+            if (Minigame.getInstance().getDatabase() != null) {
+                SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
+                String tableName = PlayerTable.TABLE_NAME;
+
+                Optional<Row> result = connection.select()
+                        .from(tableName)
+                        .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                        .obtainOne();
+
+                if (result.isPresent()) {
+                    int balance = result.get().getInt("DailyXP");
+                    int newBalance = balance + amount;
+
+                    connection.update()
+                            .table(tableName)
+                            .set("DailyXP", newBalance)
+                            .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                            .execute();
+
+                    for (DailyMeter.DailyMeterTier tier : Minigame.getInstance().getLevelManager().getDailyMeter().getTiers()) {
+                        if (balance < tier.neededXP() && newBalance >= tier.neededXP()) {
+                            Reward reward = tier.reward();
+
+                            JsonObject json = new JsonObject();
+                            json.addProperty("tier", tier.tier());
+                            reward.setAsClaimable(gamePlayer, UnclaimedReward.Type.DAILYMETER, json);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    public DailyMeter.DailyMeterTier getDailyMeterTier(){
+        /*if (dailyRewardsClaims == 0) {
+            if (Minigame.getInstance().getDatabase() != null) {
+                SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
+                String tableName = PlayerTable.TABLE_NAME;
+
+                Optional<Row> result = connection.select()
+                        .from(tableName)
+                        .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                        .obtainOne();
+                if (result.isPresent()) {
+                    int claims = result.get().getInt("DailyRewards_claims");
+                    if (claims >= Minigame.getInstance().getLevelManager().getDailyMeter().getMaxTier())
+                        return null;
+                    return Minigame.getInstance().getLevelManager().getDailyMeter().getTiers().get(claims);
+                }
+            }
+            return null;
+        }else{
+            if (dailyRewardsClaims >= Minigame.getInstance().getLevelManager().getDailyMeter().getMaxTier())
+                return null;
+            return Minigame.getInstance().getLevelManager().getDailyMeter().getTiers().get(dailyRewardsClaims);
+        }*/
+        if (dailyRewardsClaims >= Minigame.getInstance().getLevelManager().getDailyMeter().getMaxTier())
+            return null;
+        return Minigame.getInstance().getLevelManager().getDailyMeter().getTiers().get(dailyRewardsClaims);
+    }
+
+    public void saveDailyRewardsClaims(){
+        Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> {
+            SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
+            String tableName = PlayerTable.TABLE_NAME;
+
+            connection.update()
+                    .table(tableName)
+                    .set("DailyRewards_claims", dailyRewardsClaims)
+                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .execute();
+        });
+    }
+
+    public void loadLevelSystem(){
+        if (Minigame.getInstance().getLevelManager() != null && Minigame.getInstance().getDatabase() != null) {
+            SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
+            String tableName = PlayerTable.TABLE_NAME;
+
+            Optional<Row> result = connection.select()
+                    .from(tableName)
+                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .obtainOne();
+            if (result.isPresent()) {
+                LocalDate today = LocalDate.now();
+                if (result.get().getString("DailyRewards_reset") == null) {
+                    connection.update()
+                            .table(tableName)
+                            .set("DailyRewards_reset", today)
+                            .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                            .execute();
+                } else {
+                    LocalDate lastReset = LocalDate.parse(result.get().getString("DailyRewards_reset"));
+                    if (!lastReset.equals(today)) {
+                        connection.update()
+                                .table(tableName)
+                                .set("DailyRewards_reset", today)
+                                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                                .execute();
+                        connection.update()
+                                .table(tableName)
+                                .set("DailyXP", 0)
+                                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                                .execute();
+                        connection.update()
+                                .table(tableName)
+                                .set("DailyRewards_claims", 0)
+                                .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                                .execute();
+                    } else {
+                        dailyRewardsClaims = result.get().getInt("DailyRewards_claims");
+                    }
+                }
+            }
+        }
+    }
 
     public void addPlayerScore(PlayerManager.Score score){
         boolean exists = scores.stream()
@@ -163,7 +498,7 @@ public class PlayerData {
         }else{
             if (!areItemsMatching(kit.getContent().getInventory(), kitInventories.get(kit))){
                 kitInventories.remove(kit);
-                Bukkit.getScheduler().runTaskAsynchronously(GameAPI.getInstance(), task -> saveKitInventories());
+                Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> saveKitInventories());
 
                 MessageManager.get(gamePlayer, "chat.kit_layout_reset")
                         .replace("%kit%", kit.getName())
@@ -193,35 +528,19 @@ public class PlayerData {
         return itemCounts;
     }
 
-    public PlayerData setLanguage(Language language) {
-        this.language = language;
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
-                connection.update()
-                        .table(PlayerTable.TABLE_NAME)
-                        .set("Language", language.getName())
-                        .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
-                        .execute();
-            }
-        }.runTaskAsynchronously(GameAPI.getInstance());
-        return this;
-    }
-
     public PlayerData setDefaultKit(Kit defaultKit) {
         this.defaultKit = defaultKit;
         new BukkitRunnable(){
             @Override
             public void run() {
-                SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
+                SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
                 connection.update()
-                        .table(GameAPI.getInstance().getMinigame().getMinigameTable().getTableName())
+                        .table(Minigame.getInstance().getMinigameTable().getTableName())
                         .set("DefaultKit", defaultKit.getName())
                         .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
                         .execute();
             }
-        }.runTaskAsynchronously(GameAPI.getInstance());
+        }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
         return this;
     }
 
@@ -264,11 +583,11 @@ public class PlayerData {
     }
 
     private void loadQuests(){
-        if (GameAPI.getInstance().getQuestManager() == null){
+        if (Minigame.getInstance().getQuestManager() == null){
             return;
         }
 
-        Minigame minigame = GameAPI.getInstance().getMinigame();
+        Minigame minigame = Minigame.getInstance();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
         Optional<Row> result = connection.select()
@@ -290,28 +609,28 @@ public class PlayerData {
                         JSONObject questObject = questsArray.getJSONObject(i);
                         String name = questObject.getString("name");
                         QuestType type = QuestType.valueOf(questObject.getString("type").toUpperCase());
-                        PlayerQuestData.Status status = PlayerQuestData.Status.valueOf(questObject.getString("status").toUpperCase());  // "NOT_STARTED", "IN_PROGRESS", "COMPLETED"
+                        PlayerQuestData.Status status = (!questObject.getString("status").equalsIgnoreCase("NOT_STARTED") ? PlayerQuestData.Status.valueOf(questObject.getString("status").toUpperCase()) : PlayerQuestData.Status.IN_PROGRESS);  // "IN_PROGRESS", "COMPLETED"
                         int progress = questObject.getInt("progress");
-                        LocalDate completionDate = null;
-                        if (questObject.has("completion_date") && questObject.get("completion_date") != null) {
-                            completionDate = LocalDate.parse(questObject.getString("completion_date"));
+                        LocalDate startDate = null;
+                        if (questObject.has("start_date") && questObject.get("start_date") != null) {
+                            startDate = LocalDate.parse(questObject.getString("start_date"));
                         }
 
-                        Quest quest = GameAPI.getInstance().getQuestManager().getQuest(type, name);
+
+                        Quest quest = Minigame.getInstance().getQuestManager().getQuest(type, name);
                         if (quest == null){
                             continue;
                         }
 
                         PlayerQuestData questData;
                         if (status.equals(PlayerQuestData.Status.COMPLETED)) {
-                            questData = new PlayerQuestData(quest, gamePlayer, completionDate);
-                        } else if (status.equals(PlayerQuestData.Status.IN_PROGRESS)) {
-                            questData = new PlayerQuestData(quest, gamePlayer, progress);
-                        }else{
-                            questData = new PlayerQuestData(quest, gamePlayer);
+                            questData = new PlayerQuestData(quest, gamePlayer, startDate, PlayerQuestData.Status.COMPLETED);
+                        } else {
+                            questData = new PlayerQuestData(quest, gamePlayer, startDate, progress);
                         }
+
                         if (progress >= quest.getCompletionGoal() && status != PlayerQuestData.Status.COMPLETED){
-                            Bukkit.getLogger().log(Level.WARNING, "Quest data is incorrectly stored in the database. Status: " + status.name() + " Progress: " + progress + " Completion goal: " + quest.getCompletionGoal() + " Quest Name: " + quest.getDisplayName());
+                            Logger.log("Quest data is incorrectly stored in the database. Status: " + status.name() + " Progress: " + progress + " Completion goal: " + quest.getCompletionGoal() + " Quest Name: " + quest.getDisplayName(), Logger.LogType.WARNING);
                             questData.setStatus(PlayerQuestData.Status.COMPLETED);
                         }
 
@@ -327,11 +646,11 @@ public class PlayerData {
     }
 
     private void loadAchievements(){
-        if (GameAPI.getInstance().getAchievementManager() == null){
+        if (Minigame.getInstance().getAchievementManager() == null){
             return;
         }
 
-        Minigame minigame = GameAPI.getInstance().getMinigame();
+        Minigame minigame = Minigame.getInstance();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
         Optional<Row> result = connection.select()
@@ -353,9 +672,10 @@ public class PlayerData {
                         JSONObject achievementObject = achievementsArray.getJSONObject(i);
                         String name = achievementObject.getString("name");
                         PlayerAchievementData.Status status = PlayerAchievementData.Status.valueOf(achievementObject.getString("status").toUpperCase());  // "LOCKED", "UNLOCKED"
+                        int stage = achievementObject.getInt("stage");
                         int progress = achievementObject.getInt("progress");
 
-                        Achievement achievement = GameAPI.getInstance().getAchievementManager().getAchievement(name);
+                        Achievement achievement = Minigame.getInstance().getAchievementManager().getAchievement(name);
                         if (achievement == null){
                             continue;
                         }
@@ -364,12 +684,12 @@ public class PlayerData {
                         if (status.equals(PlayerAchievementData.Status.UNLOCKED)) {
                             achievementData = new PlayerAchievementData(achievement, gamePlayer, PlayerAchievementData.Status.UNLOCKED);
                         }else{
-                            achievementData = new PlayerAchievementData(achievement, gamePlayer, progress);
+                            achievementData = new PlayerAchievementData(achievement, gamePlayer, achievement.getStages().get(stage - 1), progress);
                         }
-                        if (progress >= achievement.getCompletionGoal() && status != PlayerAchievementData.Status.UNLOCKED){
+                        /*if (progress >= achievement.get() && status != PlayerAchievementData.Status.UNLOCKED){
                             Bukkit.getLogger().log(Level.WARNING, "Achievement data is incorrectly stored in the database. Status: " + status.name() + " Progress: " + progress + " Completion goal: " + achievement.getCompletionGoal() + " Achievement Name: " + achievement.getDisplayName());
                             achievementData.setStatus(PlayerAchievementData.Status.UNLOCKED);
-                        }
+                        }*/
 
                         getAchievementData().add(achievementData);
                     }
@@ -394,12 +714,17 @@ public class PlayerData {
 
 
     public void setPerkLevel(Perk perk, int level){
+        if (perksLevel == null)
+            perksLevel = new HashMap<>();
+
         perksLevel.put(perk, level);
     }
 
     public PerkLevel getPerkLevel(Perk perk){
-        if (perksLevel.containsKey(perk)){
+        if (perksLevel != null){
+            if (perksLevel.containsKey(perk)){
             return perk.getLevels().stream().filter(l -> l.level() == perksLevel.get(perk)).toList().get(0);
+            }
         }
         return null;
     }
@@ -409,11 +734,11 @@ public class PlayerData {
     }
 
     private void loadPerks(){
-        if (GameAPI.getInstance().getPerkManager() == null){
+        if (Minigame.getInstance().getPerkManager() == null){
             return;
         }
 
-        Minigame minigame = GameAPI.getInstance().getMinigame();
+        Minigame minigame = Minigame.getInstance();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
         Optional<Row> result = connection.select()
@@ -435,10 +760,10 @@ public class PlayerData {
                         JSONObject perkObject = perksArray.getJSONObject(i);
                         String name = perkObject.getString("name");
                         int level = perkObject.getInt("level");
-                        Perk perk = GameAPI.getInstance().getPerkManager().getPerk(name);
+                        Perk perk = Minigame.getInstance().getPerkManager().getPerk(name);
 
                         if (perk != null) {
-                            perksLevel.put(perk, level);
+                            setPerkLevel(perk, level);
                         }
                     }
                 }
@@ -454,18 +779,18 @@ public class PlayerData {
     }
 
     public void loadKits(){
-        if (game == null){
+        if (!getGamePlayer().isInGame()){
             return;
         }
-        KitManager kitManager = KitManager.getKitManager(game);
+        KitManager kitManager = KitManager.getKitManager(getGamePlayer().getGame());
         if (kitManager == null){
             return;
         }
         if (kitManager.getDefaultKit() != null){
-            Bukkit.getScheduler().runTask(GameAPI.getInstance(), () -> kitManager.getDefaultKit().select(gamePlayer));
+            Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), () -> kitManager.getDefaultKit().select(gamePlayer));
         }
 
-        Minigame minigame = GameAPI.getInstance().getMinigame();
+        Minigame minigame = Minigame.getInstance();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
         Optional<Row> result = connection.select()
@@ -484,7 +809,7 @@ public class PlayerData {
                         if (dKit != null) {
                             this.defaultKit = dKit;
 
-                            Bukkit.getScheduler().runTask(GameAPI.getInstance(), () -> {
+                            Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), () -> {
                                 defaultKit.select(gamePlayer);
                             });
                         }
@@ -551,6 +876,10 @@ public class PlayerData {
     }
 
     public void addPurchasedKitThisGame(Kit kit){
+        if (purchasedKitsThisGame == null)
+            purchasedKitsThisGame = new ArrayList<>();
+
+
         if (purchasedKitsThisGame.contains(kit)){
             return;
         }
@@ -565,8 +894,8 @@ public class PlayerData {
         savePerks();
         saveKitInventories();
 
-        for (Stat stat : GameAPI.getInstance().getStatsManager().getStats()){
-            PlayerStat playerStat = stat.getPlayerStat(gamePlayer);
+        for (Stat stat : Minigame.getInstance().getStatsManager().getStats()){
+            PlayerStat playerStat = getPlayerStat(stat);
             if (playerStat != null && playerStat.wasUpdated()){
                 playerStat.saveDataToDatabase();
             }
@@ -574,7 +903,7 @@ public class PlayerData {
     }
 
     public void saveKitInventories(){
-        Minigame minigame = GameAPI.getInstance().getMinigame();
+        Minigame minigame = Minigame.getInstance();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
         QueryResult kitInventoriesResult = connection.update()
@@ -585,14 +914,15 @@ public class PlayerData {
         if (!kitInventoriesResult.isSuccessful()) {
             Logger.log("Something went wrong when saving kits data! The following message is for Developers: ", Logger.LogType.ERROR);
             Logger.log(kitInventoriesResult.getRejectMessage(), Logger.LogType.ERROR);
+            getGamePlayer().getOnlinePlayer().sendMessage("§cAn error occurred while saving kits data. Sorry for the inconvenience.");
         }
     }
 
     public void savePerks(){
-        Minigame minigame = GameAPI.getInstance().getMinigame();
+        Minigame minigame = Minigame.getInstance();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
-        if (GameAPI.getInstance().getPerkManager() != null) {
+        if (Minigame.getInstance().getPerkManager() != null) {
             QueryResult perksResult = connection.update()
                     .table(minigame.getMinigameTable().getTableName())
                     .set("Perks", PerksStorage.perksToJSON(getGamePlayer()).toString())
@@ -601,15 +931,16 @@ public class PlayerData {
             if (!perksResult.isSuccessful()) {
                 Logger.log("Something went wrong when saving perks data! The following message is for Developers: ", Logger.LogType.ERROR);
                 Logger.log(perksResult.getRejectMessage(), Logger.LogType.ERROR);
+                getGamePlayer().getOnlinePlayer().sendMessage("§cAn error occurred while saving perks data. Sorry for the inconvenience.");
             }
         }
     }
 
     public void saveQuests(){
-        Minigame minigame = GameAPI.getInstance().getMinigame();
+        Minigame minigame = Minigame.getInstance();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
-        if (GameAPI.getInstance().getQuestManager() != null) {
+        if (Minigame.getInstance().getQuestManager() != null) {
             QueryResult questsResult = connection.update()
                     .table(minigame.getMinigameTable().getTableName())
                     .set("Quests", QuestsStorage.toJSON(getGamePlayer()).toString())
@@ -618,15 +949,16 @@ public class PlayerData {
             if (!questsResult.isSuccessful()) {
                 Logger.log("Something went wrong when saving quests data! The following message is for Developers: ", Logger.LogType.ERROR);
                 Logger.log(questsResult.getRejectMessage(), Logger.LogType.ERROR);
+                getGamePlayer().getOnlinePlayer().sendMessage("§cAn error occurred while saving quests data. Sorry for the inconvenience.");
             }
         }
     }
 
     public void saveAchievements(){
-        Minigame minigame = GameAPI.getInstance().getMinigame();
+        Minigame minigame = Minigame.getInstance();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
-        if (GameAPI.getInstance().getAchievementManager() != null) {
+        if (Minigame.getInstance().getAchievementManager() != null) {
             QueryResult achievementsResult = connection.update()
                     .table(minigame.getMinigameTable().getTableName())
                     .set("Achievements", AchievementsStorage.toJSON(getGamePlayer()).toString())
@@ -635,15 +967,16 @@ public class PlayerData {
             if (!achievementsResult.isSuccessful()) {
                 Logger.log("Something went wrong when saving achievements data! The following message is for Developers: ", Logger.LogType.ERROR);
                 Logger.log(achievementsResult.getRejectMessage(), Logger.LogType.ERROR);
+                getGamePlayer().getOnlinePlayer().sendMessage("§cAn error occurred while saving achievements data. Sorry for the inconvenience.");
             }
         }
     }
 
     public void saveCosmetics(){
-        Minigame minigame = GameAPI.getInstance().getMinigame();
+        Minigame minigame = Minigame.getInstance();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
-        if (GameAPI.getInstance().getCosmeticsManager() != null) {
+        if (Minigame.getInstance().getCosmeticsManager() != null) {
             QueryResult cosmeticResult = connection.update()
                     .table(minigame.getMinigameTable().getTableName())
                     .set("Cosmetics", CosmeticsStorage.toJSON(getGamePlayer()).toString())
@@ -652,6 +985,7 @@ public class PlayerData {
             if (!cosmeticResult.isSuccessful()) {
                 Logger.log("Something went wrong when saving cosmetics data! The following message is for Developers: ", Logger.LogType.ERROR);
                 Logger.log(cosmeticResult.getRejectMessage(), Logger.LogType.ERROR);
+                getGamePlayer().getOnlinePlayer().sendMessage("§cAn error occurred while saving cosmetics data. Sorry for the inconvenience.");
             }
         }
     }
@@ -659,10 +993,10 @@ public class PlayerData {
 
 
     private void loadCosmetics(){
-        Minigame minigame = GameAPI.getInstance().getMinigame();
+        Minigame minigame = Minigame.getInstance();
         SQLDatabaseConnection connection = minigame.getDatabase().getConnection();
 
-        if (GameAPI.getInstance().getCosmeticsManager() == null){
+        if (Minigame.getInstance().getCosmeticsManager() == null){
             return;
         }
 
@@ -679,13 +1013,13 @@ public class PlayerData {
                 if (jsonString != null) {
                     JSONObject jsonObject = new JSONObject(jsonString);
 
-                    for (CosmeticsCategory category : GameAPI.getInstance().getCosmeticsManager().getCategories()) {
+                    for (CosmeticsCategory category : Minigame.getInstance().getCosmeticsManager().getCategories()) {
                         if (!jsonObject.getJSONArray("purchased").isEmpty())
                             purchasedCosmetics = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("purchased"));
 
 
                         if (!jsonObject.getJSONArray("selected").isEmpty()) {
-                            List<Cosmetic> cosmetics = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("selected")).stream().filter(c -> GameAPI.getInstance().getCosmeticsManager().getCategory(c) != null && GameAPI.getInstance().getCosmeticsManager().getCategory(c).equals(category)).toList();
+                            List<Cosmetic> cosmetics = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("selected")).stream().filter(c -> Minigame.getInstance().getCosmeticsManager().getCategory(c) != null && Minigame.getInstance().getCosmeticsManager().getCategory(c).equals(category)).toList();
                             if (!cosmetics.isEmpty()) {
                                 //selectedCosmetics.put(category, cosmetics.get(0));
                                 cosmetics.get(0).select(gamePlayer, false);
@@ -702,13 +1036,27 @@ public class PlayerData {
     }
 
     public void selectCosmetic(Cosmetic cosmetic){
-        if (GameAPI.getInstance().getCosmeticsManager().getCategory(cosmetic) != null) {
+
+        if (Minigame.getInstance().getCosmeticsManager().getCategory(cosmetic) != null) {
+            if (selectedCosmetics == null)
+                selectedCosmetics = new HashMap<>();
+
             if (!selectedCosmetics.containsValue(cosmetic))
-                selectedCosmetics.put(GameAPI.getInstance().getCosmeticsManager().getCategory(cosmetic), cosmetic);
+                selectedCosmetics.put(Minigame.getInstance().getCosmeticsManager().getCategory(cosmetic), cosmetic);
         }
     }
 
+    public Cosmetic getSelectedCosmetic(CosmeticsCategory category){
+        if (selectedCosmetics == null)
+            return null;
+
+        return selectedCosmetics.get(category);
+    }
+
     public void purchaseCosmetic(Cosmetic cosmetic){
+        if (purchasedCosmetics == null)
+            purchasedCosmetics = new ArrayList<>();
+
         if (!purchasedCosmetics.contains(cosmetic)) {
             purchasedCosmetics.add(cosmetic);
         }
@@ -723,15 +1071,6 @@ public class PlayerData {
     public void addVoteForMap(GameMap map){
         votesForMaps.add(map);
     }
-
-    public PlayerStat getStat(Stat stat){
-        return stat.getPlayerStat(gamePlayer);
-    }
-
-    public PlayerStat getStat(String statName){
-        return GameAPI.getInstance().getStatsManager().getStat(statName).getPlayerStat(gamePlayer);
-    }
-
 
     public void deposit(Resource resource, int amount) {
         if (resource != null) {

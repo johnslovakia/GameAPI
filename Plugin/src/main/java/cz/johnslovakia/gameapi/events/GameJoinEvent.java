@@ -13,9 +13,9 @@ public class GameJoinEvent extends Event {
 
     private boolean isCancelled;
 
-    private Game game;
-    private GamePlayer gamePlayer;
-    private JoinType joinType;
+    private final Game game;
+    private final GamePlayer gamePlayer;
+    private final JoinType joinType;
 
 
     public GameJoinEvent(Game game, GamePlayer gamePlayer, JoinType joinType){

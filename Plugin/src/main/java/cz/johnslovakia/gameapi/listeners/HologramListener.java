@@ -4,11 +4,22 @@ import cz.johnslovakia.gameapi.utils.Sounds;
 import eu.decentsoftware.holograms.api.holograms.Hologram;
 import eu.decentsoftware.holograms.event.HologramClickEvent;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 
 public class HologramListener implements Listener {
 
+
+    @EventHandler
+    public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
+       if (e.getRightClicked() instanceof TextDisplay textDisplay){
+            Player player = e.getPlayer();
+
+        }
+
+    }
 
     @EventHandler
     public void onHologramClick(HologramClickEvent e) {

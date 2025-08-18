@@ -12,8 +12,8 @@ public class KitActiveEvent extends Event {
     private boolean isCancelled;
     private boolean giveItems = true;
 
-    private Kit kit;
-    private GamePlayer gamePlayer;
+    private final Kit kit;
+    private final GamePlayer gamePlayer;
 
     public KitActiveEvent(GamePlayer gamePlayer, Kit kit){
         this.kit = kit;

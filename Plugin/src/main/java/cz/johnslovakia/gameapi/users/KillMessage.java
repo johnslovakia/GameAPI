@@ -14,8 +14,9 @@ public class KillMessage {
 
     public KillMessage(GamePlayer gamePlayer) {
         this.gamePlayer = gamePlayer;
-        messages.put(EntityDamageEvent.DamageCause.BLOCK_EXPLOSION, "§7[§rẃ§7] §a%dead%§r §7was killed by an explosion caused by §a%killer%§r");
-        messages.put(EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, "§7[§rẃ§7] §a%dead%§r §7was killed by an explosion caused by §a%killer%§r");
+        addMessage(EntityDamageEvent.DamageCause.BLOCK_EXPLOSION, "chat.explosion");
+        addMessage(EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, "chat.explosion");
+        addMessage(EntityDamageEvent.DamageCause.WORLD_BORDER, "chat.border");
     }
 
     public void addMessage(EntityDamageEvent.DamageCause cause, String messageKey){

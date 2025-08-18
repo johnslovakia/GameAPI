@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.utils.Sounds;
 import me.zort.containr.Component;
 import me.zort.containr.Element;
 import me.zort.containr.GUI;
+import net.kyori.adventure.key.Key;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
@@ -35,7 +36,7 @@ public class VotingInventory {
                     .replace("%creators%", map.getAuthors())
                     .addToItemLore(item);
         }
-        if (!gamePlayer.getPlayerData().getGame().getMapManager().isVoting()){
+        if (!gamePlayer.getGame().getMapManager().isVoting()){
             item.addLoreLine("");
             MessageManager.get(gamePlayer, "inventory.map.vote_ended")
                     .addToItemLore(item);
@@ -59,7 +60,7 @@ public class VotingInventory {
 
     public static void openGUI(GamePlayer gamePlayer){
         GUI inventory = Component.gui()
-                .title("§f七七七七七七七七ㆽ")
+                .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七ㆽ").font(Key.key("jsplugins", "guis")))
                 .rows(2)
                 .prepare((gui, player) -> {
                     ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
@@ -85,7 +86,7 @@ public class VotingInventory {
                             .size(9, 1)
                             .init(container -> {
 
-                                List<GameMap> maps = gamePlayer.getPlayerData().getGame().getMapManager().getMaps();
+                                List<GameMap> maps = gamePlayer.getGame().getMapManager().getMaps();
                                 Collections.shuffle(maps);
 
                                 for (GameMap map : maps.subList(0, Math.min(7, maps.size()))){

@@ -18,11 +18,11 @@ public class GamePlayerDeathEvent extends Event implements Cancellable {
 
     private boolean isCancelled;
 
-    private Game game;
-    private GamePlayer gamePlayer;
-    private GamePlayer killer;
-    private List<GamePlayer> assists;
-    private EntityDamageEvent.DamageCause dmgCause;
+    private final Game game;
+    private final GamePlayer gamePlayer;
+    private final GamePlayer killer;
+    private final List<GamePlayer> assists;
+    private final EntityDamageEvent.DamageCause dmgCause;
     @Setter
     private boolean firstGameKill = false;
 
@@ -35,8 +35,8 @@ public class GamePlayerDeathEvent extends Event implements Cancellable {
     }
 
     public boolean isFinalKill(){
-        if (gamePlayer.getPlayerData().getGame().getSettings().useTeams()){
-            return gamePlayer.getPlayerData().getTeam().isDead();
+        if (gamePlayer.getGame().getSettings().useTeams()){
+            return gamePlayer.getTeam().isDead();
         }else{
             return true;
         }

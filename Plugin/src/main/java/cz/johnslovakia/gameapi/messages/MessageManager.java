@@ -12,8 +12,6 @@ public class MessageManager {
 
     @Getter
     private static Map<String, Map<Language, String>> messages = new HashMap<>();
-    @Getter
-    public static Map<String, Reward> linkedRewardMessages = new HashMap<>();
 
     public static void addMessage(String name, Language language, String message){
         if (messages.containsKey(name)){
@@ -22,13 +20,6 @@ public class MessageManager {
             Map<Language, String> map = new HashMap<>();
             map.put(language, message);
             messages.put(name, map);
-        }
-    }
-
-    public static void addLinkedRewardMessage(String key, Reward reward){
-        if (!messages.containsKey(key)){
-            linkedRewardMessages.put(key, reward);
-            reward.setLinkedMessageKey(key);
         }
     }
 
@@ -53,9 +44,9 @@ public class MessageManager {
     }
 
     public static String get(Language language, String key){
-        if (!existMessage(key) || messages.get(key).get(language) == null){
+        if (!existMessage(key)) {
             return "§cNo translation found for message key: " + key + " (Language: " + language.getName() + ")";
-        }else{
+        } else{
             return messages.get(key).get(language);
         }
     }

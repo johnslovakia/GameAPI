@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.game;
 
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import net.kyori.adventure.text.Component;
 
 public class Winner {
 
@@ -22,10 +23,9 @@ public class Winner {
             return (this.name().toUpperCase().substring(0, 1) + this.name().toLowerCase().substring(1, this.name().length())).replace("_", " ");
         }
 
-        public String getTranslatedName(GamePlayer player) {
-            String translated = MessageManager.get(player, "winnerType." + this.name().toLowerCase())
+        public Component getTranslatedName(GamePlayer player) {
+            return MessageManager.get(player, "winnerType." + this.name().toLowerCase())
                     .getTranslated();
-            return (translated.toUpperCase().substring(0, 1) + translated.toLowerCase().substring(1, translated.length())).replace("_", " ");
         }
     }
 }

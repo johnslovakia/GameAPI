@@ -20,10 +20,10 @@ public class UserInterfaceHandler implements UserInterface {
         player.sendTitle(colorizer(title), colorizer(subtitle), i1, i2, i3);
     }
 
-    @Override
+    /*@Override
     public void sendAction(Player player, String text) {
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(colorizer(text)));
-    }
+    }*/
 
     public static String colorizer(String message) {
         Pattern pattern = Pattern.compile("#[a-fA-F0-9]{6}");

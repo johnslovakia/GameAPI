@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.game.perk;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
@@ -41,7 +42,7 @@ public class Perk implements Listener{
         this.name = name;
         this.icon = icon;
         this.type = type;
-        Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
+        Bukkit.getPluginManager().registerEvents(this, Minigame.getInstance().getPlugin());
     }
 
     public Perk(String name, ItemStack icon, PerkType type, List<PerkLevel> levels) {
@@ -49,7 +50,7 @@ public class Perk implements Listener{
         this.icon = icon;
         this.type = type;
         this.levels = levels;
-        Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
+        Bukkit.getPluginManager().registerEvents(this, Minigame.getInstance().getPlugin());
     }
 
     public void addLevel(PerkLevel perkLevel){
@@ -60,15 +61,15 @@ public class Perk implements Listener{
 
     public void addTrigger(Trigger<?> trigger){
         triggers.add(trigger);
-        GameAPI.getInstance().getServer().getPluginManager().registerEvent(trigger.getEventClass(), new Listener() { }, EventPriority.NORMAL, (listener, event) -> onEventCall(event), GameAPI.getInstance());
+        Minigame.getInstance().getPlugin().getServer().getPluginManager().registerEvent(trigger.getEventClass(), new Listener() { }, EventPriority.NORMAL, (listener, event) -> onEventCall(event), Minigame.getInstance().getPlugin());
     }
 
     public void purchase(GamePlayer gamePlayer) {
         Player player = gamePlayer.getOnlinePlayer();
         PlayerData playerData = gamePlayer.getPlayerData();
 
-        Resource resource = GameAPI.getInstance().getPerkManager().getResource();
-        PerkLevel nextLevel = GameAPI.getInstance().getPerkManager().getNextPlayerPerkLevel(gamePlayer, this);
+        Resource resource = Minigame.getInstance().getPerkManager().getResource();
+        PerkLevel nextLevel = Minigame.getInstance().getPerkManager().getNextPlayerPerkLevel(gamePlayer, this);
 
         Integer balance = resource.getResourceInterface().getBalance(gamePlayer);
 
@@ -79,20 +80,20 @@ public class Perk implements Listener{
                 playerData.setPerkLevel(this, nextLevel.level());
 
                 MessageManager.get(player, "chat.perk.purchase")
-                        .replace("%economy_name%", resource.getName())
+                        .replace("%economy_name%", resource.getDisplayName())
                         .replace("%price%", "" + nextLevelPrice)
                         .replace("%perk%", getName() + " " + StringUtils.numeral(nextLevel.level()))
                         .send();
-                gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "custom:purchase", 1F, 1.0F);
+                gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "jsplugins:purchase", 1F, 1.0F);
                 new BukkitRunnable(){
                     @Override
                     public void run() {
                         gamePlayer.getPlayerData().withdraw(resource, nextLevelPrice);
                     }
-                }.runTaskAsynchronously(GameAPI.getInstance());
+                }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
             }else{
                 MessageManager.get(player, "chat.dont_have_enough")
-                        .replace("%economy_name%", resource.getName())
+                        .replace("%economy_name%", resource.getDisplayName())
                         .replace("%need_more%", "" + (nextLevelPrice - balance))
                         .send();
                 player.playSound(player.getLocation(), Sounds.ANVIL_BREAK.bukkitSound(), 10.0F, 10.0F);

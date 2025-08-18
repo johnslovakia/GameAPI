@@ -23,38 +23,10 @@ public class MathUtils {
         return a.subtract(b).length();
     }
 
-    public static float randomRange(float min, float max) {
-        return min + (float)Math.random() * (max - min);
-    }
-
-    public static int randomRange(int min, int max) {
-        Random rand = new Random();
-        int randomNum = rand.nextInt(max - min + 1) + min;
-        return randomNum;
-    }
-
-    public static double randomDouble(double min, double max) {
-        return (Math.random() < 0.5) ? ((1.0 - Math.random()) * (max - min) + min) : (Math.random() * (max - min) + min);
-    }
-
     public static Vector getBackVector(Location loc) {
         float newZ = (float)(loc.getZ() + 0.75 * Math.sin(Math.toRadians(loc.getYaw() + 90.0f)));
         float newX = (float)(loc.getX() + 0.75 * Math.cos(Math.toRadians(loc.getYaw() + 90.0f)));
         return new Vector(newX - loc.getX(), 0.0, newZ - loc.getZ());
-    }
-
-    public static double randomRange(double min, double max) {
-        return (Math.random() < 0.5) ? ((1.0 - Math.random()) * (max - min) + min) : (Math.random() * (max - min) + min);
-    }
-
-    public static int randomRangeInt(int min, int max) {
-        return (int)((Math.random() < 0.5) ? ((1.0 - Math.random()) * (max - min) + min) : (Math.random() * (max - min) + min));
-    }
-
-    public static int randRange(int min, int max) {
-        Random rand = new Random();
-        int randomNum = rand.nextInt(max - min + 1) + min;
-        return randomNum;
     }
 
     public static double arrondi(double A, int B) {

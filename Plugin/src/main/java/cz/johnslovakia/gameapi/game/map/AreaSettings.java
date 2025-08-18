@@ -88,8 +88,6 @@ public class AreaSettings implements Cloneable{
      @param priority The ArenaSettings' priority to be set.
       * @return This ArenaSettings' priority.
      */
-    @Getter
-    @Setter
     private int priority;
 
     public AreaSettings(){

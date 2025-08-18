@@ -53,15 +53,15 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion {
             return "";
         }
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        Game game = gamePlayer.getPlayerData().getGame();
+        Game game = gamePlayer.getGame();
 
-        for (Stat stat : GameAPI.getInstance().getStatsManager().getStats()){
+        for (Stat stat : Minigame.getInstance().getStatsManager().getStats()){
             if(identifier.equalsIgnoreCase("stat_" + stat.getName().replace(" ", "_").toLowerCase())) {
-                return "" + stat.getPlayerStat(gamePlayer).getStatScore();
+                return "" + gamePlayer.getPlayerData().getPlayerStat(stat).getStatScore();
             }
 
             if (identifier.contains("rankings")){
-                List<Map.Entry<String, Integer>> topMap = GameAPI.getInstance().getStatsManager().getStatsTable().topStats(stat.getName(), 15).entrySet()
+                List<Map.Entry<String, Integer>> topMap = Minigame.getInstance().getStatsManager().getTable().topStats(stat.getName(), 15).entrySet()
                         .stream()
                         .sorted((o1, o2) -> -Integer.compare(o1.getValue(), o2.getValue()))
                         .limit(15)
@@ -109,7 +109,7 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion {
 
         if (minigame.getSettings().isUseTeams()){
             if (identifier.equalsIgnoreCase("teamcolor")){
-                return "" + gamePlayer.getPlayerData().getTeam().getChatColor();
+                return "" + gamePlayer.getTeam().getChatColor();
             }
         }
 

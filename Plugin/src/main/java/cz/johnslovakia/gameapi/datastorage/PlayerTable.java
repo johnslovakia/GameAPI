@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.datastorage;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.messages.Language;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.Logger;
@@ -8,26 +9,21 @@ import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 
 public class PlayerTable {
 
     public static final String TABLE_NAME = "gameapi_playertable";
 
-    private GamePlayer gamePlayer;
-    private Map<Type, List<String>> rows = new HashMap<>();
-
-    public PlayerTable(GamePlayer gamePlayer) {
-        this.gamePlayer = gamePlayer;
-    }
+    private Map<Type, List<String>> rows;
 
     public PlayerTable() {
     }
 
     public PlayerTable addColumn(Type type, String name){
+        if (rows == null) rows = new HashMap<>();
+
         List<String> rs = new ArrayList<>();
         if (rows.get(type) != null){
             rs.addAll(rows.get(type));
@@ -41,26 +37,55 @@ public class PlayerTable {
     }
 
     public PlayerTable createNewColumn(Type type, String name) {
-        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
-        if (connection != null) {
-            QueryResult result = connection.exec(() ->
-                    "ALTER TABLE " + TABLE_NAME +
-                            " ADD IF NOT EXISTS " + name + " " + type.getB() + (type.equals(Type.INT) ? " DEFAULT 0" : ""));
+        createNewColumn(type, name, null);
+        return this;
+    }
 
-            if (!result.isSuccessful()) {
-                Logger.log("Failed to add new column " + TABLE_NAME + " table!", Logger.LogType.ERROR);
-                Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+    public PlayerTable createNewColumn(Type type, String name, String def) {
+        SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
+        if (connection != null) {
+            Connection conn = Minigame.getInstance().getDatabase().getConnection().getConnection();
+
+            try (
+                    PreparedStatement checkStmt = conn.prepareStatement(
+                            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?"
+                    )
+            ) {
+                checkStmt.setString(1, Minigame.getInstance().getDatabase().getDatabase());
+                checkStmt.setString(2, TABLE_NAME);
+                checkStmt.setString(3, name);
+
+                ResultSet rs = checkStmt.executeQuery();
+                boolean exists = false;
+
+                if (rs.next()) {
+                    exists = rs.getInt(1) > 0;
+                }
+
+                rs.close();
+
+                if (!exists) {
+                    try (Statement alterStmt = conn.createStatement()) {
+                        String sql = "ALTER TABLE `" + TABLE_NAME + "` ADD `" + name + "` " + type.b + (type == Type.INT ? " DEFAULT " + (def != null ? def : "0") : "");
+                        alterStmt.executeUpdate(sql);
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         }
         return this;
     }
 
     public void newUser(GamePlayer gamePlayer){
-        if (GameAPI.getInstance().getMinigame().getDatabase() == null){
+        if (Minigame.getInstance().getDatabase() == null){
             Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
             return;
         }
-        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
+        SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
         if (connection == null){
             return;
         }
@@ -119,7 +144,7 @@ public class PlayerTable {
         }
 
 
-        SQLDatabaseConnection connection = GameAPI.getInstance().getMinigame().getDatabase().getConnection();
+        SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
         if (connection == null){
             return;
         }

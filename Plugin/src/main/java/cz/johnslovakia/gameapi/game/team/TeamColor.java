@@ -1,6 +1,8 @@
 package cz.johnslovakia.gameapi.game.team;
 
-import org.apache.commons.lang.StringUtils;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
@@ -24,6 +26,23 @@ public enum TeamColor {
             return ChatColor.GOLD;
         }
         return ChatColor.valueOf(this.toString());
+    }
+
+    public TextColor getTextColor() {
+        return switch (this) {
+            case RED -> NamedTextColor.RED;
+            case GRAY -> NamedTextColor.GRAY;
+            case GREEN -> NamedTextColor.GREEN;
+            case AQUA -> NamedTextColor.AQUA;
+            case DARK_AQUA -> NamedTextColor.DARK_AQUA;
+            case BLUE -> NamedTextColor.BLUE;
+            case WHITE -> NamedTextColor.WHITE;
+            case YELLOW -> NamedTextColor.YELLOW;
+            case PINK -> NamedTextColor.LIGHT_PURPLE;
+            case PURPLE -> NamedTextColor.DARK_PURPLE;
+            case DARK_GREEN -> NamedTextColor.DARK_GREEN;
+            case ORANGE -> NamedTextColor.GOLD;
+        };
     }
 
     public DyeColor getDyeColor() {

@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.Date;
 
 @Getter
 public class PlayerQuestData {
@@ -16,27 +17,22 @@ public class PlayerQuestData {
     private Status status;
     private int progress;
     @Setter
-    private LocalDate completionDate;
+    private LocalDate startDate;
 
-    public PlayerQuestData(Quest quest, GamePlayer gamePlayer, int progress) {
+    public PlayerQuestData(Quest quest, GamePlayer gamePlayer, LocalDate startDate, int progress) {
         this.gamePlayer = gamePlayer;
         this.quest = quest;
         this.status = Status.IN_PROGRESS;
+        this.startDate = startDate;
         this.progress = progress;
     }
 
-    public PlayerQuestData(Quest quest, GamePlayer gamePlayer, LocalDate completionDate) {
+    public PlayerQuestData(Quest quest, GamePlayer gamePlayer, LocalDate startDate, Status status) {
         this.gamePlayer = gamePlayer;
         this.quest = quest;
-        this.status = Status.COMPLETED;
+        this.status = status;
         this.progress = quest.getCompletionGoal();
-        this.completionDate = completionDate;
-    }
-
-    public PlayerQuestData(Quest quest, GamePlayer gamePlayer) {
-        this.quest = quest;
-        this.gamePlayer = gamePlayer;
-        this.status = Status.NOT_STARTED;
+        this.startDate = startDate;
     }
 
     public void increaseProgress(){
@@ -50,6 +46,6 @@ public class PlayerQuestData {
     }
 
     public enum Status{
-        NOT_STARTED, IN_PROGRESS, COMPLETED;
+        IN_PROGRESS, COMPLETED;
     }
 }

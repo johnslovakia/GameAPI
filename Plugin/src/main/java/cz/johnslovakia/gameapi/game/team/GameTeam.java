@@ -29,10 +29,10 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
 
     private final Game game;
     private final TeamColor teamColor;
-    private Team boardTeam;
 
-    private List<GamePlayer> members = new ArrayList<>();
-    private HashMap<String, Object> metadata = new HashMap<>();
+    //TODO: zkontrolovat jestli to tu nedrží data i po vymazaní z PlayerManageru
+    private final List<GamePlayer> members = new ArrayList<>();
+    private final HashMap<String, Object> metadata = new HashMap<>();
 
     @Setter
     private boolean dead = true;
@@ -53,7 +53,7 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
 
     public boolean joinPlayer(GamePlayer gamePlayer, TeamJoinCause cause){
         Player player = gamePlayer.getOnlinePlayer();
-        Game game = gamePlayer.getPlayerData().getGame();
+        Game game = gamePlayer.getGame();
 
         if (game != null) {
             if (game.getState() == GameState.WAITING
@@ -75,19 +75,19 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
                                 .send();
                         return false;
                     }
-                    if (!game.getTeamManager().getTeamAllowEnter(this)){
+                    if (!game.getTeamManager().getTeamAllowEnter(this)) {
                         MessageManager.get(gamePlayer, "chat.team.balancing.cant_join")
                                 .send();
                         return false;
                     }
 
 
-                    if (gamePlayer.getPlayerData().getTeam() != null) {
-                        gamePlayer.getPlayerData().getTeam().quitPlayer(gamePlayer);
+                    if (gamePlayer.getTeam() != null) {
+                        gamePlayer.getTeam().quitPlayer(gamePlayer);
                     }
 
                     getAllMembers().add(gamePlayer);
-                    gamePlayer.getPlayerData().setTeam(this);
+                    gamePlayer.setTeam(this);
 
                     if (cause.equals(TeamJoinCause.INDIVIDUAL) || cause.equals(TeamJoinCause.AUTO)) {
                         if (gamePlayer.getParty().isInParty()) {
@@ -115,13 +115,14 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
                             BannerMeta bannerMeta = (BannerMeta) item.getItemMeta();
                             bannerMeta.addPattern(new Pattern(getDyeColor(), PatternType.BASE));
                             item.setItemMeta(bannerMeta);
+                            break;
                         }else if (item.getType().toString().toLowerCase().contains("wool")) {
                             Material colorfulWool = XMaterial.valueOf(getDyeColor().name() + "_WOOL").parseMaterial();
                             if (colorfulWool != null){
                                 item.setType(colorfulWool);
+                                break;
                             }
                         }
-                        break;
                     }
 
                     GameAPI.getInstance().getVersionSupport().setTeamNameTag(player, getName() + "_" + game.getID(), getChatColor());

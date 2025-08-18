@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.Game;
+import cz.johnslovakia.gameapi.serverManagement.DataManager;
 import cz.johnslovakia.gameapi.serverManagement.gameData.implementations.*;
 import cz.johnslovakia.gameapi.utils.Logger;
 import me.zort.sqllib.internal.query.UpdateQuery;
@@ -48,7 +49,7 @@ public class GameDataManager {
     }
 
 
-    public static void  createTableIfNotExists() {
+    public static void  createTableIfNotExists(Minigame.Database serverDataMySQL) {
         String query = "CREATE TABLE IF NOT EXISTS games (" +
                 //"id INT AUTO_INCREMENT PRIMARY KEY, " +
                 "name VARCHAR(64) NOT NULL PRIMARY KEY, " +
@@ -58,13 +59,13 @@ public class GameDataManager {
                 "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
                 ")";
 
-        GameAPI.getInstance().getMinigame().getServerDataMySQL().getConnection().exec(query);
+        serverDataMySQL.getConnection().exec(query);
     }
 
     public void updateGame(){
-        Minigame minigame = GameAPI.getInstance().getMinigame();
+        Minigame minigame = Minigame.getInstance();
 
-        if (minigame.useRedisForServerData()){
+        if (DataManager.getInstance().useRedisForServerData()){
             new BukkitRunnable(){
                 @Override
                 public void run() {
@@ -82,9 +83,9 @@ public class GameDataManager {
                         }
                     }
 
-                    minigame.getServerDataRedis().set("minigame." + minigame.getName() + "." + game.getName(), jsonData.toString(), 86400);
+                    DataManager.getInstance().getServerDataRedis().set("minigame." + minigame.getName() + "." + game.getName(), jsonData.toString(), 86400);
                 }
-            }.runTaskAsynchronously(GameAPI.getInstance());
+            }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
         }else {
             new BukkitRunnable() {
                 @Override
@@ -109,7 +110,7 @@ public class GameDataManager {
 
                     PreparedStatement statement = null;
                     try {
-                        statement = minigame.getServerDataMySQL().getConnection().getConnection().prepareStatement(query);
+                        statement = DataManager.getInstance().getServerDataMySQL().getConnection().getConnection().prepareStatement(query);
                         statement.setString(1, game.getName());
                         statement.setString(2, minigame.getName());
                         statement.setInt(3, game.getSettings().getMaxPlayers());
@@ -128,7 +129,7 @@ public class GameDataManager {
                         }
                     }
                 }
-            }.runTaskAsynchronously(GameAPI.getInstance());
+            }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
         }
     }
 

@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.datastorage;
 
+import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
 import cz.johnslovakia.gameapi.game.kit.Kit;
 import cz.johnslovakia.gameapi.game.perk.Perk;
 import cz.johnslovakia.gameapi.users.GamePlayer;
@@ -8,15 +9,23 @@ import org.bukkit.inventory.Inventory;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class PerksStorage {
 
     public static JSONObject perksToJSON(GamePlayer gamePlayer){
-        JSONArray inventories = convertMapToJsonArray(gamePlayer.getPlayerData().getPerksLevel());
+        Map<Perk, Integer> emptyMap = Collections.emptyMap();
+        JSONArray levels;
+        if (gamePlayer.getPlayerData().getPerksLevel() != null){
+            levels = convertMapToJsonArray(gamePlayer.getPlayerData().getPerksLevel());
+        }else{
+            levels = convertMapToJsonArray(emptyMap);
+        }
 
         JSONObject jsonObject = new JSONObject();
-        jsonObject.put("levels", inventories);
+        jsonObject.put("levels", levels);
 
         return jsonObject;
     }

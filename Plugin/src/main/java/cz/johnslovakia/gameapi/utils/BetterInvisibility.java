@@ -8,6 +8,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.Pair;
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -37,79 +38,26 @@ import java.util.*;
 
 public class BetterInvisibility implements Listener {
 
-    private boolean hideHelmet, hideChestplate, hideLeggings, hideBoots, hideMainHand, hideOffHand, hidePotionParticles;
-    private boolean workaround = false;
-
-    public BetterInvisibility() {
-    }
-
-    public BetterInvisibility(boolean hideHelmet, boolean hideChestplate, boolean hideLeggings, boolean hideBoots, boolean hideMainHand, boolean hideOffHand, boolean hidePotionParticles) {
-        this.hideHelmet = hideHelmet;
-        this.hideChestplate = hideChestplate;
-        this.hideLeggings = hideLeggings;
-        this.hideBoots = hideBoots;
-        this.hideMainHand = hideMainHand;
-        this.hideOffHand = hideOffHand;
-        this.hidePotionParticles = hidePotionParticles;
-    }
+    private final EnumSet<EnumWrappers.ItemSlot> hiddenSlots = EnumSet.noneOf(EnumWrappers.ItemSlot.class);
+    private final boolean hidePotionParticles;
+    private boolean workaround;
 
     public BetterInvisibility(boolean hideArmor, boolean hideMainHand, boolean hideOffHand, boolean hidePotionParticles) {
-        this.hideHelmet = hideArmor;
-        this.hideChestplate = hideArmor;
-        this.hideLeggings = hideArmor;
-        this.hideBoots = hideArmor;
-        this.hideMainHand = hideMainHand;
-        this.hideOffHand = hideOffHand;
+        if (hideArmor) {
+            hiddenSlots.addAll(Arrays.asList(
+                    EnumWrappers.ItemSlot.HEAD,
+                    EnumWrappers.ItemSlot.CHEST,
+                    EnumWrappers.ItemSlot.LEGS,
+                    EnumWrappers.ItemSlot.FEET
+            ));
+        }
+        if (hideMainHand) hiddenSlots.add(EnumWrappers.ItemSlot.MAINHAND);
+        if (hideOffHand) hiddenSlots.add(EnumWrappers.ItemSlot.OFFHAND);
         this.hidePotionParticles = hidePotionParticles;
     }
 
-    public BetterInvisibility(boolean hideArmor) {
-        this.hideHelmet = hideArmor;
-        this.hideChestplate = hideArmor;
-        this.hideLeggings = hideArmor;
-        this.hideBoots = hideArmor;
-        this.hideMainHand = false;
-        this.hideOffHand = false;
-        this.hidePotionParticles = false;
-    }
-
-    public BetterInvisibility registerEvents(){
-        Bukkit.getPluginManager().registerEvents(this, GameAPI.getInstance());
-        return this;
-    }
-
-    public BetterInvisibility setHideHelmet(boolean hideHelmet) {
-        this.hideHelmet = hideHelmet;
-        return this;
-    }
-
-    public BetterInvisibility setHideChestplate(boolean hideChestplate) {
-        this.hideChestplate = hideChestplate;
-        return this;
-    }
-
-    public BetterInvisibility setHideLeggings(boolean hideLeggings) {
-        this.hideLeggings = hideLeggings;
-        return this;
-    }
-
-    public BetterInvisibility setHideBoots(boolean hideBoots) {
-        this.hideBoots = hideBoots;
-        return this;
-    }
-
-    public BetterInvisibility setHideMainHand(boolean hideMainHand) {
-        this.hideMainHand = hideMainHand;
-        return this;
-    }
-
-    public BetterInvisibility setHideOffHand(boolean hideOffHand) {
-        this.hideOffHand = hideOffHand;
-        return this;
-    }
-
-    public BetterInvisibility setHidePotionParticles(boolean hidePotionParticles) {
-        this.hidePotionParticles = hidePotionParticles;
+    public BetterInvisibility registerEvents() {
+        Bukkit.getPluginManager().registerEvents(this, Minigame.getInstance().getPlugin());
         return this;
     }
 
@@ -118,214 +66,82 @@ public class BetterInvisibility implements Listener {
         return this;
     }
 
-    private final HashMap<UUID, Long> lastHitTimestamps = new HashMap<>();
-
-    @EventHandler
-    public void onPlayerLogin(PlayerLoginEvent event) {
-        if (event.getPlayer().hasPotionEffect(PotionEffectType.INVISIBILITY)) {
-            BukkitRunnable runnable = new BukkitRunnable() {
-                @Override
-                public void run() {
-                    if (event.getPlayer().hasPotionEffect(PotionEffectType.INVISIBILITY)) {
-                        removeAllArmor(event.getPlayer());
-                    } else {
-                        restoreArmor(event.getPlayer());
-                        this.cancel();
-                    }
-                }
-            };
-            runnable.runTaskTimer(GameAPI.getInstance(), 0L, 1L);
-        }
-    }
+    private final Map<UUID, Long> lastHitTimestamps = new HashMap<>();
 
     @EventHandler
     public void onPotionEffect(EntityPotionEffectEvent event) {
-        Entity entity = event.getEntity();
-        if (entity instanceof Player) {
-            Player player = (Player) entity;
-            if (event.getNewEffect() != null && event.getNewEffect().getType() != null && event.getNewEffect().getType().equals(PotionEffectType.INVISIBILITY)) {
-                // Schedule a task to remove all armor when player becomes invisible
-                if(hidePotionParticles) {
-                    PotionEffect potion = event.getNewEffect();
-                    PotionEffect newEffect = new PotionEffect(PotionEffectType.INVISIBILITY, potion.getDuration(), potion.getAmplifier(), potion.isAmbient(), false);
-                    player.removePotionEffect(PotionEffectType.INVISIBILITY);
-                    player.addPotionEffect(newEffect);
-                }
-                Bukkit.getScheduler().runTaskTimer(GameAPI.getInstance(), () -> removeAllArmor(player), 0L, 1L);
+        if (!(event.getEntity() instanceof Player player)) return;
 
-            } else if (event.getOldEffect() != null && event.getOldEffect().getType() != null && event.getOldEffect().getType().equals(PotionEffectType.INVISIBILITY)) {
-                // Schedule a task to restore player's armor when invisibility effect is removed
-                Bukkit.getScheduler().runTaskTimer(GameAPI.getInstance(), () -> restoreArmor(player), 0L, 1L);
+        PotionEffectType newType = event.getNewEffect() != null ? event.getNewEffect().getType() : null;
+        PotionEffectType oldType = event.getOldEffect() != null ? event.getOldEffect().getType() : null;
+
+        if (PotionEffectType.INVISIBILITY.equals(newType)) {
+            if (hidePotionParticles) {
+                PotionEffect original = event.getNewEffect();
+                if (original != null) {
+                    player.removePotionEffect(PotionEffectType.INVISIBILITY);
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY,
+                            original.getDuration(), original.getAmplifier(), original.isAmbient(), false));
+                }
+            }
+            updateArmor(player, true);
+        } else if (PotionEffectType.INVISIBILITY.equals(oldType)) {
+            updateArmor(player, false);
+        }
+    }
+
+    private void updateArmor(Player player, boolean hide) {
+        ProtocolManager protocolManager = GameAPI.getInstance().getProtocolManager();
+        PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.ENTITY_EQUIPMENT);
+        packet.getIntegers().write(0, player.getEntityId());
+
+        List<Pair<EnumWrappers.ItemSlot, ItemStack>> slotPairs = new ArrayList<>();
+        for (EnumWrappers.ItemSlot slot : hiddenSlots) {
+            ItemStack item = hide ? new ItemStack(Material.AIR) : getItemFromSlot(player, slot);
+            slotPairs.add(new Pair<>(slot, item));
+        }
+
+        packet.getSlotStackPairLists().write(0, slotPairs);
+
+        for (Player viewer : player.getWorld().getPlayers()) {
+            if (!viewer.equals(player)) {
+                protocolManager.sendServerPacket(viewer, packet);
             }
         }
     }
 
-
-    public void restoreArmor(Player player) {
-        ProtocolManager protocolManager = GameAPI.getInstance().getProtocolManager();
-
-        // Create a packet to restore player's armor
-        PacketContainer restoreArmorPacket = protocolManager.createPacket(PacketType.Play.Server.ENTITY_EQUIPMENT);
-        restoreArmorPacket.getIntegers().write(0, player.getEntityId());
-
-        // Get the player's armor contents and held items
-        ItemStack[] armorContents = player.getInventory().getArmorContents();
-        ItemStack mainHand = player.getInventory().getItemInMainHand();
-        ItemStack offHand = player.getInventory().getItemInOffHand();
-
-        ArrayList<EnumWrappers.ItemSlot> slots = new ArrayList<>();
-
-        if (hideBoots) {
-            slots.add(EnumWrappers.ItemSlot.FEET);
-        }
-        if (hideLeggings) {
-            slots.add(EnumWrappers.ItemSlot.LEGS);
-        }
-        if (hideChestplate) {
-            slots.add(EnumWrappers.ItemSlot.CHEST);
-        }
-        if (hideHelmet) {
-            slots.add(EnumWrappers.ItemSlot.HEAD);
-        }
-        if (hideMainHand) {
-            slots.add(EnumWrappers.ItemSlot.MAINHAND);
-        }
-        if (hideOffHand) {
-            slots.add(EnumWrappers.ItemSlot.OFFHAND);
-        }
-
-        List<Pair<EnumWrappers.ItemSlot, ItemStack>> slotItemPairs = new ArrayList<>();
-        for (int i = 0; i < slots.size(); i++) {
-            EnumWrappers.ItemSlot itemSlot = slots.get(i);
-            ItemStack item;
-            if (itemSlot == EnumWrappers.ItemSlot.MAINHAND) {
-                item = mainHand;
-            } else if (itemSlot == EnumWrappers.ItemSlot.OFFHAND) {
-                item = offHand;
-            } else {
-                item = armorContents[i];
-            }
-            Pair<EnumWrappers.ItemSlot, ItemStack> slotItemPair = new Pair<>(itemSlot, item);
-            slotItemPairs.add(slotItemPair);
-        }
-        restoreArmorPacket.getSlotStackPairLists().write(0, slotItemPairs);
-        // Send the restore armor packet to all players in the same world
-        List<Player> playersInWorld = player.getWorld().getPlayers();
-        for (Player currentPlayer : playersInWorld) {
-            try {
-                if (currentPlayer != player) {
-                    protocolManager.sendServerPacket(currentPlayer, restoreArmorPacket);
-                }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+    private ItemStack getItemFromSlot(Player player, EnumWrappers.ItemSlot slot) {
+        switch (slot) {
+            case HEAD -> { return player.getInventory().getHelmet(); }
+            case CHEST -> { return player.getInventory().getChestplate(); }
+            case LEGS -> { return player.getInventory().getLeggings(); }
+            case FEET -> { return player.getInventory().getBoots(); }
+            case MAINHAND -> { return player.getInventory().getItemInMainHand(); }
+            case OFFHAND -> { return player.getInventory().getItemInOffHand(); }
+            default -> { return new ItemStack(Material.AIR); }
         }
     }
 
     @EventHandler
-    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) throws InvocationTargetException {
-        if(!workaround){
-            return;
-        }
-        if (event.getEntity() instanceof Player && event.getDamager() instanceof Player) {
-            Player player = (Player) event.getEntity();
-            Player attacker = (Player) event.getDamager();
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        if (!workaround) return;
 
-            if (player.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
+        if (event.getEntity() instanceof Player target && event.getDamager() instanceof Player attacker) {
+            if (!target.hasPotionEffect(PotionEffectType.INVISIBILITY)) return;
 
-                // Cancel the event to prevent the animation from being shown
-                event.setCancelled(true);
+            event.setCancelled(true);
 
-                // Check if the player has been hit recently
-                long currentTime = System.currentTimeMillis();
-                long lastHitTime = lastHitTimestamps.getOrDefault(player.getUniqueId(), 0L);
-                long cooldownMillis = 500;
+            long now = System.currentTimeMillis();
+            long lastHit = lastHitTimestamps.getOrDefault(target.getUniqueId(), 0L);
+            if (now - lastHit < 500) return;
 
-                if (currentTime - lastHitTime < cooldownMillis) {
-                    return; // Skip the knockback if the player was hit recently
-                }
+            lastHitTimestamps.put(target.getUniqueId(), now);
+            double damage = event.getFinalDamage();
+            target.setHealth(Math.max(0, target.getHealth() - damage));
 
-                lastHitTimestamps.put(player.getUniqueId(), currentTime);
-
-                // Calculate the damage, including enchantments and armor reduction
-                double damage = event.getFinalDamage();
-
-                // Manually apply the damage to the player without showing the animation
-                player.setHealth(Math.max(0, player.getHealth() - damage));
-
-                // Get the attacker's and target's locations
-                Location attackerLocation = attacker.getLocation();
-                Location targetLocation = player.getLocation();
-
-                // Calculate the knockback direction
-                Vector knockbackDirection = targetLocation.toVector().subtract(attackerLocation.toVector()).normalize();
-
-                // Set the knockback magnitude
-                double knockbackMagnitude = attacker.isSprinting() ? 1.3 : 0.8;
-
-                // Multiply the direction by the magnitude
-                Vector horizontalKnockback = knockbackDirection.multiply(knockbackMagnitude);
-
-                // Add vertical knockback component
-                Vector verticalKnockback = new Vector(0, 0.35, 0);
-
-                // Combine horizontal and vertical knockback
-                Vector knockback = horizontalKnockback.add(verticalKnockback);
-
-                // Apply the knockback to the target player
-                player.setVelocity(knockback);
-            }
-        }
-    }
-
-    public void removeAllArmor(Player player) {
-        ProtocolManager protocolManager = GameAPI.getInstance().getProtocolManager();
-
-        // Create a packet to clear player's armor
-        PacketContainer clearArmorPacket = protocolManager.createPacket(PacketType.Play.Server.ENTITY_EQUIPMENT);
-        clearArmorPacket.getIntegers().write(0, player.getEntityId());
-
-        // Define the slots where the armor and held items are equipped
-        ArrayList<EnumWrappers.ItemSlot> slots = new ArrayList<>();
-
-        if (hideBoots) {
-            slots.add(EnumWrappers.ItemSlot.FEET);
-        }
-        if (hideLeggings) {
-            slots.add(EnumWrappers.ItemSlot.LEGS);
-        }
-        if (hideChestplate) {
-            slots.add(EnumWrappers.ItemSlot.CHEST);
-        }
-        if (hideHelmet) {
-            slots.add(EnumWrappers.ItemSlot.HEAD);
-        }
-        if (hideMainHand) {
-            slots.add(EnumWrappers.ItemSlot.MAINHAND);
-        }
-        if (hideOffHand) {
-            slots.add(EnumWrappers.ItemSlot.OFFHAND);
-        }
-
-        // Create a list of slot-item pairs with empty items (air) for the packet
-        List<Pair<EnumWrappers.ItemSlot, ItemStack>> slotItemPairs = new ArrayList<>();
-        for (EnumWrappers.ItemSlot itemSlot : slots) {
-            ItemStack airItem = new ItemStack(Material.AIR);
-            Pair<EnumWrappers.ItemSlot, ItemStack> slotItemPair = new Pair<>(itemSlot, airItem);
-            slotItemPairs.add(slotItemPair);
-        }
-        clearArmorPacket.getSlotStackPairLists().write(0, slotItemPairs);
-
-        // Send the clear armor packet to all players in the same world
-        List<Player> playersInWorld = player.getWorld().getPlayers();
-        for (Player currentPlayer : playersInWorld) {
-            try {
-                if (currentPlayer != player) {
-                    protocolManager.sendServerPacket(currentPlayer, clearArmorPacket);
-                }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            Vector knockback = target.getLocation().toVector().subtract(attacker.getLocation().toVector()).normalize()
+                    .multiply(attacker.isSprinting() ? 1.3 : 0.8).add(new Vector(0, 0.35, 0));
+            target.setVelocity(knockback);
         }
     }
 }

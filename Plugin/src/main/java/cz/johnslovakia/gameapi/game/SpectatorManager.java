@@ -6,6 +6,7 @@ import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.kit.KitManager;
 import cz.johnslovakia.gameapi.guis.TeleporterInventory;
 import cz.johnslovakia.gameapi.messages.MessageManager;
+import cz.johnslovakia.gameapi.serverManagement.DataManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.Utils;
@@ -25,7 +26,6 @@ import java.util.function.Consumer;
 
 public class SpectatorManager {
 
-
     private InventoryManager itemManager;
     private InventoryManager withTeamSelectorItemManager;
 
@@ -34,7 +34,7 @@ public class SpectatorManager {
         InventoryManager im = new InventoryManager("Spectator");
         InventoryManager im2 = new InventoryManager("Spectator");
 
-        if (GameManager.getGames().size() > 1 || (GameAPI.getInstance().getMinigame().getDataManager() != null && GameAPI.getInstance().getMinigame().getDataManager().isThereFreeGame())) {
+        if (GameManager.getGames().size() > 1 || (DataManager.getInstance() != null)) {
             Item playAgain = new Item(new ItemBuilder(XMaterial.PAPER.parseMaterial()).hideAllFlags().toItemStack(),
                     1, "item.play_again", event -> GameManager.newArena(event.getPlayer(), false));
             im.registerItem(playAgain);
@@ -44,12 +44,12 @@ public class SpectatorManager {
         /*Item teamSelector = new Item(new ItemBuilder(XMaterial.WHITE_WOOL.parseMaterial()).hideAllFlags().toItemStack(),
                 3,
                 "Item.team_selector",
-                e -> GameAPI.getInstance().getMinigame().getInventories().openTeamSelectorInventory(e.getPlayer()));
+                e -> Minigame.getInstance().getInventories().openTeamSelectorInventory(e.getPlayer()));
 
         Item settings = new Item(new ItemBuilder(XMaterial.COMPARATOR.parseMaterial()).hideAllFlags().toItemStack(),
                 7,
                 "item.settings",
-                e -> GameAPI.getInstance().getMinigame().getInventories().openSettingsInventory(e.getPlayer()));*/
+                e -> Minigame.getInstance().getInventories().openSettingsInventory(e.getPlayer()));*/
 
         Item alivePlayers = new Item(new ItemBuilder(Material.COMPASS).hideAllFlags().toItemStack(),
                 4,

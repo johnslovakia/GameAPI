@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.users;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.users.resources.Resource;
 import cz.johnslovakia.gameapi.users.resources.ResourceComparator;
 import cz.johnslovakia.gameapi.events.PlayerScoreEvent;
@@ -10,6 +11,7 @@ import cz.johnslovakia.gameapi.users.stats.Stat;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
 import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
+import cz.johnslovakia.gameapi.utils.rewards.PlayerRewardRecord;
 import cz.johnslovakia.gameapi.utils.rewards.Reward;
 import cz.johnslovakia.gameapi.utils.rewards.RewardItem;
 import lombok.Getter;
@@ -58,7 +60,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
             this.triggers = builder.getTriggers();
 
             for(Trigger<?> t : getTriggers()){
-                GameAPI.getInstance().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() { }, EventPriority.NORMAL, (listener, event) -> onEventCall(event), GameAPI.getInstance());
+                Minigame.getInstance().getPlugin().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() { }, EventPriority.NORMAL, (listener, event) -> onEventCall(event), Minigame.getInstance().getPlugin());
             }
         }
     }
@@ -73,10 +75,10 @@ public class PlayerScore implements Comparable<PlayerScore> {
         Bukkit.getPluginManager().callEvent(event);
 
         if (getStat() != null) {
-            getStat().getPlayerStat(getGamePlayer()).increase();
+            getGamePlayer().getPlayerData().getPlayerStat(getStat()).increase();
         }
         if (reward && this.reward != null) {
-            Reward.PlayerRewardRecord record = getReward().applyReward(gamePlayer, isAllowedMessage());
+            PlayerRewardRecord record = getReward().applyReward(gamePlayer, isAllowedMessage());
             record.earned().forEach(this::addEarning);
         }
     }
@@ -99,11 +101,11 @@ public class PlayerScore implements Comparable<PlayerScore> {
         Bukkit.getPluginManager().callEvent(event);
         for (int i = 0; i < score; i++){
             if (getStat() != null) {
-                getStat().getPlayerStat(getGamePlayer()).increase();
+                getGamePlayer().getPlayerData().getPlayerStat(getStat()).increase();
             }
 
             if (this.reward != null){
-                Reward.PlayerRewardRecord record = getReward().applyReward(gamePlayer, isAllowedMessage());
+                PlayerRewardRecord record = getReward().applyReward(gamePlayer, isAllowedMessage());
                 record.earned().forEach(this::addEarning);
             }
         }
@@ -263,6 +265,11 @@ public class PlayerScore implements Comparable<PlayerScore> {
             this.pluralName = pluralName;
             return this;
         }
+        public Builder setExperiencePointsReward(int xp){
+            addReward(new RewardItem("ExperiencePoints", xp));
+            return this;
+        }
+
         public Builder addReward(RewardItem... rewardItems){
             if (reward == null) reward = new Reward();
             for (RewardItem item : rewardItems){
@@ -333,7 +340,7 @@ public class PlayerScore implements Comparable<PlayerScore> {
         public Builder createStat(String name){
             Stat stat = new Stat(name);
             this.stat = stat;
-            GameAPI.getInstance().getStatsManager().registerStat(stat);
+            Minigame.getInstance().getStatsManager().registerStat(stat);
             return this;
         }
 

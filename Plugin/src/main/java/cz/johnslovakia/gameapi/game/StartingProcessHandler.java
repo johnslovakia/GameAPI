@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.game;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.GamePreparationEvent;
 import cz.johnslovakia.gameapi.events.GameStartEvent;
 import cz.johnslovakia.gameapi.game.map.GameMap;
@@ -17,6 +18,7 @@ import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.stats.StatsHolograms;
 import cz.johnslovakia.gameapi.utils.Logger;
+import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
 import org.bukkit.World;
@@ -31,6 +33,11 @@ public interface StartingProcessHandler {
     Game getGame();
 
     default void startPreparation(){
+        PlayerManager.getPlayerMap().entrySet().removeIf(entry ->
+                entry.getValue().getGame().equals(getGame())
+                        && !entry.getValue().isOnline()
+        );
+
         prepareGame();
         getGame().setState(GameState.INGAME);
 
@@ -43,7 +50,7 @@ public interface StartingProcessHandler {
             gamePlayer.setLimited(true);
         }
 
-        Task task = new Task(getGame(), "PreparationTask", getGame().getSettings().getPreparationTime(), new PreparationCountdown(), GameAPI.getInstance());
+        Task task = new Task(getGame(), "PreparationTask", getGame().getSettings().getPreparationTime(), new PreparationCountdown(), Minigame.getInstance().getPlugin());
         task.setGame(getGame());
     };
 
@@ -71,7 +78,7 @@ public interface StartingProcessHandler {
 
         if (getGame().getSettings().isUseTeams()){
             for (GamePlayer gamePlayer : getGame().getParticipants()){
-                if (gamePlayer.getPlayerData().getTeam() == null){
+                if (gamePlayer.getTeam() == null){
                     GameTeam lowestTeam = getGame().getTeamManager().getSmallestTeam();
                     lowestTeam.joinPlayer(gamePlayer, TeamJoinCause.AUTO);
                 }
@@ -88,10 +95,14 @@ public interface StartingProcessHandler {
 
         getGame().getCurrentMap().teleport();
         for (GamePlayer gamePlayer : getGame().getPlayers()) {
+            Player player = gamePlayer.getOnlinePlayer();
+
             preparePlayer(gamePlayer);
+            player.setLevel(0);
+            player.setExp(0);
 
             if (GameAPI.getInstance().useDecentHolograms()) {
-                StatsHolograms.remove(gamePlayer.getOnlinePlayer());
+                StatsHolograms.remove(player);
             }
         }
 
@@ -100,7 +111,7 @@ public interface StartingProcessHandler {
         while (iterator.hasNext()) {
             UUID uuid = iterator.next();
             GamePlayer gamePlayer = PlayerManager.getPlayerMap().get(uuid);
-            if (!gamePlayer.isOnline() && gamePlayer.getPlayerData().getGame().equals(this)) {
+            if (!gamePlayer.isOnline() && gamePlayer.getGame().equals(this)) {
                 iterator.remove();
             }
         }
@@ -116,8 +127,8 @@ public interface StartingProcessHandler {
             player.sendMessage("");
             if (getGame().getSettings().sendMinigameDescription()) {
                 MessageManager.get(gamePlayer, "chat.description")
-                        .replace("%minigame%", GameAPI.getInstance().getMinigame().getName())
-                        .replace("%description%", MessageManager.get(gamePlayer, GameAPI.getInstance().getMinigame().getDescriptionTranslateKey()).getTranslated())
+                        .replace("%minigame%", Minigame.getInstance().getName())
+                        .replace("%description%", MessageManager.get(gamePlayer, Minigame.getInstance().getDescriptionTranslateKey()).getTranslated())
                         .replace("%map%",
                                 MessageManager.get(gamePlayer, "chat.description.map")
                                         .replace("%map%", getGame().getCurrentMap().getName()
@@ -130,16 +141,16 @@ public interface StartingProcessHandler {
                 player.sendMessage(MessageManager.get(player, "chat.team_chat").getTranslated());
             }
 
-            if (getGame().getLobbyInventory() != null) {
-                getGame().getLobbyInventory().unloadInventory(player);
+            if (getGame().getLobbyManager().getInventoryManager() != null) {
+                getGame().getLobbyManager().getInventoryManager().unloadInventory(player);
             }
             player.getInventory().clear();
 
-            if (gamePlayer.getPlayerData().getKit() != null) {
-                gamePlayer.getPlayerData().getKit().activate(gamePlayer);
+            if (gamePlayer.getKit() != null) {
+                gamePlayer.getKit().activate(gamePlayer);
             }
             if (getGame().getState().equals(GameState.INGAME) && getGame().getSettings().isAllowedJoiningAfterStart()) {
-                player.teleport(gamePlayer.getPlayerData().getTeam().getSpawn());
+                player.teleport(gamePlayer.getTeam().getSpawn());
             }
         }
     };
@@ -149,8 +160,8 @@ public interface StartingProcessHandler {
         getGame().getMetadata().put("players_at_start", getGame().getPlayers().size());
 
         if (getGame().getSettings().isDefaultGameCountdown()) {
-            Bukkit.getScheduler().runTaskLater(GameAPI.getInstance(), t -> {
-                Task task = new Task(getGame(), "GameCountdown", getGame().getSettings().getGameTime(), new GameCountdown(), GameAPI.getInstance());
+            Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), t -> {
+                Task task = new Task(getGame(), "GameCountdown", getGame().getSettings().getGameTime(), new GameCountdown(), Minigame.getInstance().getPlugin());
                 task.setGame(getGame());
 
                 if (getGame().getSettings().getRounds() > 1){
@@ -172,6 +183,20 @@ public interface StartingProcessHandler {
             data.getKitInventories().clear();
             data.getVotesForMaps().clear();
         }
+
+
+        //TODO: udělat podporu i pro hry, kde to portuje na lobby na konci hry
+        WorldManager.unload(getGame().getLobbyManager().getLobbyLocation().getWorld());
+
+
+        PlayerManager.getPlayerMap().entrySet().removeIf(entry -> {
+            GamePlayer gamePlayer = entry.getValue();
+            Game playerGame = gamePlayer.getGame();
+            return playerGame != null
+                    && playerGame.equals(getGame())
+                    && !gamePlayer.isOnline();
+        });
+
 
         GameStartEvent ev = new GameStartEvent(getGame());
         Bukkit.getPluginManager().callEvent(ev);

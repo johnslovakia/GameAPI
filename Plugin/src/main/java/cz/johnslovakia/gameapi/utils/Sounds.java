@@ -203,7 +203,7 @@ public enum Sounds {
     private final String post19sound;
     private Sound resolvedSound = null;
 
-    private Sounds(String pre19sound, String post19sound) {
+    Sounds(String pre19sound, String post19sound) {
         this.pre19sound = pre19sound;
         this.post19sound = post19sound;
     }
