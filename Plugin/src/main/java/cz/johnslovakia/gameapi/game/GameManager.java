@@ -131,7 +131,6 @@ public class GameManager {
             return;
         }
 
-        //TODO: zkontrolovat
         KitManager.removeKitManager(game);
 
 

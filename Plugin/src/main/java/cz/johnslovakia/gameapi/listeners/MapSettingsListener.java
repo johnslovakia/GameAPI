@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.listeners;
 
 
 import com.cryptomorin.xseries.XMaterial;
+import com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.Game;
@@ -13,6 +14,7 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Utils;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.damage.DamageSource;
@@ -36,6 +38,15 @@ import java.util.List;
 
 public class MapSettingsListener implements Listener {
 
+
+    @EventHandler
+    public void onXpPickup(PlayerPickupExperienceEvent e) {
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
+
+        if (gamePlayer.isSpectator() || gamePlayer.getGame().getState() != GameState.INGAME){
+            e.setCancelled(true);
+        }
+    }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void playerInteract(PlayerInteractEvent e){
@@ -422,7 +433,7 @@ public class MapSettingsListener implements Listener {
     public void onInventoryClick(InventoryClickEvent e){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer((Player) e.getWhoClicked());
 
-        if (e.getView().getTitle().equalsIgnoreCase("Inventory Editor") || e.getView().getTitle().contains("ㆾ") || gamePlayer.getPlayerData().getCurrentInventory().getName().equalsIgnoreCase("Set Kit Inventory")){
+        if (e.getView().getTitle().equalsIgnoreCase("Inventory Editor") || PlainTextComponentSerializer.plainText().serialize(e.getView().title()).contains("ㆾ") || (gamePlayer.getPlayerData().getCurrentInventory() != null && gamePlayer.getPlayerData().getCurrentInventory().getName().equalsIgnoreCase("Set Kit Inventory"))){
             return;
         }
 
@@ -548,7 +559,9 @@ public class MapSettingsListener implements Listener {
                 }
                 if (settings.isAllowedInstantVoidKill() && e.getCause().equals(EntityDamageEvent.DamageCause.VOID)){
                     e.setCancelled(true);
+                    gamePlayer.getMetadata().put("diedInVoid", true);
                     player.damage(player.getHealth());
+
                 }
                 if(settings.canPlayerInvincibility()) {
                     e.setCancelled(true);
@@ -574,12 +587,14 @@ public class MapSettingsListener implements Listener {
                     lowestAreaY = borderArea.getLocation2().getY();
                 }
                 if (e.getTo().getY() < lowestAreaY - 20){
-                    player.teleport(RespawnListener.getNonRespawnLocation(game));
                     if (!gamePlayer.isSpectator()) {
                         Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
                             player.getInventory().clear();
+                            gamePlayer.getMetadata().put("diedInVoid", true);
                             player.damage(player.getHealth());
                         }, 1L);
+                    }else{
+                        player.teleport(RespawnListener.getNonRespawnLocation(game));
                     }
                 }
             }

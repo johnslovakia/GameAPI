@@ -29,6 +29,9 @@ public class MinigameSettings {
     private boolean enabledMovementInPreparation = false;
     private boolean allowDefaultKitSelection = true;
     private boolean canDropCosmeticHat = false;
+    private boolean useLevelSystem = true;
+
+    private String defaultLanguage = "english";
 
     private int gamesPerServer = 1;
     private int maxPlayers = 16;

@@ -1,9 +1,11 @@
 package cz.johnslovakia.gameapi.utils.inventoryBuilder;
 
+import com.comphenix.protocol.PacketType;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.GameQuitEvent;
 import cz.johnslovakia.gameapi.messages.MessageManager;
+import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 
@@ -19,6 +21,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
@@ -26,6 +29,7 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +46,7 @@ public class InventoryManager implements Listener {
 
     public InventoryManager(String name) {
         this.name = name;
+        //TODO: ...
         Bukkit.getPluginManager().registerEvents(this, Minigame.getInstance().getPlugin());
     }
 
@@ -155,18 +160,43 @@ public class InventoryManager implements Listener {
         }
     }
 
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent e) {
+        if (e.getPlayer() instanceof Player player) {
+            if (!players.contains(player)) {
+                return;
+            }
+            GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+
+            //TODO: asi nefunguje
+            /*if (gamePlayer.getMetadata().containsKey("inventory_manager_blinking_task")){
+                ((BukkitRunnable) gamePlayer.getMetadata().get("inventory_manager_blinking_task")).cancel();
+                gamePlayer.getMetadata().remove("inventory_manager_blinking_task");
+            }*/
+            give(player);
+        }
+    }
+
     public void give(Player player){
         give(player, true);
     }
 
     public void give(Player player, boolean clearInventory){
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+
+        InventoryManager oldInventoryManager = gamePlayer.getPlayerData().getCurrentInventory();
+        if (oldInventoryManager != null && oldInventoryManager != this) oldInventoryManager.unloadInventory(player);
+
+        PlayerInventory inventory = player.getInventory();
         if (!players.contains(player)) {
+            inventory.setHeldItemSlot(holdItemSlot);
             players.add(player);
         }
-        PlayerInventory inventory = player.getInventory();
 
         if (clearInventory) {
-            inventory.clear();
+            for (int i = 0; i < 36; i++) {
+                inventory.clear(i);
+            }
         }
 
         if (fillFreeSlots != null){
@@ -176,31 +206,38 @@ public class InventoryManager implements Listener {
         }
 
         for (Item item : items){
-            ItemStack translated = new ItemBuilder((item.isPlayerHead() ? GameAPI.getInstance().getVersionSupport().getPlayerHead(player) : item.getItem()))
-                    .setName(MessageManager.get(player, item.getTranslateKey()).getTranslated()).toItemStack();
+            ItemBuilder translated = new ItemBuilder((item.isPlayerHead() ? GameAPI.getInstance().getVersionSupport().getPlayerHead(player) : item.getItem()))
+                    .setName(MessageManager.get(player, item.getTranslateKey()).getTranslated());
+            if (item.getBlinking() != null &&  item.getBlinking().test(gamePlayer)){
+                translated.setCustomModelData(item.getBlinkingItemCustomModelData());
+            }
 
-            inventory.setItem(item.getSlot(), translated);
+            inventory.setItem(item.getSlot(), translated.toItemStack());
         }
-        inventory.setHeldItemSlot(holdItemSlot);
+        //inventory.setHeldItemSlot(holdItemSlot);
         PlayerManager.getGamePlayer(player).getPlayerData().setCurrentInventory(this);
     }
 
-    public void unloadInventory(Player p) {
-        if (!players.contains(p)) {
-            return;
-        }
-        players.remove(p);
-        Inventory inv = p.getInventory();
-        for (Item ji : items) {
-            Component component = MessageManager.get(p, ji.getTranslateKey()).getTranslated();
+    public void unloadInventory(Player player) {
+        if (!players.contains(player)) return;
+        players.remove(player);
+
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+
+        InventoryManager currentInventory = gamePlayer.getPlayerData().getCurrentInventory();
+        if (currentInventory != null && currentInventory.equals(this)) gamePlayer.getPlayerData().setCurrentInventory(null);
+
+        Inventory inv = player.getInventory();
+        for (Item item : items) {
+            Component component = MessageManager.get(player, item.getTranslateKey()).getTranslated();
             if (component != null){
-                for (ItemStack item : p.getInventory().getContents()){
-                    if (item == null || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName()){
+                for (ItemStack itemStack : player.getInventory().getContents()){
+                    if (itemStack == null || !itemStack.hasItemMeta() || !itemStack.getItemMeta().hasDisplayName()){
                         continue;
                     }
 
-                    if (item.getItemMeta().displayName().equals(component)){
-                        inv.remove(item);
+                    if (itemStack.getItemMeta().displayName().equals(component)){
+                        inv.remove(itemStack);
                     }
                 }
             }
@@ -208,28 +245,7 @@ public class InventoryManager implements Listener {
     }
 
     public void unloadAllInventories() {
-        for (Player p : players) {
-            if (!players.contains(p)) {
-                return;
-            }
-            Inventory inv = p.getInventory();
-            for (Item ji : items) {
-                Component component = MessageManager.get(p, ji.getTranslateKey()).getTranslated();
-                if (component != null){
-                    for (ItemStack item : p.getInventory().getContents()){
-                        if (item == null || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName()){
-                            continue;
-                        }
-
-                        if (item.getItemMeta().displayName().equals(component)){
-                            inv.remove(item);
-                        }
-                    }
-                }
-            }
-            p.updateInventory();
-        }
-        players.clear();
+       players.forEach(this::unloadInventory);
     }
 
 

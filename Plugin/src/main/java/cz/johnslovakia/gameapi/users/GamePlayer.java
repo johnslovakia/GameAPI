@@ -211,7 +211,7 @@ public class GamePlayer extends Winner {
         getOnlinePlayer().setHealth(20);
         getOnlinePlayer().setFoodLevel(20);
         //TODO: vymyslet lépe pro level system
-        if (getGame().getState().equals(GameState.INGAME)) {
+        if (getGame().getState().equals(GameState.INGAME) || getGame().isPreparation()) {
             getOnlinePlayer().setLevel(0);
             getOnlinePlayer().setExp(0);
         }

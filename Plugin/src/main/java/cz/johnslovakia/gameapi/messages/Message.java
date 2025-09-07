@@ -31,6 +31,11 @@ public class Message {
     public Message(List<GamePlayer> audience, String key) {
         for (GamePlayer recipient : audience) {
             Language language = recipient.getLanguage();
+            if (language == null){
+                messages.put(recipient, Component.text("§cSomething went wrong, your language could not be retrieved. Sorry for the inconvenience."));
+                continue;
+            }
+
             Map<Language, String> langMap = MessageManager.getMessages(key);
             if (langMap == null) {
                 messages.put(recipient, Component.text("§cNo translation found for message key: " + key + " (Language: " + language.getName() + ")"));

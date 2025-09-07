@@ -51,6 +51,8 @@ public class ChatListener implements Listener {
 
         e.setMessage(ChatColor.stripColor(e.getMessage()));
 
+        LevelManager levelManager = Minigame.getInstance().getLevelManager();
+        
         if (game != null) {
             if (gamePlayer.isSpectator() && game.getState() == GameState.INGAME) {
                 e.setCancelled(true);
@@ -62,7 +64,7 @@ public class ChatListener implements Listener {
                             .replace("%prefix%", StringUtils.colorizer(prefix))
                             .replace("%name%", player.getName())
                             .replace("%message%", e.getMessage())
-                            .replace("%level_evolution_icon%", Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon())
+                            .replace("%level_evolution_icon%", (levelManager != null ? Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon() : Component.text("")))
                             .send();
                 }
             }else if (game.getState() == GameState.INGAME) {
@@ -81,7 +83,7 @@ public class ChatListener implements Listener {
                                         .replace("%team_color%", Component.empty().color(team.getTeamColor().getTextColor()))
                                         .replace("%team%", Component.text(team.getName()).color(team.getTeamColor().getTextColor()))
                                         .replace("%message%", e.getMessage())
-                                        .replace("%level_evolution_icon%", Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon())
+                                        .replace("%level_evolution_icon%", (levelManager != null ? Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon() : Component.text("")))
                                         .send();
                             }
                         } else {
@@ -96,7 +98,7 @@ public class ChatListener implements Listener {
                                         .replace("%team_color%", Component.text("").color(team.getTeamColor().getTextColor()))
                                         .replace("%team%", Component.text(team.getName()).color(team.getTeamColor().getTextColor()))
                                         .replace("%message%", e.getMessage())
-                                        .replace("%level_evolution_icon%", Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon())
+                                        .replace("%level_evolution_icon%", (levelManager != null ? Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon() : Component.text("")))
                                         .send();
                             }
                         }
@@ -118,7 +120,7 @@ public class ChatListener implements Listener {
                                 .replace("%message%", e.getMessage())
                                 .replace("%team_color%", "§a")
                                 .replace("%team%", "")
-                                .replace("%level_evolution_icon%", Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon())
+                                .replace("%level_evolution_icon%", (levelManager != null ? Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon() : Component.text("")))
                                 .send();
                     }
                 }
@@ -132,7 +134,7 @@ public class ChatListener implements Listener {
                             .replace("%prefix%", StringUtils.colorizer(prefix))
                             .replace("%name%", player.getName())
                             .replace("%message%", e.getMessage())
-                            .replace("%level_evolution_icon%", Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon())
+                            .replace("%level_evolution_icon%", (levelManager != null ? Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer).levelEvolution().getIcon() : Component.text("")))
                             .send();
                 }
             }

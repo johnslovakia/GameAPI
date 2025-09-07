@@ -1,5 +1,7 @@
 package cz.johnslovakia.gameapi.listeners;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.GamePlayerDeathEvent;
 import cz.johnslovakia.gameapi.events.PlayerDamageByPlayerEvent;
@@ -24,6 +26,7 @@ import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 
 import org.bukkit.Bukkit;
+import org.bukkit.damage.DamageType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -31,13 +34,19 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Getter
 public class PlayerDeathListener implements Listener {
 
     //private static final Map<GamePlayer, Integer> spawnKillProtection = new HashMap<>();
-    private static final Map<UUID, Integer> killCounter = new HashMap<>();
-    private static final Map<Integer, Set<UUID>> blockedxKill = new HashMap<>();
+    private static final Cache<UUID, Integer> killCounter = CacheBuilder.newBuilder()
+            .expireAfterWrite(6, TimeUnit.SECONDS)
+            .build();
+
+    private static final Cache<String, Boolean> blockedXKill = CacheBuilder.newBuilder()
+            .expireAfterWrite(25, TimeUnit.SECONDS)
+            .build();
 
 
     public String getxKillMessageKey(int count){
@@ -127,34 +136,15 @@ public class PlayerDeathListener implements Listener {
             GamePlayer killer = e.getKiller();
             UUID killerId = killer.getOfflinePlayer().getUniqueId();
 
-            killCounter.merge(killerId, 1, Integer::sum);
-            int currentCount = killCounter.get(killerId);
-
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    killCounter.computeIfPresent(killerId, (k, v) -> v > 1 ? v - 1 : null);
-                }
-            }.runTaskLater(Minigame.getInstance().getPlugin(), 6 * 20L);
+            int currentCount = killCounter.getIfPresent(killerId) != null ? killCounter.getIfPresent(killerId) + 1 : 1;
+            killCounter.put(killerId, currentCount);
 
             if (currentCount > 1) {
-                blockedxKill.computeIfAbsent(currentCount, k -> new HashSet<>()).add(killerId);
-
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        Set<UUID> set = blockedxKill.get(currentCount);
-                        if (set != null) {
-                            set.remove(killerId);
-                            if (set.isEmpty()) blockedxKill.remove(currentCount);
-                        }
-                    }
-                }.runTaskLater(Minigame.getInstance().getPlugin(), 25 * 20L);
+                blockedXKill.put(killerId + ":" + currentCount, true);
             }
 
             String killKey = "";
-            Set<UUID> blockedSet = blockedxKill.get(currentCount);
-            if (currentCount > 1 && (blockedSet == null || !blockedSet.contains(killerId))) {
+            if (currentCount > 1 && blockedXKill.getIfPresent(killerId + ":" + currentCount) == null) {
                 killKey = getxKillMessageKey(currentCount);
             }
 
@@ -167,7 +157,7 @@ public class PlayerDeathListener implements Listener {
                         .addAndTranslate(killKey)
                         .send();
             } else {
-                MessageManager.get(game.getParticipants(), killer.getPlayerData().getKillMessage().getMessageKey(e.getDmgCause()))
+                MessageManager.get(game.getParticipants(), killer.getPlayerData().getKillMessage().getMessageKey(e.getDmgType()))
                         .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                         .replace("%killer%", killer.getOnlinePlayer().getName())
                         .replace("%player_color%", useTeams ? "" + gamePlayer.getTeam().getChatColor() : "§a")
@@ -185,12 +175,10 @@ public class PlayerDeathListener implements Listener {
             }
 
             if (e.isFirstGameKill()) {
-                game.getPlayers().forEach(gp -> gp.getOnlinePlayer().sendMessage(
-                        MessageManager.get(gp, "chat.first_blood")
-                                .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
-                                .replace("%killer%", killer.getOnlinePlayer().getName())
-                                .getTranslated()
-                ));
+                MessageManager.get(game.getParticipants(), "chat.first_blood")
+                        .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
+                        .replace("%killer%", killer.getOnlinePlayer().getName())
+                        .getTranslated();
             }
 
             /*spawnKillProtection.merge(killer, 1, Integer::sum);
@@ -208,11 +196,14 @@ public class PlayerDeathListener implements Listener {
             killer.getOnlinePlayer().playSound(killer.getOnlinePlayer().getLocation(), "jsplugins:good", 1F, 1F);
             eliminationBanner(killer, gamePlayer);
         } else {
-            String key = switch (e.getDmgCause()) {
-                case VOID -> "chat.void";
-                case FALL -> "chat.fall";
-                default -> "chat.died";
-            };
+            String key;
+            if (e.getDmgType() == DamageType.FALL) {
+                key = "chat.fall";
+            } else if (e.getDmgType() == DamageType.OUT_OF_WORLD) {
+                key = "chat.void";
+            } else {
+                key = "chat.died";
+            }
 
             MessageManager.get(game.getParticipants(), key)
                     .replace("%dead%", gamePlayer.getOnlinePlayer().getName())

@@ -7,6 +7,7 @@ import cz.johnslovakia.gameapi.users.resources.ResourceComparator;
 import cz.johnslovakia.gameapi.events.PlayerScoreEvent;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.messages.MessageManager;
+import cz.johnslovakia.gameapi.users.resources.ResourcesManager;
 import cz.johnslovakia.gameapi.users.stats.Stat;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
@@ -302,12 +303,12 @@ public class PlayerScore implements Comparable<PlayerScore> {
         }
 
         public Builder addReward(String resourceName, int amount){
-            addReward(Resource.getResourceByName(resourceName), amount);
+            addReward(ResourcesManager.getResourceByName(resourceName), amount);
             return this;
         }
 
         public Builder addReward(String forWhat, String resourceName, int amount){
-            addReward(forWhat, Resource.getResourceByName(resourceName), amount);
+            addReward(forWhat, ResourcesManager.getResourceByName(resourceName), amount);
             return this;
         }
 

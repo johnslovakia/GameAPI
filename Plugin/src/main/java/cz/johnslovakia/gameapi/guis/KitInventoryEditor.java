@@ -12,6 +12,7 @@ import cz.johnslovakia.gameapi.utils.Sounds;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import org.bukkit.Bukkit;
@@ -122,7 +123,7 @@ public class KitInventoryEditor implements Listener {
         boolean autoArmor = (boolean) gamePlayer.getMetadata().get("set_kit_inventory.autoArmor");
 
         ItemBuilder armor = new ItemBuilder(Material.LEATHER_CHESTPLATE);
-        armor.setName((autoArmor ? "#72f622" : "§c") + MessageManager.get(gamePlayer, "inventory.set_kit_inventory.item.auto_equip_armor").getTranslated());
+        armor.setName((autoArmor ? "#72f622" : "§c") + PlainTextComponentSerializer.plainText().serialize(MessageManager.get(gamePlayer, "inventory.set_kit_inventory.item.auto_equip_armor").getTranslated()));
         armor.addLoreLine("");
         if (autoArmor) {
             MessageManager.get(gamePlayer, "inventory.set_kit_inventory.item.auto_equip_armor.action1").addToItemLore(armor);

@@ -141,7 +141,6 @@ public class IMinigame {
 
             return newData;
         }else {
-
             String query = "SELECT * FROM games WHERE name = ? LIMIT 1";
 
             PreparedStatement statement = null;

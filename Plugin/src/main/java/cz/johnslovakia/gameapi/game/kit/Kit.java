@@ -11,6 +11,7 @@ import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.GamePlayerType;
 import cz.johnslovakia.gameapi.users.PlayerData;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.StringUtils;
 import cz.johnslovakia.gameapi.utils.Utils;
 
@@ -157,7 +158,7 @@ public class Kit implements Listener{
                         .send();
                 if (!(player.hasPermission("kits.free") || getPrice() == 0 || kitManager.hasKitPermission(gamePlayer, this))) {
                     MessageManager.get(player, "chat.kit.balance_deducted")
-                            .replace("%economy_name%", kitManager.getResource().getName())
+                            .replace("%economy_name%", "" + kitManager.getResource().getName())
                             .send();
                 }
             }
@@ -181,7 +182,6 @@ public class Kit implements Listener{
         Player player = gamePlayer.getOnlinePlayer();
         PlayerData data = gamePlayer.getPlayerData();
         Game game = gamePlayer.getGame();
-
         PlayerInventory playerInventory = player.getInventory();
         Inventory kitInventory = data.getKitInventory(this);
         if (game.isPreparation()) {
@@ -189,15 +189,15 @@ public class Kit implements Listener{
             playerInventory.setContents(kitInventory.getContents());
         }else{
             for (ItemStack itemStack : kitInventory.getContents()) {
-                if (itemStack != null && itemStack.getType() != Material.AIR) {
+                if (itemStack != null && !itemStack.getType().equals(Material.AIR)) {
                     if (itemStack.getType().toString().toLowerCase().contains("helmet")){
-                        if (playerInventory.getHelmet() == null) playerInventory.setItem(39, itemStack);
+                        if (playerInventory.getHelmet().getType() == Material.AIR) playerInventory.setHelmet(itemStack);
                     }else if (itemStack.getType().toString().toLowerCase().contains("chestplate")){
-                        if (playerInventory.getChestplate() == null) playerInventory.setItem(38, itemStack);
+                        if (playerInventory.getChestplate().getType() == Material.AIR) playerInventory.setChestplate(itemStack);
                     }else if (itemStack.getType().toString().toLowerCase().contains("leggings")){
-                        if (playerInventory.getLeggings() == null) playerInventory.setItem(37, itemStack);
+                        if (playerInventory.getLeggings().getType() == Material.AIR) playerInventory.setLeggings(itemStack);
                     }else if (itemStack.getType().toString().toLowerCase().contains("boots")){
-                        if (playerInventory.getBoots() == null) playerInventory.setItem(36, itemStack);
+                        if (playerInventory.getBoots().getType() == Material.AIR) playerInventory.setBoots(itemStack);
                     }else {
                         playerInventory.addItem(itemStack);
                     }

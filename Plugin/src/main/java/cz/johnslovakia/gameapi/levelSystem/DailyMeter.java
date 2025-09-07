@@ -37,6 +37,23 @@ public class DailyMeter {
         return tiers.isEmpty() ? 0 : tiers.get(tiers.size() - 1).neededXP();
     }
 
+    public DailyMeterTier getCurrentTier(GamePlayer gamePlayer) {
+        int dailyXp = gamePlayer.getPlayerData().getDailyXP();
+        int accumulatedXP = 0;
+        DailyMeterTier currentTier = null;
+
+        for (DailyMeterTier tier : tiers) {
+            accumulatedXP += tier.neededXP();
+            if (dailyXp >= accumulatedXP) {
+                currentTier = tier;
+            } else {
+                break;
+            }
+        }
+
+        return currentTier;
+    }
+
     //TODO: přidat kontrolování jestli je levelů jako maximální počet
     public void addDailyMeterLevel(int neededXP, Reward reward){
         tiers.add(new DailyMeterTier(tiers.size() + 1, neededXP, reward));

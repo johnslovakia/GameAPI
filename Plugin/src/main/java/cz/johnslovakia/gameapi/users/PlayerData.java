@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.datastorage.*;
 import cz.johnslovakia.gameapi.levelSystem.DailyMeter;
+import cz.johnslovakia.gameapi.levelSystem.LevelManager;
 import cz.johnslovakia.gameapi.levelSystem.LevelProgress;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.achievements.Achievement;
@@ -70,7 +71,6 @@ public class PlayerData {
     private List<PlayerStat> stats = new ArrayList<>();
     private List<GameMap> votesForMaps = new ArrayList<>();
 
-    //TODO: psalo to chybu při saving když nebyl hashmap v default a při killu
     private Map<CosmeticsCategory, Cosmetic> selectedCosmetics = new HashMap<>();
     private List<Cosmetic> purchasedCosmetics = new ArrayList<>();
 
@@ -92,30 +92,33 @@ public class PlayerData {
     public PlayerData(GamePlayer gamePlayer) {
         this.gamePlayer = gamePlayer;
 
+        if (Minigame.getInstance().getDatabase() == null){
+            return;
+        }
+
+
+        try {
+            Optional<Row> result = Minigame.getInstance().getDatabase().getConnection().select()
+                    .from(PlayerTable.TABLE_NAME)
+                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .obtainOne();
+
+            result.ifPresent(row -> language = Optional.ofNullable(Language.getLanguage(row.getString("Language")))
+                    .orElse(Language.getDefaultLanguage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
         new BukkitRunnable(){
             @Override
             public void run() {
-                try {
-                    if (Minigame.getInstance().getDatabase() == null){
-                        return;
-                    }
-
-                    Optional<Row> result = Minigame.getInstance().getDatabase().getConnection().select()
-                            .from(PlayerTable.TABLE_NAME)
-                            .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
-                            .obtainOne();
-
-                    result.ifPresent(row -> language = Language.getLanguage(row.getString("Language")));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-
                 PlayerTable playerTable = new PlayerTable();
                 playerTable.newUser(gamePlayer);
 
                 Minigame.getInstance().getMinigameTable().newUser(gamePlayer);
                 Minigame.getInstance().getStatsManager().getTable().newUser(gamePlayer);
+
                 loadData();
             }
         }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
@@ -288,6 +291,8 @@ public class PlayerData {
                 Logger.log("I can't get unclaimed rewards data for player " + gamePlayer.getOnlinePlayer().getName() + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
             }
         }
+        if (getUnclaimedRewards() != null && !getUnclaimedRewards().isEmpty() && getCurrentInventory() != null)
+            getCurrentInventory().give(gamePlayer.getOnlinePlayer());
     }
 
 
@@ -341,6 +346,10 @@ public class PlayerData {
         });
     }
 
+    public LevelProgress getLevelProgress(){
+        return Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer);
+    }
+
     public int getDailyXP(){
         if (Minigame.getInstance().getDatabase() != null) {
             SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
@@ -358,6 +367,8 @@ public class PlayerData {
     }
 
     public void addDailyXP(int amount){
+        if (Minigame.getInstance().getLevelManager() == null) return;
+
         Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> {
             if (Minigame.getInstance().getDatabase() != null) {
                 SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
@@ -374,17 +385,52 @@ public class PlayerData {
 
                     connection.update()
                             .table(tableName)
-                            .set("DailyXP", newBalance)
+                            .set("DailyXP",  balance + amount)
                             .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
                             .execute();
 
-                    for (DailyMeter.DailyMeterTier tier : Minigame.getInstance().getLevelManager().getDailyMeter().getTiers()) {
-                        if (balance < tier.neededXP() && newBalance >= tier.neededXP()) {
+                    //TODO: sečíst tiery neededXP a prostě to brát podle daily XP prostě
+
+
+                    List<DailyMeter.DailyMeterTier> tiers = new ArrayList<>(Minigame.getInstance()
+                            .getLevelManager()
+                            .getDailyMeter()
+                            .getTiers()
+                            .stream()
+                            .filter(t ->
+                                    t.tier() > dailyRewardsClaims &&
+                                            getUnclaimedRewards(UnclaimedReward.Type.DAILYMETER)
+                                                    .stream()
+                                                    .map(r -> (DailyMeterUnclaimedReward) r)
+                                                    .noneMatch(r -> r.getTier() == t.tier())
+                            )
+                            .toList());
+
+
+                    int xp = newBalance;
+                    for (DailyMeter.DailyMeterTier tier : Minigame.getInstance()
+                            .getLevelManager()
+                            .getDailyMeter()
+                            .getTiers()) {
+
+                        boolean isClaimedOrUnclaimed = tier.tier() <= dailyRewardsClaims ||
+                                getUnclaimedRewards(UnclaimedReward.Type.DAILYMETER)
+                                        .stream()
+                                        .map(r -> (DailyMeterUnclaimedReward) r)
+                                        .anyMatch(r -> r.getTier() == tier.tier());
+
+                        if (isClaimedOrUnclaimed) {
+                            xp -= tier.neededXP();
+                        } else if (xp >= tier.neededXP()) {
                             Reward reward = tier.reward();
 
                             JsonObject json = new JsonObject();
                             json.addProperty("tier", tier.tier());
                             reward.setAsClaimable(gamePlayer, UnclaimedReward.Type.DAILYMETER, json);
+
+                            xp -= tier.neededXP();
+                        } else {
+                            break;
                         }
                     }
                 }
@@ -415,6 +461,8 @@ public class PlayerData {
                 return null;
             return Minigame.getInstance().getLevelManager().getDailyMeter().getTiers().get(dailyRewardsClaims);
         }*/
+        if (Minigame.getInstance().getLevelManager() == null) return null;
+
         if (dailyRewardsClaims >= Minigame.getInstance().getLevelManager().getDailyMeter().getMaxTier())
             return null;
         return Minigame.getInstance().getLevelManager().getDailyMeter().getTiers().get(dailyRewardsClaims);
@@ -563,23 +611,20 @@ public class PlayerData {
     }
 
     public List<Quest> getQuests(){
-        List<Quest> list = new ArrayList<>();
-        for (PlayerQuestData data : getQuestData()){
-            list.add(data.getQuest());
-        }
-        return list;
+        return getQuestData().stream()
+                .map(PlayerQuestData::getQuest)
+                .toList();
     }
 
     public List<Quest> getQuestsByStatus(PlayerQuestData.Status status){
-        List<Quest> list = new ArrayList<>();
-        for (PlayerQuestData data : getQuestData().stream().filter(data -> data.getStatus().equals(status)).toList()){
-            list.add(data.getQuest());
-        }
-        return list;
+        return getQuestData().stream()
+                .filter(data -> data.getStatus().equals(status))
+                .map(PlayerQuestData::getQuest)
+                .toList();
     }
 
     public List<PlayerQuestData> getQuestDataByStatus(PlayerQuestData.Status status){
-        return new ArrayList<>(getQuestData().stream().filter(data -> data.getStatus().equals(status)).toList());
+        return getQuestData().stream().filter(data -> data.getStatus().equals(status)).toList();
     }
 
     private void loadQuests(){
@@ -846,6 +891,10 @@ public class PlayerData {
 
                         JSONObject kitsData = new JSONObject(jsonString);
                         JSONObject kitsDataJson = kitsData.getJSONObject("kits_data");
+
+                        if (kitsDataJson == null){
+                            return;
+                        }
                         JSONObject mapsJson = kitsDataJson.getJSONObject("maps");
 
                         if (mapsJson.has(map)) {

@@ -212,7 +212,7 @@ public class GameMap {
                 try {
                     WorldManager.unload(this);
                 }catch (Exception e){
-                    // This exception cannot be ignored
+
                     throw new RuntimeException(e);
                 }
             }

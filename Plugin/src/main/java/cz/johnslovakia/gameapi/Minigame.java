@@ -53,7 +53,6 @@ public abstract class Minigame {
     private List<JSONProperty> properties = new ArrayList<>();
 
     private List<InputStreamWithName> languageFiles = new ArrayList<>();
-    private List<Resource> economies = new ArrayList<>();
 
 
     private CosmeticsManager cosmeticsManager;
@@ -75,15 +74,6 @@ public abstract class Minigame {
         if (config.get("testServer") != null && config.getBoolean("testServer")){
             this.testServer = true;
             Bukkit.getPluginManager().registerEvents(new TestServerListener(), plugin);
-        }
-    }
-
-    public void addEconomy(Resource... economies){
-        assert economies != null;
-        for (Resource resource : economies){
-            if (!this.economies.contains(resource)){
-                this.economies.add(resource);
-            }
         }
     }
 
@@ -163,6 +153,16 @@ public abstract class Minigame {
                     e.printStackTrace();
                 }
             }
+        }
+
+        public SQLDatabaseConnection getConnection(){
+            if (connection != null && connection.isConnected()){
+                return this.connection;
+            }else if (connection != null){
+                connection.connect();
+                return connection;
+            }
+            return null;
         }
     }
 }

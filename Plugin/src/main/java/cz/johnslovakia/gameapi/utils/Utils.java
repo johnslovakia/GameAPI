@@ -233,7 +233,7 @@ public class Utils {
         PlayerInventory inv = player.getInventory();
         GameTeam team = gamePlayer.getTeam();
 
-        if (team == null || inv.getArmorContents() == null){
+        if (team == null){
             return;
         }
 

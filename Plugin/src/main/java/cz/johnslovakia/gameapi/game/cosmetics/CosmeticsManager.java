@@ -28,17 +28,17 @@ public class CosmeticsManager implements Listener{
 
     private final Resource resource;
 
-    public CosmeticsManager(String name, Resource resource) {
+    public CosmeticsManager(String name, Resource mainResource) {
         this.name = name;
-        this.resource = resource;
+        this.resource = mainResource;
 
         Minigame.getInstance().getMinigameTable().createNewColumn(Type.JSON, "Cosmetics");
 
-        addCategory(new KillMessagesCategory());
-        addCategory(new KillSoundsCategory());
-        addCategory(new KillEffectsCategory());
-        addCategory(new TrailsCategory());
-        addCategory(new HatsCategory());
+        addCategory(new KillMessagesCategory(this));
+        addCategory(new KillSoundsCategory(this));
+        addCategory(new KillEffectsCategory(this));
+        addCategory(new TrailsCategory(this));
+        addCategory(new HatsCategory(this));
     }
 
     public CosmeticsCategory getCategoryByName(String name){
@@ -89,7 +89,7 @@ public class CosmeticsManager implements Listener{
         }
     }
 
-    public Resource getEconomy() {
+    public Resource getMainResource() {
         return resource;
     }
 

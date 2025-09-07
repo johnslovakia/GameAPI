@@ -4,6 +4,7 @@ import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.damage.DamageType;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -22,15 +23,15 @@ public class GamePlayerDeathEvent extends Event implements Cancellable {
     private final GamePlayer gamePlayer;
     private final GamePlayer killer;
     private final List<GamePlayer> assists;
-    private final EntityDamageEvent.DamageCause dmgCause;
+    private final DamageType dmgType;
     @Setter
     private boolean firstGameKill = false;
 
-    public GamePlayerDeathEvent(Game game, GamePlayer killer, GamePlayer gamePlayer, List<GamePlayer> assists, EntityDamageEvent.DamageCause dmgCause){
+    public GamePlayerDeathEvent(Game game, GamePlayer killer, GamePlayer gamePlayer, List<GamePlayer> assists, DamageType dmgType){
         this.game = game;
         this.gamePlayer = gamePlayer;
         this.killer = killer;
-        this.dmgCause = dmgCause;
+        this.dmgType = dmgType;
         this.assists = assists;
     }
 

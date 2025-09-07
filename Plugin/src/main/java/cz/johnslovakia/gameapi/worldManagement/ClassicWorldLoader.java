@@ -55,6 +55,7 @@ public class ClassicWorldLoader {
 
                     World bukkitWorld = new WorldCreator(worldName).createWorld();
                     bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+                    bukkitWorld.setGameRule(GameRule.LOCATOR_BAR, false);
                     bukkitWorld.setAutoSave(false);
                     return bukkitWorld;
                 }else {
@@ -96,6 +97,7 @@ public class ClassicWorldLoader {
             }
 
             bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+            bukkitWorld.setGameRule(GameRule.LOCATOR_BAR, false);
             bukkitWorld.setAutoSave(false);
             WorldManager.addLoadedWorld(active.getName());
 
@@ -145,6 +147,7 @@ public class ClassicWorldLoader {
         world.setAutoSave(false);
         if (!arena.getSettings().isAllowTimeChange()) {
             world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+            world.setGameRule(GameRule.LOCATOR_BAR, false);
         }
         arena.setWorld(world);
         WorldManager.addLoadedWorld(worldName);

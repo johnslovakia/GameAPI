@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.datastorage.UnclaimedRewardsTable;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.resources.Resource;
+import cz.johnslovakia.gameapi.utils.inventoryBuilder.InventoryManager;
 import cz.johnslovakia.gameapi.utils.rewards.unclaimed.DailyMeterUnclaimedReward;
 import cz.johnslovakia.gameapi.utils.rewards.unclaimed.LevelUpUnclaimedReward;
 import cz.johnslovakia.gameapi.utils.rewards.unclaimed.QuestUnclaimedReward;
@@ -16,6 +17,7 @@ import cz.johnslovakia.gameapi.utils.rewards.unclaimed.UnclaimedReward;
 import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -23,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 @Getter @Setter
 public class Reward {
@@ -86,6 +89,9 @@ public class Reward {
 
         UnclaimedRewardsTable.addUnclaimedReward(unclaimedReward, data != null ? data.toString() : "");
         gamePlayer.getPlayerData().addUnclaimedReward(unclaimedReward);
+
+        InventoryManager currentInventoryManager = gamePlayer.getPlayerData().getCurrentInventory();
+        if (currentInventoryManager != null && gamePlayer.getGame().getPlayers().contains(gamePlayer)) currentInventoryManager.give(gamePlayer.getOnlinePlayer());
     }
 
     public PlayerRewardRecord applyReward(GamePlayer gamePlayer){
@@ -103,13 +109,12 @@ public class Reward {
         boolean atleastOneApplied = false;
         for (RewardItem item : getRewardItems()) {
             int amount = item.getAmount();
-            int bonusAmount = (int) (amount * bonus / 100.0);
-            amount += bonusAmount;
+            if (item.getResource().isApplicableBonus()) amount += (int) (amount * bonus / 100.0);
+
             if (!item.shouldApply() || amount == 0) {
                 continue;
-            }else{
-                earned.put(item.getResource(), amount);
             }
+            earned.put(item.getResource(), amount);
             atleastOneApplied = true;
         }
 
@@ -198,30 +203,50 @@ public class Reward {
     }
 
     public void sendMessage(GamePlayer gamePlayer, Map<Resource, Integer> earned, int bonus){
-        StringBuilder text = new StringBuilder();
+        Set<Map.Entry<Resource, Integer>> entrySet = earned.entrySet();
+        boolean bonusAppliedToAll = entrySet.stream()
+                .allMatch(entry -> entry.getKey().isApplicableBonus());
 
-        int i = 0;
-        for (Resource resource : earned.keySet()) {
-            if (i >= 1) {
-                text.append("§7, ");
-            }
-            text.append(resource.getColor()).append(forWhat != null ? "+" : "").append(earned.get(resource)).append(" ").append(resource.getDisplayName());
+        List<Component> components = entrySet.stream()
+                .map(entry -> {
+                    Resource resource = entry.getKey();
+                    int amount = entry.getValue();
 
-            i++;
+                    Component base = Component.text()
+                            .append(Component.text(resource.getColor() + (forWhat != null ? "+" : "") + amount + " "))
+                            .append(Component.text(resource.getColor() + resource.getDisplayName()))
+                            .build();
+
+                    if (!bonusAppliedToAll && resource.isApplicableBonus()) {
+                        Component bonusComponent = MessageManager.get(gamePlayer, "chat.reward.bonus_applied")
+                                .replace("%bonus%", String.valueOf(bonus))
+                                .getTranslated();
+
+                        base = base.append(Component.space()).append(bonusComponent);
+                    }
+
+                    return base;
+                })
+                .toList();
+
+        Component text = Component.empty();
+        for (int i = 0; i < components.size(); i++) {
+            if (i > 0) text = text.append(Component.text("§7, "));
+            text = text.append(components.get(i));
         }
 
         if (forWhat == null) {
             MessageManager.get(gamePlayer, "chat.resources.linked_to_message_reward")
-                    .replace("%rewards%", text.toString())
-                    .addAndTranslate("chat.reward.bonus_applied", gp -> bonus != 0)
+                    .replace("%rewards%", text)
+                    .addAndTranslate("chat.reward.bonus_applied", gp -> bonusAppliedToAll && bonus != 0)
                     .replace("%bonus%", "" + bonus)
                     .send();
         }else{
             MessageManager.get(gamePlayer, "chat.resources.reward")
-                    .replace("%rewards%", text.toString())
-                    .addAndTranslate("chat.reward.bonus_applied", gp -> bonus != 0)
-                    .replace("%bonus%", "" + bonus)
+                    .replace("%rewards%", text)
+                    .addAndTranslate("chat.reward.bonus_applied", gp -> bonusAppliedToAll && bonus != 0)
                     .replace("%for_what%", MessageManager.existMessage(forWhat) ? MessageManager.get(gamePlayer, forWhat).getTranslated() : Component.text(forWhat))
+                    .replace("%bonus%", "" + bonus)
                     .send();
         }
     }

@@ -4,6 +4,7 @@ import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.cosmetics.*;
 import cz.johnslovakia.gameapi.users.PlayerManager;
+import cz.johnslovakia.gameapi.users.resources.ResourcesManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.ItemUtils;
 import cz.johnslovakia.gameapi.utils.Utils;
@@ -21,33 +22,54 @@ import java.util.*;
 
 public class TrailsCategory extends CosmeticsCategory {
 
-    public TrailsCategory() {
+    public TrailsCategory(CosmeticsManager manager) {
         super("Projectile Trails", new ItemStack(Material.ARROW));
 
         FileConfiguration config = Minigame.getInstance().getPlugin().getConfig();
-        int LEGENDARY_PRICE = Utils.getPrice(config, "projectile_trails.legendary", 15000);
-        int EPIC_PRICE = Utils.getPrice(config, "projectile_trails.epic", 12000);
-        int RARE_PRICE = Utils.getPrice(config, "projectile_trails.rare", 10000);
-        int UNCOMMON_PRICE = Utils.getPrice(config, "projectile_trails.uncommon", 8000);
-        int COMMON_PRICE = Utils.getPrice(config, "projectile_trails.common", 5000);
 
-        Cosmetic greenSparks = new Cosmetic("Green Sparks", new ItemStack(Material.EMERALD), COMMON_PRICE, CosmeticRarity.COMMON)
+        int LEGENDARY_COINS_PRICE = Utils.getPrice(config, "projectile_trails.legendary", 15000);
+        int EPIC_COINS_PRICE = Utils.getPrice(config, "projectile_trails.epic", 12000);
+        int RARE_COINS_PRICE = Utils.getPrice(config, "projectile_trails.rare", 10000);
+        int UNCOMMON_COINS_PRICE = Utils.getPrice(config, "projectile_trails.uncommon", 8000);
+        int COMMON_COINS_PRICE = Utils.getPrice(config, "projectile_trails.common", 5000);
+
+        int LEGENDARY_TOKEN_PRICE = 7;
+        int EPIC_TOKEN_PRICE = 5;
+        int RARE_TOKEN_PRICE = 4;
+        int UNCOMMON_TOKEN_PRICE = 3;
+        int COMMON_TOKEN_PRICE = 2;
+
+        Cosmetic greenSparks = new Cosmetic("Green Sparks", new ItemStack(Material.EMERALD), CosmeticRarity.COMMON)
+                .addCost(manager.getMainResource(), COMMON_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), COMMON_TOKEN_PRICE)
                 .setAsPurchasable()
                 .setLocationConsumer(location -> location.getWorld().spawnParticle(Particle.COMPOSTER, location.getX(), location.getY(), location.getZ(), 2, 0.1, 0.1, 0.1, 1));
-        Cosmetic lava = new Cosmetic("Lava", new ItemStack(Material.LAVA_BUCKET), COMMON_PRICE, CosmeticRarity.COMMON)
+        Cosmetic lava = new Cosmetic("Lava", new ItemStack(Material.LAVA_BUCKET), CosmeticRarity.COMMON)
+                .addCost(manager.getMainResource(), COMMON_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), COMMON_TOKEN_PRICE)
                 .setLocationConsumer(location -> location.getWorld().spawnParticle(Particle.LAVA, location.getX(), location.getY(), location.getZ(), 2, 0.1, 0.1, 0.1, 1));
-        Cosmetic hearth = new Cosmetic("Hearth", new ItemStack(Material.REDSTONE), COMMON_PRICE, CosmeticRarity.COMMON)
+        Cosmetic hearth = new Cosmetic("Hearth", new ItemStack(Material.REDSTONE), CosmeticRarity.COMMON)
+                .addCost(manager.getMainResource(), COMMON_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), COMMON_TOKEN_PRICE)
                 .setAsPurchasable()
                 .setAsPurchasable()
                 .setLocationConsumer(location -> location.getWorld().spawnParticle(Particle.HEART, location.getX(), location.getY(), location.getZ(), 2, 0.1, 0.1, 0.1, 1));
-        Cosmetic slime = new Cosmetic("Slime", new ItemStack(Material.SLIME_BALL), UNCOMMON_PRICE, CosmeticRarity.UNCOMMON)
+        Cosmetic slime = new Cosmetic("Slime", new ItemStack(Material.SLIME_BALL), CosmeticRarity.UNCOMMON)
+                .addCost(manager.getMainResource(), UNCOMMON_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), UNCOMMON_TOKEN_PRICE)
                 .setAsPurchasable()
                 .setLocationConsumer(location -> location.getWorld().spawnParticle(Particle.ITEM_SLIME, location.getX(), location.getY(), location.getZ(), 2, 0.1, 0.1, 0.1, 1));
-        Cosmetic notes = new Cosmetic("Notes", new ItemStack(Material.JUKEBOX), COMMON_PRICE, CosmeticRarity.COMMON)
+        Cosmetic notes = new Cosmetic("Notes", new ItemStack(Material.JUKEBOX), CosmeticRarity.COMMON)
+                .addCost(manager.getMainResource(), COMMON_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), COMMON_TOKEN_PRICE)
                 .setLocationConsumer(location -> location.getWorld().spawnParticle(Particle.NOTE, location.getX(), location.getY(), location.getZ(), 2, 0.1, 0.1, 0.1, 1));
-        Cosmetic glow = new Cosmetic("Glow", new ItemStack(Material.GLOW_SQUID_SPAWN_EGG), RARE_PRICE, CosmeticRarity.RARE)
+        Cosmetic glow = new Cosmetic("Glow", new ItemStack(Material.GLOW_SQUID_SPAWN_EGG), CosmeticRarity.RARE)
+                .addCost(manager.getMainResource(), RARE_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), RARE_TOKEN_PRICE)
                 .setLocationConsumer(location -> location.getWorld().spawnParticle(Particle.GLOW, location.getX(), location.getY(), location.getZ(), 2, 0.1, 0.1, 0.1, 1));
-        Cosmetic head = new Cosmetic("Skeleton Heads", new ItemStack(Material.SKELETON_SKULL), UNCOMMON_PRICE, CosmeticRarity.UNCOMMON)
+        Cosmetic head = new Cosmetic("Skeleton Heads", new ItemStack(Material.SKELETON_SKULL), CosmeticRarity.UNCOMMON)
+                .addCost(manager.getMainResource(), UNCOMMON_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), UNCOMMON_TOKEN_PRICE)
                 .setAsPurchasable()
                 .setLocationConsumer(location -> {
                     ItemStack itemStack =  new ItemBuilder(Material.SKELETON_SKULL).setName(UUID.randomUUID().toString()).toItemStack();
@@ -56,7 +78,9 @@ public class TrailsCategory extends CosmeticsCategory {
                     Item item = location.getWorld().dropItem(location, new ItemStack(Material.SKELETON_SKULL));
                     Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
-        Cosmetic pumpkins = new Cosmetic("Pumpkins", new ItemStack(Material.PUMPKIN), RARE_PRICE, CosmeticRarity.RARE)
+        Cosmetic pumpkins = new Cosmetic("Pumpkins", new ItemStack(Material.PUMPKIN), CosmeticRarity.RARE)
+                .addCost(manager.getMainResource(), RARE_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), RARE_TOKEN_PRICE)
                 .setLocationConsumer(location -> {
                     ItemStack itemStack =  new ItemBuilder(Material.PUMPKIN).setName(UUID.randomUUID().toString()).toItemStack();
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
@@ -64,7 +88,9 @@ public class TrailsCategory extends CosmeticsCategory {
                     Item item = location.getWorld().dropItem(location, new ItemStack(Material.PUMPKIN));
                     Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
-        Cosmetic presents = new Cosmetic("Presents", GameAPI.getInstance().getVersionSupport().getCustomHead("12919c67317c7678438ff520c98dde0e3b4d68769c8938a5a3de2968edfc7314"), EPIC_PRICE, CosmeticRarity.EPIC)
+        Cosmetic presents = new Cosmetic("Presents", GameAPI.getInstance().getVersionSupport().getCustomHead("12919c67317c7678438ff520c98dde0e3b4d68769c8938a5a3de2968edfc7314"), CosmeticRarity.EPIC)
+                .addCost(manager.getMainResource(), EPIC_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), EPIC_TOKEN_PRICE)
                 .setLocationConsumer(location -> {
                     ItemStack itemStack =  new ItemBuilder(GameAPI.getInstance().getVersionSupport().getCustomHead("12919c67317c7678438ff520c98dde0e3b4d68769c8938a5a3de2968edfc7314")).setName(UUID.randomUUID().toString()).toItemStack();
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
@@ -72,7 +98,9 @@ public class TrailsCategory extends CosmeticsCategory {
                     Item item = location.getWorld().dropItem(location, itemStack);
                     Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
-        Cosmetic usaFlag = new Cosmetic("USA Flag", GameAPI.getInstance().getVersionSupport().getCustomHead("46c9923bebd9ad90a80a0731c3f3b9db729b0785015e18e3ec07e4e91099be06"), EPIC_PRICE, CosmeticRarity.EPIC)
+        Cosmetic usaFlag = new Cosmetic("USA Flag", GameAPI.getInstance().getVersionSupport().getCustomHead("46c9923bebd9ad90a80a0731c3f3b9db729b0785015e18e3ec07e4e91099be06"), CosmeticRarity.EPIC)
+                .addCost(manager.getMainResource(), EPIC_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), EPIC_TOKEN_PRICE)
                 .setLocationConsumer(location -> {
                     ItemStack itemStack =  new ItemBuilder(GameAPI.getInstance().getVersionSupport().getCustomHead("46c9923bebd9ad90a80a0731c3f3b9db729b0785015e18e3ec07e4e91099be06")).setName(UUID.randomUUID().toString()).toItemStack();
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
@@ -80,7 +108,9 @@ public class TrailsCategory extends CosmeticsCategory {
                     Item item = location.getWorld().dropItem(location, itemStack);
                     Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
-        Cosmetic czechFlag = new Cosmetic("Czech Flag", GameAPI.getInstance().getVersionSupport().getCustomHead("48152b7334d7ecf335e47a4f35defbd2eb6957fc7bfe94212642d62f46e61e"), EPIC_PRICE, CosmeticRarity.EPIC)
+        Cosmetic czechFlag = new Cosmetic("Czech Flag", GameAPI.getInstance().getVersionSupport().getCustomHead("48152b7334d7ecf335e47a4f35defbd2eb6957fc7bfe94212642d62f46e61e"), CosmeticRarity.EPIC)
+                .addCost(manager.getMainResource(), EPIC_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), EPIC_TOKEN_PRICE)
                 .setLocationConsumer(location -> {
                     ItemStack itemStack =  new ItemBuilder(GameAPI.getInstance().getVersionSupport().getCustomHead("48152b7334d7ecf335e47a4f35defbd2eb6957fc7bfe94212642d62f46e61e")).setName(UUID.randomUUID().toString()).toItemStack();
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
@@ -88,7 +118,9 @@ public class TrailsCategory extends CosmeticsCategory {
                     Item item = location.getWorld().dropItem(location, itemStack);
                     Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
-        Cosmetic ukFlag = new Cosmetic("UK Flag", GameAPI.getInstance().getVersionSupport().getCustomHead("8831c73f5468e888c3019e2847e442dfaa88898d50ccf01fd2f914af544d5368"), EPIC_PRICE, CosmeticRarity.EPIC)
+        Cosmetic ukFlag = new Cosmetic("UK Flag", GameAPI.getInstance().getVersionSupport().getCustomHead("8831c73f5468e888c3019e2847e442dfaa88898d50ccf01fd2f914af544d5368"), CosmeticRarity.EPIC)
+                .addCost(manager.getMainResource(), EPIC_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), EPIC_TOKEN_PRICE)
                 .setLocationConsumer(location -> {
                     ItemStack itemStack =  new ItemBuilder(GameAPI.getInstance().getVersionSupport().getCustomHead("8831c73f5468e888c3019e2847e442dfaa88898d50ccf01fd2f914af544d5368")).setName(UUID.randomUUID().toString()).toItemStack();
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
@@ -96,7 +128,9 @@ public class TrailsCategory extends CosmeticsCategory {
                     Item item = location.getWorld().dropItem(location, itemStack);
                     Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
-        Cosmetic roses = new Cosmetic("Roses", new ItemStack(Material.POPPY), COMMON_PRICE, CosmeticRarity.COMMON)
+        Cosmetic roses = new Cosmetic("Roses", new ItemStack(Material.POPPY), CosmeticRarity.COMMON)
+                .addCost(manager.getMainResource(), COMMON_COINS_PRICE)
+                .addCost(ResourcesManager.getResourceByName("CosmeticTokens"), COMMON_TOKEN_PRICE)
                 .setAsPurchasable()
                 .setLocationConsumer(location -> {
                     ItemStack itemStack =  new ItemBuilder(Material.POPPY).setName(UUID.randomUUID().toString()).toItemStack();

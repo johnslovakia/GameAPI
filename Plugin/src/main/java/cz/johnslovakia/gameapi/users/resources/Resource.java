@@ -20,7 +20,6 @@ import java.util.Optional;
 @Getter
 public class Resource {
 
-    public static List<Resource> resourceList = new ArrayList<>();
 
     private String name;
     @Setter
@@ -31,7 +30,7 @@ public class Resource {
     @Setter
     private int firstDailyWinReward;
     @Setter
-    private boolean applicableBonus;
+    private boolean applicableBonus = false;
     @Setter
     private String img_char;
     @Setter
@@ -47,7 +46,8 @@ public class Resource {
         this.rank = rank;
         this.resourceInterface = resourceInterface;
 
-        resourceList.add(this);
+        //TODO: dát to vždy přímo u vytváření toho resource v pluginech
+        if (name.equalsIgnoreCase("Coins")) applicableBonus = true;
     }
 
     public Resource(String name, ChatColor color, int rank, boolean automatically, boolean forAllMinigames) {
@@ -56,7 +56,8 @@ public class Resource {
         this.rank = rank;
         setAutomatically(automatically, forAllMinigames);
 
-        resourceList.add(this);
+        //TODO: dát to vždy přímo u vytváření toho resource v pluginech
+        if (name.equalsIgnoreCase("Coins")) applicableBonus = true;
     }
 
     public Resource(String name, ChatColor color, ResourceInterface resourceInterface) {
@@ -64,7 +65,8 @@ public class Resource {
         this.color = color;
         this.resourceInterface = resourceInterface;
 
-        resourceList.add(this);
+        //TODO: dát to vždy přímo u vytváření toho resource v pluginech
+        if (name.equalsIgnoreCase("Coins")) applicableBonus = true;
     }
 
     public Resource(String name, ChatColor color, boolean automatically, boolean forAllMinigames) {
@@ -72,7 +74,8 @@ public class Resource {
         this.color = color;
         setAutomatically(automatically, forAllMinigames);
 
-        resourceList.add(this);
+        //TODO: dát to vždy přímo u vytváření toho resource v pluginech
+        if (name.equalsIgnoreCase("Coins")) applicableBonus = true;
     }
 
     public String getDisplayName(){
@@ -221,19 +224,6 @@ public class Resource {
     public String formattedName() {
         String caps = name.toLowerCase();
         return caps.substring(0, 1).toUpperCase() + caps.substring(1);
-    }
-
-    public static List<Resource> getResources() {
-        return resourceList;
-    }
-
-    public static Resource getResourceByName(String name){
-        for (Resource resource : getResources()){
-            if (resource.getName().equalsIgnoreCase(name)){
-                return resource;
-            }
-        }
-        return null;
     }
 
     public ObservableResource observe(@NotNull ResourceChangeListener listener) {

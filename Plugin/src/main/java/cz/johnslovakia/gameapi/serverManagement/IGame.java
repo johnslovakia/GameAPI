@@ -19,7 +19,6 @@ import java.util.List;
 @Getter
 public class IGame {
 
-
     private final IMinigame minigame;
     private final String name;
 

@@ -2,6 +2,9 @@ package cz.johnslovakia.gameapi.guis;
 
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.datastorage.PlayerTable;
+import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
+import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsCategory;
+import cz.johnslovakia.gameapi.game.cosmetics.CosmeticsManager;
 import cz.johnslovakia.gameapi.levelSystem.*;
 import cz.johnslovakia.gameapi.messages.Language;
 import cz.johnslovakia.gameapi.messages.MessageManager;
@@ -10,6 +13,7 @@ import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.users.achievements.PlayerAchievementData;
 import cz.johnslovakia.gameapi.users.quests.QuestType;
 import cz.johnslovakia.gameapi.users.resources.Resource;
+import cz.johnslovakia.gameapi.users.resources.ResourcesManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.Sounds;
 import cz.johnslovakia.gameapi.utils.StringUtils;
@@ -24,8 +28,11 @@ import me.zort.containr.Element;
 import me.zort.containr.GUI;
 import me.zort.sqllib.SQLDatabaseConnection;
 import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 
 import java.text.SimpleDateFormat;
@@ -55,8 +62,8 @@ public class ProfileInventory {
 
     public static void openGUI(GamePlayer gamePlayer){
         GUI inventory = Component.gui()
-                .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七").font(Key.key("jsplugins", "guis")))
-                .rows(3)
+                .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七\uE000").font(Key.key("jsplugins", "guis")))
+                .rows(5)
                 .prepare((gui, player) -> {
                     PlayerData data = gamePlayer.getPlayerData();
 
@@ -69,9 +76,9 @@ public class ProfileInventory {
                     ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
                     info.setCustomModelData(1018);
                     info.hideAllFlags();
-                    info.setName(MessageManager.get(player, "inventory.info_item.perks_inventory.name")
+                    info.setName(MessageManager.get(player, "inventory.info_item.player_menu.name")
                             .getTranslated());
-                    info.setLore(MessageManager.get(player, "inventory.info_item.perks_inventory.lore").getTranslated());
+                    info.setLore(MessageManager.get(player, "inventory.info_item.player_menu.lore").getTranslated());
 
                     gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> {
                         gui.close(player);
@@ -80,77 +87,22 @@ public class ProfileInventory {
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
 
 
-                    ItemBuilder playerInfo = new ItemBuilder(Material.PLAYER_HEAD);
-                    playerInfo.hideAllFlags();
 
 
-                    ItemBuilder profile = new ItemBuilder(Material.BOOK);
+                    ItemBuilder profile = new ItemBuilder(Utils.getPlayerHead(player));
                     profile.hideAllFlags();
                     profile.setName("§aMy Profile");
                     profile.addLoreLine("");
-                    for (Resource resource : Resource.getResources()){
-                        profile.addLoreLine("§7" + resource.getDisplayName() + ": §a" + data.getBalance(resource));
+                    for (Resource resource : ResourcesManager.getResources()){
+                        profile.addLoreLine("§7" + resource.getDisplayName() + ": §a" + StringUtils.betterNumberFormat(data.getBalance(resource)));
                     }
-                    gui.appendElement(9, Component.element(profile.toItemStack()).addClick(i -> {
+                    gui.appendElement(11, Component.element(profile.toItemStack()).addClick(i -> {
 
-                    }).build());
-
-                    ItemBuilder quests = new ItemBuilder(Material.BOOK);
-                    quests.hideAllFlags();
-                    quests.setName("§aQuests");
-                    quests.setLore(MessageManager.get(player, "inventory.profile_menu.quests.description").getTranslated());
-                    quests.addLoreLine("");
-                    quests.addLoreLine(MessageManager.get(player, "inventory.profile_menu.quests.click_to_view").getTranslated());
-                    gui.appendElement(10, Component.element(quests.toItemStack()).addClick(i -> {
-
-                    }).build());
-
-                    ItemBuilder achievements = new ItemBuilder(Material.BOOK);
-                    achievements.hideAllFlags();
-                    achievements.setName("§aAchievements");
-                    achievements.setLore(MessageManager.get(player, "inventory.profile_menu.achievements.achievements_unlocked")
-                            .replace("%unlocked%", "" + data.getAchievementData().stream().filter(achievementData -> achievementData.getStatus().equals(PlayerAchievementData.Status.UNLOCKED)).toList().size())
-                            .getTranslated());
-                    achievements.addLoreLine("");
-                    achievements.addLoreLine(MessageManager.get(player, "inventory.profile_menu.achievements.click_to_view").getTranslated());
-                    gui.appendElement(11, Component.element(achievements.toItemStack()).addClick(i -> {
-
-                    }).build());
-
-                    List<Language> languageList = Language.getLanguages();
-                    languageList.sort(Comparator.comparing(Language::getName));
-
-                    ItemBuilder languages = new ItemBuilder(Material.BOOK);
-                    languages.hideAllFlags();
-                    languages.setName("§aLanguages");
-                    if (languageList.size() <= 3){
-                        languages.addLoreLine("");
-                        for (Language language : languageList){
-                            languages.addLoreLine((data.getLanguage().equals(language) ? "§a" : "§7") + org.apache.commons.lang3.StringUtils.capitalize(language.getName()));
-                        }
-                    }else{
-                        languages.addLoreLine(MessageManager.get(player, "inventory.profile_menu.language.selected_language")
-                                .replace("%language%", org.apache.commons.lang3.StringUtils.capitalize(data.getLanguage().getName()))
-                                .getTranslated());
-                    }
-                    languages.addLoreLine("");
-                    languages.addLoreLine(MessageManager.get(player, "inventory.profile_menu.language.click_to_change").getTranslated());
-                    gui.appendElement(12, Component.element(languages.toItemStack()).addClick(i -> {
-                        if (languageList.size() <= 3){
-                            int currentIndex = languageList.indexOf(gamePlayer.getLanguage());
-                            Language nextLanguage = (currentIndex + 1 < languageList.size()) ? languageList.get(currentIndex + 1) : languageList.get(0);
-                            gamePlayer.getGamePlayer().getPlayerData().setLanguage(nextLanguage, true);
-                            openGUI(gamePlayer);
-                            player.playSound(player, Sounds.LEVEL_UP.bukkitSound(), 1F, 1F);
-                        }else{
-                            player.playSound(player, Sounds.CLICK.bukkitSound(), 1F, 1F);
-                        }
                     }).build());
 
                     int bonus = getBonus(gamePlayer);
 
                     //TODO: nezobrazovat pokud není LevelSystem
-                    //TODO: může jich být více, seřazení
                     Optional<LevelUpUnclaimedReward> levelUpUnclaimedReward = gamePlayer.getPlayerData()
                             .getUnclaimedRewards(UnclaimedReward.Type.LEVELUP).stream()
                             .filter(r -> r instanceof LevelUpUnclaimedReward)
@@ -158,17 +110,20 @@ public class ProfileInventory {
                             .findFirst();
                     LevelManager levelManager = Minigame.getInstance().getLevelManager();
                     LevelProgress levelProgress = levelManager.getLevelProgress(gamePlayer);
-                    ItemBuilder level = new ItemBuilder(Material.BOOK);
+                    ItemBuilder level = new ItemBuilder(Material.ECHO_SHARD);
+                    level.setCustomModelData((levelUpUnclaimedReward.map(LevelUpUnclaimedReward -> levelManager.getLevelEvolution(LevelUpUnclaimedReward.getLevel()).blinkingItemCustomModelData()).orElseGet(() -> levelManager.getLevelEvolution(data.getLevel()).itemCustomModelData())));
                     level.hideAllFlags();
-                    level.setName("§aLevel");
+                    level.setName(MessageManager.get(gamePlayer, "inventory.profile_menu.your_level.name").replace("%level%", "" + levelProgress.level()).getTranslated());
                     level.addLoreLine("");
                     level.addLoreLine(MessageManager.get(player, "inventory.profile_menu.your_level.your_level")
                             .replace("%level%", "" + (levelUpUnclaimedReward.map(LevelUpUnclaimedReward::getLevel).orElseGet(data::getLevel)))
                             .replace("%icon%", (levelUpUnclaimedReward.map(LevelUpUnclaimedReward -> levelManager.getLevelEvolution(LevelUpUnclaimedReward.getLevel()).getIcon()).orElseGet(() -> levelManager.getLevelEvolution(data.getLevel()).getIcon())))
                             .getTranslated());
+                    level.addLoreLine("");
                     if (levelUpUnclaimedReward.isEmpty()) {
                         level.addLoreLine(Utils.getStringProgressBar(levelProgress.xpOnCurrentLevel(), levelProgress.levelRange().neededXP()));
                         level.addLoreLine(MessageManager.get(player, "inventory.profile_menu.your_level.progress")
+                                .replace("%level%", "" + levelProgress.level() + 1)
                                 .replace("%xp%", "" + levelProgress.xpOnCurrentLevel())
                                 .replace("%needed_xp%", "" + levelProgress.levelRange().neededXP())
                                 .getTranslated());
@@ -176,6 +131,7 @@ public class ProfileInventory {
                         int neededXP = levelManager.getLevelRange(levelUpUnclaimedReward.get().getLevel()).neededXP();
                         level.addLoreLine(Utils.getStringProgressBar(neededXP, neededXP));
                         level.addLoreLine(MessageManager.get(player, "inventory.profile_menu.your_level.progress")
+                                .replace("%level%", "" + levelProgress.level() + 1)
                                 .replace("%xp%", "§a" + neededXP)
                                 .replace("%needed_xp%", "" + neededXP)
                                 .getTranslated());
@@ -183,20 +139,23 @@ public class ProfileInventory {
                     level.addLoreLine("");
                     level.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.your_level.rewards").getTranslated());
                     if (levelUpUnclaimedReward.isEmpty()) {
-                        for (RewardItem rewardItem : levelManager.getReward(data.getLevel()).getRewardItems()) {
+                        for (RewardItem rewardItem : levelManager.getReward(levelProgress.level() + 1).getRewardItems()) {
                             Resource resource = rewardItem.getResource();
-                            level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.randomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName());
+                            level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.randomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(MessageManager.get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
+                            if (bonus != 0 && resource.isApplicableBonus())
+                                level.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.your_level.bonus")
+                                        .replace("%bonus%", "" + bonus)
+                                        .getTranslated());
                         }
                     }else{
                         for (RewardItem rewardItem : levelUpUnclaimedReward.get().getReward().getRewardItems()) {
                             Resource resource = rewardItem.getResource();
-                            level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.randomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName());
+                            level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.randomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(MessageManager.get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
+                            if (bonus != 0 && resource.isApplicableBonus())
+                                level.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.your_level.bonus")
+                                        .replace("%bonus%", "" + bonus)
+                                        .getTranslated());
                         }
-                    }
-                    if (bonus != 0){
-                        level.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.your_level.bonus")
-                                .replace("%bonus%", "" + bonus)
-                                .getTranslated());
                     }
                     LevelEvolution nextEvolution = levelManager.getNextEvolution(levelUpUnclaimedReward.map(LevelUpUnclaimedReward::getLevel).orElseGet(data::getLevel));
                     if (nextEvolution != null) {
@@ -234,81 +193,87 @@ public class ProfileInventory {
                     DailyMeter dailyMeter = Minigame.getInstance().getLevelManager().getDailyMeter();
                     DailyMeter.DailyMeterTier dailyMeterClaim = data.getDailyMeterTier();
 
-                    ItemBuilder dailyRewards = new ItemBuilder(Material.BOOK);
-                    dailyRewards.hideAllFlags();
-                    dailyRewards.setName(MessageManager.get(player, "inventory.profile_menu.daily_rewards.name").getTranslated());
-                    dailyRewards.addLoreLine("");
-                    dailyRewards.addLoreLine(MessageManager.get(player, "inventory.profile_menu.daily_rewards.description").getTranslated());
+                    ItemBuilder dailyRewardTrack = new ItemBuilder(Material.ECHO_SHARD);
+                    dailyRewardTrack.setCustomModelData(dailyMeterUnclaimedReward.isPresent() ? 1053 : 1052);
+                    dailyRewardTrack.hideAllFlags();
+                    dailyRewardTrack.setName(MessageManager.get(player, "inventory.profile_menu.daily_reward_track.name").getTranslated());
+                    dailyRewardTrack.addLoreLine("");
+                    dailyRewardTrack.addLoreLine(MessageManager.get(player, "inventory.profile_menu.daily_reward_track.description").getTranslated());
                     if (dailyMeterClaim != null && dailyMeterClaim.tier() <= levelManager.getDailyMeter().getMaxTier()) {
-                        dailyRewards.addLoreLine("");
+                        dailyRewardTrack.addLoreLine("");
                         if (dailyMeterUnclaimedReward.isEmpty()) {
-                            dailyRewards.addLoreLine(Utils.getStringProgressBar(dailyMeter.getXpOnCurrentTier(gamePlayer), dailyMeterClaim.neededXP()));
-                            dailyRewards.addLoreLine(MessageManager.get(player, "inventory.profile_menu.daily_rewards.progress")
+                            dailyRewardTrack.addLoreLine(Utils.getStringProgressBar(dailyMeter.getXpOnCurrentTier(gamePlayer), dailyMeterClaim.neededXP()));
+                            dailyRewardTrack.addLoreLine(MessageManager.get(player, "inventory.profile_menu.daily_reward_track.progress")
                                     .replace("%xp%", "" + dailyMeter.getXpOnCurrentTier(gamePlayer))
                                     .replace("%needed_xp%", "" + dailyMeterClaim.neededXP())
                                     .getTranslated());
                         } else {
                             DailyMeter.DailyMeterTier unclaimedRewardTier = dailyMeter.getTiers().get(dailyMeterUnclaimedReward.get().getTier() - 1);
-                            dailyRewards.addLoreLine(Utils.getStringProgressBar(unclaimedRewardTier.neededXP(), unclaimedRewardTier.neededXP()));
-                            dailyRewards.addLoreLine(MessageManager.get(player, "inventory.profile_menu.daily_rewards.progress")
+                            dailyRewardTrack.addLoreLine(Utils.getStringProgressBar(unclaimedRewardTier.neededXP(), unclaimedRewardTier.neededXP()));
+                            dailyRewardTrack.addLoreLine(MessageManager.get(player, "inventory.profile_menu.daily_reward_track.progress")
                                     .replace("%xp%", "§a" + unclaimedRewardTier.neededXP())
                                     .replace("%needed_xp%", "" + unclaimedRewardTier.neededXP())
                                     .getTranslated());
                         }
                     }
                     if (dailyMeterClaim != null && dailyMeterClaim.tier() <= levelManager.getDailyMeter().getMaxTier()) {
-                        dailyRewards.addLoreLine("");
-                        dailyRewards.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_rewards.rewards").getTranslated());
+                        dailyRewardTrack.addLoreLine("");
+                        dailyRewardTrack.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_reward_track.rewards").getTranslated());
                         if (dailyMeterUnclaimedReward.isEmpty()) {
                             for (RewardItem rewardItem : dailyMeterClaim.reward().getRewardItems()) {
                                 Resource resource = rewardItem.getResource();
-                                dailyRewards.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.randomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName());
+                                dailyRewardTrack.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.randomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(MessageManager.get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
+                                if (bonus != 0 && resource.isApplicableBonus()) {
+                                    dailyRewardTrack.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_reward_track.bonus")
+                                            .replace("%bonus%", "" + bonus)
+                                            .getTranslated());
+                                }
                             }
                         } else {
                             for (RewardItem rewardItem : dailyMeterUnclaimedReward.get().getReward().getRewardItems()) {
                                 Resource resource = rewardItem.getResource();
-                                dailyRewards.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.randomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName());
+                                dailyRewardTrack.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.randomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(MessageManager.get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
+                                if (bonus != 0 && resource.isApplicableBonus()) {
+                                    dailyRewardTrack.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_reward_track.bonus")
+                                            .replace("%bonus%", "" + bonus)
+                                            .getTranslated());
+                                }
                             }
                         }
-                        if (bonus != 0) {
-                            dailyRewards.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_rewards.bonus")
-                                    .replace("%bonus%", "" + bonus)
-                                    .getTranslated());
-                        }
                     }
-                    dailyRewards.addLoreLine("");
-                    if (dailyMeterUnclaimedReward.isEmpty() || !dailyMeterUnclaimedReward.get().getCreatedAt().toLocalDate().isBefore(today)) {
-                        dailyRewards.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_rewards.resets_in")
-                                .replace("%time%", StringUtils.getTimeLeftUntil(today.plusDays(1).atStartOfDay()))
-                                .getTranslated());
-                    }
+                    dailyRewardTrack.addLoreLine("");
                     if (dailyMeterClaim != null || dailyMeterUnclaimedReward.isPresent() ) {
                         if (dailyMeterUnclaimedReward.isEmpty() || !dailyMeterUnclaimedReward.get().getCreatedAt().toLocalDate().isBefore(today)){
-                            dailyRewards.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_rewards.daily_claims")
+                            dailyRewardTrack.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_reward_track.daily_claims")
                                     .replace("%claims%", "§f" + dailyMeterUnclaimedReward.map(unclaimedReward -> unclaimedReward.getTier() - 1).orElseGet(() -> dailyMeterClaim.tier() - 1))
                                     .getTranslated());
                         }else{
-                            dailyRewards.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_rewards.old_daily_claim")
+                            dailyRewardTrack.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_reward_track.old_daily_claim")
                                     .replace("%claim%", "" + dailyMeterUnclaimedReward.get().getTier())
                                     .replace("%date%", dailyMeterUnclaimedReward.get().getCreatedAt().format(DateTimeFormatter.ofPattern("MM/dd/yyyy")))
                                     .getTranslated());
                         }
                     }else{
-                        dailyRewards.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_rewards.daily_claims")
+                        dailyRewardTrack.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_reward_track.daily_claims")
                                 .replace("%claims%", "§a" + dailyMeter.getMaxTier())
                                 .getTranslated());
                     }
+                    if (dailyMeterUnclaimedReward.isEmpty() || !dailyMeterUnclaimedReward.get().getCreatedAt().toLocalDate().isBefore(today)) {
+                        dailyRewardTrack.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_reward_track.resets_in")
+                                .replace("%time%", StringUtils.getTimeLeftUntil(today.plusDays(1).atStartOfDay()))
+                                .getTranslated());
+                    }
                     if (dailyMeterClaim == null && dailyMeterUnclaimedReward.isEmpty()){
-                        dailyRewards.addLoreLine("");
-                        dailyRewards.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_rewards.wait_for_reset").getTranslated());
+                        dailyRewardTrack.addLoreLine("");
+                        dailyRewardTrack.addLoreLine(MessageManager.get(gamePlayer, "inventory.profile_menu.daily_reward_track.wait_for_reset").getTranslated());
                     }
                     if (dailyMeterUnclaimedReward.isPresent()) {
-                        dailyRewards.addLoreLine("");
-                        dailyRewards.addLoreLine(MessageManager.get(gamePlayer, "inventory.unclaimed_rewards.click_to_claim").getTranslated());
+                        dailyRewardTrack.addLoreLine("");
+                        dailyRewardTrack.addLoreLine(MessageManager.get(gamePlayer, "inventory.unclaimed_rewards.click_to_claim").getTranslated());
                     }
-                    gui.appendElement(14, Component.element(dailyRewards.toItemStack()).addClick(i -> {
+                    gui.appendElement(15, Component.element(dailyRewardTrack.toItemStack()).addClick(i -> {
                         dailyMeterUnclaimedReward.ifPresent(unclaimedReward -> {
-                            MessageManager.get(gamePlayer, "chat.unclaimed_reward.daily_rewards.claimed").send();
+                            MessageManager.get(gamePlayer, "chat.unclaimed_reward.daily_reward_track.claimed").send();
                             if (bonus != 0){
                                 unclaimedReward.setBonus(bonus);
                             }
@@ -321,6 +286,96 @@ public class ProfileInventory {
                             }
                             openGUI(gamePlayer);
                         });
+                    }).build());
+
+                    gui.setContainer(28, Component.staticContainer()
+                            .size(3, 2)
+                            .init(container -> {
+                                CosmeticsManager cosmeticsManager = Minigame.getInstance().getCosmeticsManager();
+                                for (CosmeticsCategory category : cosmeticsManager.getCategories()){
+                                    Cosmetic selectedCosmetic = cosmeticsManager.getSelectedCosmetic(gamePlayer, category);
+                                    if (selectedCosmetic != null){
+                                        Element element = Component.element(getCosmeticEditedItem(gamePlayer, selectedCosmetic)).addClick(i -> {
+                                            CosmeticsInventory.openCategory(gamePlayer, category);
+                                            player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 10.0F, 10.0F);
+                                        }).build();
+                                        container.appendElement(element);
+                                    }else {
+                                        ItemBuilder categoryItem = new ItemBuilder(Material.BARRIER);
+                                        categoryItem.setName("§a" + category.getName());
+                                        categoryItem.removeLore();
+                                        categoryItem.hideAllFlags();
+
+                                        categoryItem.addLoreLine("");
+                                        MessageManager.get(player, "inventory.cosmetics.click_to_view")
+                                                .addToItemLore(categoryItem);
+
+                                        Element element = Component.element(categoryItem.toItemStack()).addClick(i -> {
+                                            CosmeticsInventory.openCategory(gamePlayer, category);
+                                            player.playSound(player.getLocation(), Sounds.CLICK.bukkitSound(), 10.0F, 10.0F);
+                                        }).build();
+                                        container.appendElement(element);
+                                    }
+                                }
+                            }).build());
+
+
+                    ItemBuilder quests = new ItemBuilder(Material.BOOK);
+                    quests.hideAllFlags();
+                    quests.setName("§aQuests");
+                    quests.setLore(MessageManager.get(player, "inventory.profile_menu.quests.description").getTranslated());
+                    quests.addLoreLine("");
+                    quests.addLoreLine(MessageManager.get(player, "inventory.profile_menu.quests.click_to_view").getTranslated());
+                    if (!data.getUnclaimedRewards(UnclaimedReward.Type.QUEST).isEmpty()){
+                        quests.setCustomModelData(1010);
+                    }
+                    gui.appendElement(34, Component.element(quests.toItemStack()).addClick(i -> {
+                        QuestInventory.openGUI(gamePlayer);
+                    }).build());
+
+                    ItemBuilder achievements = new ItemBuilder(Material.ECHO_SHARD);
+                    achievements.setCustomModelData(1049);
+                    achievements.hideAllFlags();
+                    achievements.setName("§aAchievements");
+                    achievements.setLore(MessageManager.get(player, "inventory.profile_menu.achievements.achievements_unlocked")
+                            .replace("%unlocked%", "" + data.getAchievementData().stream().filter(achievementData -> achievementData.getStatus().equals(PlayerAchievementData.Status.UNLOCKED)).toList().size())
+                            .getTranslated());
+                    achievements.addLoreLine("");
+                    //achievements.addLoreLine(MessageManager.get(player, "inventory.profile_menu.achievements.click_to_view").getTranslated());
+                    achievements.addLoreLine(MessageManager.get(player, "coming_soon").getTranslated());
+                    gui.appendElement(33, Component.element(achievements.toItemStack()).addClick(i -> {
+
+                    }).build());
+
+                    List<Language> languageList = Language.getLanguages();
+                    languageList.sort(Comparator.comparing(Language::getName));
+
+                    ItemBuilder languages = new ItemBuilder(Material.ECHO_SHARD);
+                    languages.setCustomModelData(1051);
+                    languages.hideAllFlags();
+                    languages.setName("§aLanguages");
+                    if (languageList.size() <= 5){
+                        languages.addLoreLine("");
+                        for (Language language : languageList){
+                            languages.addLoreLine((data.getLanguage().equals(language) ? "§a" : "§7") + org.apache.commons.lang3.StringUtils.capitalize(language.getName()));
+                        }
+                    }else{
+                        languages.addLoreLine(MessageManager.get(player, "inventory.profile_menu.language.selected_language")
+                                .replace("%language%", org.apache.commons.lang3.StringUtils.capitalize(data.getLanguage().getName()))
+                                .getTranslated());
+                    }
+                    languages.addLoreLine("");
+                    languages.addLoreLine(MessageManager.get(player, "inventory.profile_menu.language.click_to_change").getTranslated());
+                    gui.appendElement(32, Component.element(languages.toItemStack()).addClick(i -> {
+                        if (languageList.size() <= 5){
+                            int currentIndex = languageList.indexOf(gamePlayer.getLanguage());
+                            Language nextLanguage = (currentIndex + 1 < languageList.size()) ? languageList.get(currentIndex + 1) : languageList.get(0);
+                            gamePlayer.getGamePlayer().getPlayerData().setLanguage(nextLanguage, true);
+                            openGUI(gamePlayer);
+                            player.playSound(player, Sounds.LEVEL_UP.bukkitSound(), 1F, 1F);
+                        }else{
+                            player.playSound(player, Sounds.CLICK.bukkitSound(), 1F, 1F);
+                        }
                     }).build());
 
 
@@ -337,5 +392,44 @@ public class ProfileInventory {
             gamePlayer.getPlayerData().saveDailyRewardsClaims();
         });
 
+    }
+
+
+    private static ItemStack getCosmeticEditedItem(GamePlayer gamePlayer, Cosmetic cosmetic){
+        PlayerData data = gamePlayer.getPlayerData();
+
+        ItemBuilder item = new ItemBuilder(cosmetic.getIcon()/*cosmetic.hasPlayer(gamePlayer) ? cosmetic.getIcon() : new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1021).toItemStack()*/);
+        item.setName("§a§l" + cosmetic.getName());
+        item.removeLore();
+        if (PlainTextComponentSerializer.plainText().serialize(MessageManager.get(gamePlayer, cosmetic.getRarity().getTranslateKey()).getTranslated()).length() == 1){
+            item.addLoreLine(net.kyori.adventure.text.Component.text("§f").append(MessageManager.get(gamePlayer, cosmetic.getRarity().getTranslateKey()).getTranslated()));
+        }
+        item.addLoreLine("§8" + cosmetic.getCategory().getName());
+        item.removeEnchantment(Enchantment.SHARPNESS);
+
+
+        item.addLoreLine("");
+        if (PlainTextComponentSerializer.plainText().serialize(MessageManager.get(gamePlayer, cosmetic.getRarity().getTranslateKey()).getTranslated()).length() > 1) {
+            MessageManager.get(gamePlayer, "inventory.cosmetics.rarity")
+                    .replace("%rarity%", MessageManager.get(gamePlayer, cosmetic.getRarity().getTranslateKey()).getTranslated())
+                    .addToItemLore(item);
+            item.addLoreLine("");
+        }
+
+        /*if (cosmetic.getLoreKey() != null && MessageManager.existMessage(cosmetic.getLoreKey())) {
+            MessageManager.get(gamePlayer, cosmetic.getLoreKey())
+                    .addToItemLore(item);
+            item.addLoreLine("");
+        }*/
+
+
+        item.hideAllFlags();
+
+        if (cosmetic.getPreviewConsumer() != null){
+            MessageManager.get(gamePlayer, "inventory.cosmetics.click_to_change")
+                    .addToItemLore(item);
+        }
+
+        return item.toItemStack();
     }
 }

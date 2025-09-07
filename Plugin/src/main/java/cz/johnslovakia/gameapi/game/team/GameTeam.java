@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.game.team;
 
 import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.Game;
 import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.game.Winner;
@@ -12,6 +13,8 @@ import cz.johnslovakia.gameapi.users.GamePlayerType;
 import cz.johnslovakia.gameapi.users.parties.PartyUtils;
 import lombok.Getter;
 import lombok.Setter;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.banner.PatternType;
@@ -126,10 +129,9 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
                     }
 
                     GameAPI.getInstance().getVersionSupport().setTeamNameTag(player, getName() + "_" + game.getID(), getChatColor());
-
-
-                    player.setPlayerListName(getChatColor() + player.getName());
+                    player.playerListName((Minigame.getInstance().getLevelManager() != null ? gamePlayer.getPlayerData().getLevelProgress().levelEvolution().getIcon() : Component.text("")).append(Component.text(" " + player.getName()).font(Key.key("minecraft", "default")).color(getTeamColor().getTextColor())));
                     player.setDisplayName(getChatColor() + player.getName());
+
                     if (!cause.equals(TeamJoinCause.AUTO)) {
                         MessageManager.get(gamePlayer, "chat.team.join")
                                 .replace("%team%", getChatColor() + getName())

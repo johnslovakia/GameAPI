@@ -37,6 +37,8 @@ public class AntiAFK implements Listener {
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
+        if (player.hasPermission("*") || player.isOp()) return;
+
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
         if (gamePlayer.getPlayerData() == null){
@@ -82,6 +84,7 @@ public class AntiAFK implements Listener {
     public void onGameStart(GameStartEvent event) {
         for (GamePlayer gamePlayer : event.getGame().getParticipants()) {
             Player player = gamePlayer.getOnlinePlayer();
+            if (player.hasPermission("*") || player.isOp()) return;
 
             if (gamePlayer.getPlayerData() == null) {
                 return;
@@ -129,14 +132,11 @@ public class AntiAFK implements Listener {
     }
 
     private void kickPlayerIfAfk(Player player) {
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (player.hasPermission("*") || player.isOp()) return;
 
-        if (gamePlayer.getPlayerData() == null){
-            return;
-        }
-        if (gamePlayer.getGame() == null){
-            return;
-        }
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (gamePlayer.getPlayerData() == null || gamePlayer.getGame() == null) return;
+
         player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 1.0f, 1.0f);
 
         new BukkitRunnable(){

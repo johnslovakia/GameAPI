@@ -18,6 +18,7 @@ import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.stats.StatsHolograms;
 import cz.johnslovakia.gameapi.utils.Logger;
+import cz.johnslovakia.gameapi.utils.inventoryBuilder.InventoryManager;
 import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
@@ -38,6 +39,9 @@ public interface StartingProcessHandler {
                         && !entry.getValue().isOnline()
         );
 
+        Task task = new Task(getGame(), "PreparationTask", getGame().getSettings().getPreparationTime(), new PreparationCountdown(), Minigame.getInstance().getPlugin());
+        task.setGame(getGame());
+
         prepareGame();
         getGame().setState(GameState.INGAME);
 
@@ -49,9 +53,6 @@ public interface StartingProcessHandler {
             gamePlayer.setEnabledMovement(getGame().getSettings().isEnabledMovementInPreparation());
             gamePlayer.setLimited(true);
         }
-
-        Task task = new Task(getGame(), "PreparationTask", getGame().getSettings().getPreparationTime(), new PreparationCountdown(), Minigame.getInstance().getPlugin());
-        task.setGame(getGame());
     };
 
     default void prepareGame(){
@@ -92,6 +93,7 @@ public interface StartingProcessHandler {
         }
 
         getGame().getCurrentMap().getWorld().setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+        getGame().getCurrentMap().getWorld().setGameRule(GameRule.LOCATOR_BAR, false);
 
         getGame().getCurrentMap().teleport();
         for (GamePlayer gamePlayer : getGame().getPlayers()) {
@@ -123,6 +125,11 @@ public interface StartingProcessHandler {
 
         gamePlayer.resetAttributes();
 
+        InventoryManager inventoryManager = gamePlayer.getPlayerData().getCurrentInventory();
+        if (inventoryManager != null) {
+            inventoryManager.unloadInventory(player);
+        }
+
         if (!rejoin) {
             player.sendMessage("");
             if (getGame().getSettings().sendMinigameDescription()) {
@@ -141,11 +148,6 @@ public interface StartingProcessHandler {
                 player.sendMessage(MessageManager.get(player, "chat.team_chat").getTranslated());
             }
 
-            if (getGame().getLobbyManager().getInventoryManager() != null) {
-                getGame().getLobbyManager().getInventoryManager().unloadInventory(player);
-            }
-            player.getInventory().clear();
-
             if (gamePlayer.getKit() != null) {
                 gamePlayer.getKit().activate(gamePlayer);
             }
@@ -153,7 +155,7 @@ public interface StartingProcessHandler {
                 player.teleport(gamePlayer.getTeam().getSpawn());
             }
         }
-    };
+    }
 
     default void startGame(){
         getGame().setState(GameState.INGAME);
@@ -179,9 +181,6 @@ public interface StartingProcessHandler {
             gamePlayer.setEnabledMovement(true);
             gamePlayer.setLimited(false);
 
-            PlayerData data = gamePlayer.getPlayerData();
-            data.getKitInventories().clear();
-            data.getVotesForMaps().clear();
         }
 
 

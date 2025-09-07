@@ -49,7 +49,6 @@ public class KitsStorage {
             kitsData.put("maps", mapsJson);
             return new JSONObject().put("kits_data", kitsData);
         }else {
-
             JSONArray jsonArray = new JSONArray();
             for (Kit kit : inventories.keySet()) {
                 Inventory inventory = inventories.get(kit);

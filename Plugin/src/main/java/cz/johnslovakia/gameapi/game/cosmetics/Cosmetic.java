@@ -17,6 +17,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 @Getter
@@ -24,7 +28,7 @@ public class Cosmetic {
 
     private final String name;
     private final ItemStack icon;
-    private final int price;
+    private final Map<Resource, Integer> cost = new HashMap<>();
     private final CosmeticRarity rarity;
     @Setter
     private CosmeticsCategory category;
@@ -35,12 +39,17 @@ public class Cosmetic {
     private Consumer<GamePlayer> selectConsumer;
     private Consumer<GamePlayer> previewConsumer;
 
-    public Cosmetic(String name, ItemStack icon, int price, CosmeticRarity rarity) {
+    public Cosmetic(String name, ItemStack icon, CosmeticRarity rarity) {
         this.name = name;
         this.icon = icon;
-        this.price = price;
         this.rarity = rarity;
     }
+
+    public Cosmetic addCost(Resource resource, int amount){
+        cost.put(resource, amount);
+        return this;
+    }
+
 
     public void select(GamePlayer gamePlayer){
         select(gamePlayer, true);
@@ -78,35 +87,51 @@ public class Cosmetic {
 
         Player player = gamePlayer.getOnlinePlayer();
         PlayerData data = gamePlayer.getPlayerData();
-        Resource resource = Minigame.getInstance().getCosmeticsManager().getEconomy();
-        int balance = gamePlayer.getPlayerData().getBalance(category.getManager().getEconomy());
 
-        if (balance < getPrice()){
+        List<String> missing = new ArrayList<>();
+
+        for (Map.Entry<Resource, Integer> entry : cost.entrySet()) {
+            Resource resource = entry.getKey();
+            int cost = entry.getValue();
+
+            int playerAmount = data.getBalance(resource);
+            if (playerAmount < cost) {
+                int needMore = cost - playerAmount;
+                missing.add(StringUtils.betterNumberFormat(needMore) + " " + resource.getDisplayName());
+            }
+        }
+
+        if (!missing.isEmpty()) {
             player.playSound(player.getLocation(), Sounds.ANVIL_BREAK.bukkitSound(), 10.0F, 10.0F);
-            MessageManager.get(player, "chat.dont_have_enough")
-                    .replace("%need_more%", StringUtils.betterNumberFormat((getPrice() - balance)))
-                    .replace("%economy_name%", category.getManager().getEconomy().getDisplayName())
+
+            MessageManager.get(player, "chat.cosmetic.dont_have_enough")
+                    .replace("%resources%", String.join(", ", missing))
                     .send();
             return;
         }
 
         data.purchaseCosmetic(this);
 
-        new BukkitRunnable(){
-            @Override
-            public void run() {
-                resource.getResourceInterface().withdraw(gamePlayer, getPrice());
-            }
-        }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
 
+        List<String> costStringList = new ArrayList<>();
+        for (Map.Entry<Resource, Integer> entry : cost.entrySet()) {
+            Resource resource = entry.getKey();
+            int cost = entry.getValue();
 
-        //GameAPI.getInstance().getVaultPerms().playerAdd(player, getPermission());
+            costStringList.add(StringUtils.betterNumberFormat(cost) + " " + resource.getDisplayName());
+
+            Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> {
+                resource.getResourceInterface().withdraw(gamePlayer, cost);
+            });
+        }
 
         MessageManager.get(gamePlayer, "chat.cosmetics.purchase")
                 .replace("%cosmetic%", getName())
-                .replace("%price%", "" + StringUtils.betterNumberFormat(getPrice()))
-                .replace("%economy_name%", resource.getDisplayName())
+                .replace("%resources%", "" + String.join(", ", costStringList))
                 .send();
+
+
+        //GameAPI.getInstance().getVaultPerms().playerAdd(player, getPermission());
         //gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer().getLocation(), Sounds.CLICK.bukkitSound(), 10.0F, 10.0F); - už u select
         select(gamePlayer);
         Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> gamePlayer.getPlayerData().saveCosmetics());

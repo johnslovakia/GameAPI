@@ -7,7 +7,6 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.utils.ConfigAPI;
 import cz.johnslovakia.gameapi.utils.StringUtils;
-import eu.decentsoftware.holograms.api.DHAPI;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
@@ -94,6 +93,7 @@ public class StatsHolograms {
         });
 
         player.showEntity(Minigame.getInstance().getPlugin(), display);
+        gamePlayer.getMetadata().put("stats_hologram", display);
     }
 
     private static int getLength(Component component){
@@ -177,16 +177,23 @@ public class StatsHolograms {
 
 
     public static void remove(Player player){
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+
         ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", Minigame.getInstance().getPlugin());
         if (config.getLocation("statsHologram") != null) {
-            if (DHAPI.getHologram("stats_" + player.getName()) != null) {
+            /*if (DHAPI.getHologram("stats_" + player.getName()) != null) {
                 DHAPI.removeHologram("stats_" + player.getName());
+            }*/
+            TextDisplay textDisplay = (TextDisplay) gamePlayer.getMetadata().get("stats_hologram");
+            if (textDisplay != null){
+                textDisplay.remove();
+                gamePlayer.getMetadata().remove("stats_hologram");
             }
         }
-        if (config.getLocation("topStatsHologram") != null) {
+        /*if (config.getLocation("topStatsHologram") != null) {
             if (DHAPI.getHologram("topStats_" + player.getName()) != null) {
                 DHAPI.removeHologram("topStats_" + player.getName());
             }
-        }
+        }*/
     }
 }

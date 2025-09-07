@@ -2,11 +2,14 @@ package cz.johnslovakia.gameapi.game.cosmetics.listeners;
 
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.GamePreparationEvent;
+import cz.johnslovakia.gameapi.events.GameStartEvent;
 import cz.johnslovakia.gameapi.events.GameStateChangeEvent;
+import cz.johnslovakia.gameapi.events.KitGiveContentEvent;
 import cz.johnslovakia.gameapi.game.GameState;
 import cz.johnslovakia.gameapi.game.cosmetics.Cosmetic;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
+import cz.johnslovakia.gameapi.utils.Logger;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -50,6 +53,16 @@ public class HatsCategoryListener implements Listener {
 
     @EventHandler
     public void onGameStateChange(GameStateChangeEvent e) {
+        for (GamePlayer gamePlayer : e.getGame().getParticipants()) {
+            Cosmetic selected = Minigame.getInstance().getCosmeticsManager().getSelectedCosmetic(gamePlayer, Minigame.getInstance().getCosmeticsManager().getCategoryByName("Hats"));
+            if (selected != null) {
+                selected.getSelectConsumer().accept(gamePlayer);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onGameStateChange(GameStartEvent e) {
         for (GamePlayer gamePlayer : e.getGame().getParticipants()) {
             Cosmetic selected = Minigame.getInstance().getCosmeticsManager().getSelectedCosmetic(gamePlayer, Minigame.getInstance().getCosmeticsManager().getCategoryByName("Hats"));
             if (selected != null) {

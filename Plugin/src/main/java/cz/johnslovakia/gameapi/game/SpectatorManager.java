@@ -4,6 +4,8 @@ import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.game.kit.KitManager;
+import cz.johnslovakia.gameapi.guis.ProfileInventory;
+import cz.johnslovakia.gameapi.guis.QuestInventory;
 import cz.johnslovakia.gameapi.guis.TeleporterInventory;
 import cz.johnslovakia.gameapi.messages.MessageManager;
 import cz.johnslovakia.gameapi.serverManagement.DataManager;
@@ -13,6 +15,7 @@ import cz.johnslovakia.gameapi.utils.Utils;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.inventoryBuilder.InventoryManager;
 import cz.johnslovakia.gameapi.utils.inventoryBuilder.Item;
+import cz.johnslovakia.gameapi.utils.rewards.unclaimed.UnclaimedReward;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -52,22 +55,32 @@ public class SpectatorManager {
                 e -> Minigame.getInstance().getInventories().openSettingsInventory(e.getPlayer()));*/
 
         Item alivePlayers = new Item(new ItemBuilder(Material.COMPASS).hideAllFlags().toItemStack(),
-                4,
+                3,
                 "item.teleporter",
                 e -> TeleporterInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
         //TODO: dodělat inventáře
 
+        Item playerMenu = new Item(new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1025).hideAllFlags().toItemStack(), 7, "Item.player_menu", e -> ProfileInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
+        playerMenu.setBlinking(gamePlayer -> !gamePlayer.getPlayerData().getUnclaimedRewards(UnclaimedReward.Type.DAILYMETER).isEmpty()
+                || !gamePlayer.getPlayerData().getUnclaimedRewards(UnclaimedReward.Type.LEVELUP).isEmpty()
+                || !gamePlayer.getPlayerData().getUnclaimedRewards(UnclaimedReward.Type.QUEST).isEmpty());
+        playerMenu.setBlinkingItemCustomModelData(1026);
+
+        Item quests = new Item(new ItemBuilder(Material.BOOK).hideAllFlags().toItemStack(), 5, "Item.quests", e -> QuestInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
+        quests.setBlinking(gamePlayer -> !gamePlayer.getPlayerData().getUnclaimedRewards(UnclaimedReward.Type.QUEST).isEmpty());
+        quests.setBlinkingItemCustomModelData(1010);
+
 
         im.setHoldItemSlot(4);
         //im.registerItem(settings);
-        im.registerItem(alivePlayers);
+        im.registerItem(alivePlayers, playerMenu, quests);
         itemManager = im;
 
 
         im2.setHoldItemSlot(4);
         //im2.registerItem(teamSelector);
         //im2.registerItem(settings);
-        im2.registerItem(alivePlayers);
+        im2.registerItem(alivePlayers, playerMenu, quests);
         withTeamSelectorItemManager = im2;
     }
 

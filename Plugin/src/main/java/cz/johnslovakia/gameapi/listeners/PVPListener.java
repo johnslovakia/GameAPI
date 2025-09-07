@@ -247,20 +247,24 @@ public class PVPListener implements Listener {
     public void onPlayerDeath3(PlayerDeathEvent e) {
         Player player = e.getEntity();
 
-        List<ItemStack> copy = new ArrayList<>(e.getDrops());
+        /*List<ItemStack> copy = new ArrayList<>(e.getDrops());
         e.getDrops().clear();
         for (ItemStack item : copy) {
             if (item.getType().equals(Material.CARVED_PUMPKIN) && item.hasItemMeta() && item.getItemMeta().hasCustomModelData())
                 continue;
             player.getWorld().dropItemNaturally(player.getLocation().clone().add(0, 0.2, 0), item);
-        }
+        }*/
+        e.getDrops().removeIf(item ->
+                item.getType() == Material.CARVED_PUMPKIN &&
+                        item.hasItemMeta() &&
+                        item.getItemMeta().hasCustomModelData()
+        );
     }
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent e) {
         Player player = e.getEntity();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-
 
         if (gamePlayer.getType().equals(GamePlayerType.DISCONNECTED)){
             e.setKeepInventory(true);
@@ -276,6 +280,12 @@ public class PVPListener implements Listener {
             }
         }
 
+        DamageType damageType = e.getDamageSource().getDamageType();
+        if (gamePlayer.getMetadata().containsKey("diedInVoid")){
+            damageType = DamageType.OUT_OF_WORLD;
+            gamePlayer.getMetadata().remove("diedInVoid");
+        }
+        
         if (killer){
             GamePlayer gamePlayerKiller = getLastDamager(gamePlayer).getLastDamager();
 
@@ -290,7 +300,7 @@ public class PVPListener implements Listener {
                 }
             }
 
-            GamePlayerDeathEvent ev = new GamePlayerDeathEvent(gamePlayer.getGame(), gamePlayerKiller, PlayerManager.getGamePlayer(player), (!assists.isEmpty() ? assists : null), (player.getLastDamageCause() != null ? (player.getLastDamageCause() != null ? player.getLastDamageCause().getCause() : null) : null));
+            GamePlayerDeathEvent ev = new GamePlayerDeathEvent(gamePlayer.getGame(), gamePlayerKiller, PlayerManager.getGamePlayer(player), (!assists.isEmpty() ? assists : null), damageType);
             if (gamePlayer.getGame().isFirstGameKill()){
                 ev.setFirstGameKill(true);
                 gamePlayer.getGame().setFirstGameKill(false);
@@ -304,7 +314,7 @@ public class PVPListener implements Listener {
                 GamePlayerDeathEvent ev = new GamePlayerDeathEvent(gamePlayer.getGame(), null, PlayerManager.getGamePlayer(player), null,null);
                 Bukkit.getPluginManager().callEvent(ev);
             } else {
-                GamePlayerDeathEvent ev = new GamePlayerDeathEvent(gamePlayer.getGame(), null, PlayerManager.getGamePlayer(player), null, (player.getLastDamageCause() != null ? player.getLastDamageCause().getCause() : null));
+                GamePlayerDeathEvent ev = new GamePlayerDeathEvent(gamePlayer.getGame(), null, PlayerManager.getGamePlayer(player), null, damageType);
                 Bukkit.getPluginManager().callEvent(ev);
             }
         }
@@ -314,15 +324,6 @@ public class PVPListener implements Listener {
         damagers.removeIf(d -> d.getDamaged().equals(player));
 
         e.setDeathMessage(null);
-    }
-
-    public static final HashMap<Player, Location> deathLocations = new HashMap<>();
-
-    @EventHandler
-    public void onPlayerDeath2(PlayerDeathEvent event) {
-        Player player = event.getEntity();
-        Location deathLocation = player.getLocation();
-        deathLocations.put(player, deathLocation);
     }
 
 

@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.utils.rewards;
 
 import cz.johnslovakia.gameapi.users.resources.Resource;
+import cz.johnslovakia.gameapi.users.resources.ResourcesManager;
 import cz.johnslovakia.gameapi.utils.RandomUtils;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,7 +30,7 @@ public class RewardItem {
     }
 
     public Resource getResource(){
-        return Resource.getResourceByName(resource);
+        return ResourcesManager.getResourceByName(resource);
     }
 
     public RewardItem(Resource resource, int amount) {
@@ -54,10 +55,9 @@ public class RewardItem {
     }
 
     public boolean shouldApply() {
-        //TODO: opravit
-        /*if (chance == 100) return true;
-        return new Random().nextInt(100) < chance;*/
-        return true;
+        if (chance >= 100) return true;
+        if (chance <= 0) return false;
+        return new Random().nextInt(100) < chance;
     }
 
 

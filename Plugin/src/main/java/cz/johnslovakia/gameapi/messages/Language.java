@@ -1,15 +1,24 @@
 package cz.johnslovakia.gameapi.messages;
 
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class Language {
+
+    @Getter
+    private static List<Language> languages = new ArrayList<>();
+
 
     private final String name;
     private File file;
+    @Setter
     private boolean defaultLanguage;
 
     public Language(String name) {
@@ -21,26 +30,19 @@ public class Language {
         this.file = file;
     }
 
-    public String getName() {
-        return name;
-    }
-
     public boolean isDefaultLanguage() {
         return defaultLanguage;
     }
 
-    public Language setDefaultLanguage(boolean defaultLanguage) {
-        this.defaultLanguage = defaultLanguage;
-        return this;
-    }
 
-    private static List<Language> languages = new ArrayList<>();
 
     public static Language addLanguage(Language language){
         if (languages.contains(language)){
             return language;
         }
         languages.add(language);
+        if (Minigame.getInstance().getSettings().getDefaultLanguage().equalsIgnoreCase(language.getName()))
+            language.setDefaultLanguage(true);
         return language;
     }
 
@@ -62,11 +64,4 @@ public class Language {
         return (getLanguage("english") != null ? getLanguage("english") : getLanguages().get(0));
     }
 
-    public File getFile() {
-        return file;
-    }
-
-    public static List<Language> getLanguages() {
-        return languages;
-    }
 }

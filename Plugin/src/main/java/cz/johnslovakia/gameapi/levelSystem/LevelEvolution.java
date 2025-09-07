@@ -4,8 +4,9 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.ShadowColor;
+import org.bukkit.inventory.ItemStack;
 
-public record LevelEvolution(int startLevel, String icon) {
+public record LevelEvolution(int startLevel, String icon, int itemCustomModelData, int blinkingItemCustomModelData) {
 
     public Component getIcon(){
         return Component.text("§r§f" + icon)

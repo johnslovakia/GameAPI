@@ -86,7 +86,6 @@ public class KitInventory implements Listener {
                     gui.setContainer((size <= 9 ? 20 : 29), Component.staticContainer()
                             .size(5, 1)
                             .init(container -> {
-                                // Assign components to container
                                 Element spacerElement = Component.element(reset.toItemStack()).addClick(i -> {
                                     if(game.getState().equals(GameState.INGAME)) return;
 

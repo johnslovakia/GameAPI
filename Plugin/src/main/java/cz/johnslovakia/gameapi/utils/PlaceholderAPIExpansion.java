@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.PlayerScore;
 import cz.johnslovakia.gameapi.users.resources.Resource;
+import cz.johnslovakia.gameapi.users.resources.ResourcesManager;
 import cz.johnslovakia.gameapi.users.stats.Stat;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 
@@ -101,7 +102,7 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion {
             }
         }
 
-        for (Resource resource : minigame.getEconomies()){
+        for (Resource resource : ResourcesManager.getResources()){
             if (identifier.equalsIgnoreCase("balance_" + resource.getName())){
                 return "" + gamePlayer.getPlayerData().getBalance(resource);
             }

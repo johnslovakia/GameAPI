@@ -23,6 +23,8 @@ import me.zort.containr.Component;
 import me.zort.containr.Element;
 import me.zort.containr.GUI;
 import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
@@ -61,15 +63,23 @@ public class QuestInventory {
                 .findFirst();
 
 
-        ItemBuilder item = new ItemBuilder((completed ? Material.MAP : Material.PAPER));
+        ItemBuilder item = new ItemBuilder(Material.ECHO_SHARD);
+        if (!completed){
+            item.setCustomModelData(1023);
+        }else if (unclaimedReward.isPresent()){
+            item.setCustomModelData(1024);
+        }else{
+            item = new ItemBuilder(Material.BARRIER); //TODO: item pro dokončený quest
+        }
+
         item.setName(MessageManager.get(gamePlayer, "inventory.quests.name")
                 .replace("%type%", MessageManager.get(gamePlayer, "quest_type." + quest.getType().toString().toLowerCase()).getTranslated())
                 .replace("%name%", quest.getDisplayName())
                 .getTranslated());
         item.removeLore();
-        if (!completed && in_progress) {
+        /*if (!completed && in_progress) {
             item.addEnchant(Enchantment.SHARPNESS, 1);
-        }
+        }*/
         item.hideAllFlags();
 
         item.addLoreLine("");
@@ -82,12 +92,12 @@ public class QuestInventory {
         item.addLoreLine(MessageManager.get(gamePlayer, "inventory.quests.rewards").getTranslated());
         for (RewardItem rewardItem : quest.getReward().getRewardItems()) {
             Resource resource = rewardItem.getResource();
-            item.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.randomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName());
-        }
-        if (bonus != 0){
-            item.addLoreLine(MessageManager.get(gamePlayer, "inventory.quests.bonus")
-                    .replace("%bonus%", "" + bonus)
-                    .getTranslated());
+            item.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.randomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName()  + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(MessageManager.get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
+            if (bonus != 0 && resource.isApplicableBonus()){
+                item.addLoreLine(MessageManager.get(gamePlayer, "inventory.quests.bonus")
+                        .replace("%bonus%", "" + bonus)
+                        .getTranslated());
+            }
         }
 
         if (unclaimedReward.isEmpty() || (quest.getType() == QuestType.DAILY && !unclaimedReward.get().getCreatedAt().toLocalDate().isBefore(today))
@@ -140,10 +150,10 @@ public class QuestInventory {
                 .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七ㆼ").font(Key.key("jsplugins", "guis")))
                 .rows(2)
                 .prepare((gui, player) -> {
-                    ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
-                    close.setCustomModelData(1017);
-                    close.hideAllFlags();
-                    close.setName(MessageManager.get(player, "inventory.item.close")
+                    ItemBuilder back = new ItemBuilder(Material.ECHO_SHARD);
+                    back.setCustomModelData(1016);
+                    back.hideAllFlags();
+                    back.setName(MessageManager.get(player, "inventory.item.go_back")
                             .getTranslated());
 
                     ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
@@ -153,8 +163,8 @@ public class QuestInventory {
                             .getTranslated());
                     info.setLore(MessageManager.get(player, "inventory.info_item.quests_inventory.lore").getTranslated());
 
-                    gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> {
-                        gui.close(player);
+                    gui.appendElement(0, Component.element(back.toItemStack()).addClick(i -> {
+                        ProfileInventory.openGUI(gamePlayer);
                         player.playSound(player, Sounds.CLICK.bukkitSound(), 1F, 1F);
                     }).build());
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
@@ -177,11 +187,11 @@ public class QuestInventory {
                             if (data.getQuestData(quest).isCompleted()){
 
                                 if (unclaimedReward.isPresent()){
+                                    MessageManager.get(gamePlayer, "chat.unclaimed_reward.quest.claimed").send();
                                     if (bonus != 0) {
                                         unclaimedReward.get().setBonus(bonus);
                                     }
                                     unclaimedReward.get().claim();
-                                    MessageManager.get(gamePlayer, "chat.unclaimed_reward.quest.claimed").send();
                                     //Minigame.getInstance().getQuestManager().shouldReset(gamePlayer.getPlayerData().getQuestData(quest));
                                     openGUI(gamePlayer);
                                 }else {

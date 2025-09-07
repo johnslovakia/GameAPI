@@ -260,7 +260,7 @@ public class GameAPI{
         pm.registerEvents(new PVPListener(), plugin);
         pm.registerEvents(new RespawnListener(), plugin);
         pm.registerEvents(new WorldListener(), plugin);
-        //pm.registerEvents(new AntiAFK(), plugin);
+        pm.registerEvents(new AntiAFK(), plugin);
         pm.registerEvents(new ViewPlayerInventory(), plugin);
         pm.registerEvents(new HologramListener(), plugin);
         pm.registerEvents(new ItemPickupListener(), plugin);
@@ -489,7 +489,10 @@ public class GameAPI{
 
         Resource experiencePoints = new Resource("ExperiencePoints", ChatColor.YELLOW, 1, true, true);
         experiencePoints.setDisplayName("Experience Points");
-        minigame.getEconomies().add(experiencePoints);
+        Resource cosmeticTokens = new Resource("CosmeticTokens", ChatColor.DARK_GREEN, true, true);
+        cosmeticTokens.setDisplayName("Cosmetic Tokens");
+
+        ResourcesManager.addResource(experiencePoints, cosmeticTokens);
 
 
         minigame.setupPlayerScores();
@@ -503,9 +506,13 @@ public class GameAPI{
 
         JSConfigs.createTable(connection);
         //TODO: možnost nepoužívat levelManager
-        LevelManager levelManager = null;
-        //LevelManager levelManager = LevelManager.loadOrCreateLevelManager();
-        //minigame.setLevelManager(levelManager);
+        LevelManager levelManager;
+        if (minigame.getSettings().isUseLevelSystem()) {
+            levelManager = LevelManager.loadOrCreateLevelManager();
+            minigame.setLevelManager(levelManager);
+        } else {
+            levelManager = null;
+        }
 
 
         try{
@@ -537,7 +544,7 @@ public class GameAPI{
         }
 
 
-        for (Resource resource : minigame.getEconomies()){
+        for (Resource resource : ResourcesManager.getResources()){
             if (resource.isAutomatically()){
                 if (!resource.isForAllMinigames()){
                     minigameTable.createNewColumn(Type.INT , resource.getName());

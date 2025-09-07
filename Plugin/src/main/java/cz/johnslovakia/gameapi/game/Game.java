@@ -3,6 +3,9 @@ package cz.johnslovakia.gameapi.game;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.MinigameSettings;
+import cz.johnslovakia.gameapi.guis.ProfileInventory;
+import cz.johnslovakia.gameapi.guis.QuestInventory;
+import cz.johnslovakia.gameapi.levelSystem.LevelManager;
 import cz.johnslovakia.gameapi.levelSystem.LevelProgress;
 import cz.johnslovakia.gameapi.messages.Message;
 import cz.johnslovakia.gameapi.serverManagement.DataManager;
@@ -26,6 +29,7 @@ import cz.johnslovakia.gameapi.utils.*;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import cz.johnslovakia.gameapi.utils.inventoryBuilder.InventoryManager;
 import cz.johnslovakia.gameapi.utils.inventoryBuilder.Item;
+import cz.johnslovakia.gameapi.utils.rewards.unclaimed.UnclaimedReward;
 import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import lombok.Getter;
 import lombok.Setter;
@@ -213,9 +217,17 @@ public class Game {
             }
 
             player.setDisplayName("§r" + player.getName());
-            player.setPlayerListName("§r" + player.getName());
-            player.teleport(getLobbyManager().getLobbyLocation().getLocation());
-            Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> player.setGameMode(GameMode.ADVENTURE), 2L);
+            player.playerListName((Minigame.getInstance().getLevelManager() != null ? gamePlayer.getPlayerData().getLevelProgress().levelEvolution().getIcon(): Component.text("")).append(Component.text(" §r" + player.getName()).font(Key.key("minecraft", "default"))));
+
+            Location lobbyLocation = getLobbyManager().getLobbyLocation().getLocation();
+            player.teleport(lobbyLocation);
+            Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
+                //Stávalo se, že to hráče neportlo na lobby
+                if (player.getLocation().getWorld() != lobbyLocation.getWorld()){
+                    player.teleport(lobbyLocation);
+                }
+                player.setGameMode(GameMode.ADVENTURE);
+                }, 2L);
 
             participants.add(gamePlayer);
             gamePlayer.setGame(this);
@@ -457,10 +469,13 @@ public class Game {
             player.setGameMode(GameMode.ADVENTURE);
 
 
-            LevelProgress levelProgress = Minigame.getInstance().getLevelManager().getLevelProgress(gamePlayer);
-            float xpProgress = (float) levelProgress.xpOnCurrentLevel() / levelProgress.levelRange().neededXP();
-            player.setExp(Math.min(xpProgress, 1.0f));
-            player.setLevel(levelProgress.level());
+            LevelManager levelManager = Minigame.getInstance().getLevelManager();
+            if (levelManager != null) {
+                LevelProgress levelProgress = levelManager.getLevelProgress(gamePlayer);
+                float xpProgress = (float) levelProgress.xpOnCurrentLevel() / levelProgress.levelRange().neededXP();
+                player.setExp(Math.min(xpProgress, 1.0f));
+                player.setLevel(levelProgress.level());
+            }
 
 
             if (getSettings().teleportPlayersAfterEnd()){
@@ -561,7 +576,6 @@ public class Game {
             }.runTaskTimer(Minigame.getInstance().getPlugin(), 0L, 30L);
 
 
-            gamePlayer.getPlayerData().getCurrentInventory().unloadInventory(player);
 
             if (getSpectatorManager().getInventoryManager().getPlayers().contains(gamePlayer.getOnlinePlayer())) {
                 getSpectatorManager().getInventoryManager().unloadInventory(gamePlayer.getOnlinePlayer());
@@ -580,6 +594,19 @@ public class Game {
                 itemManager.setHoldItemSlot(1);
                 itemManager.registerItem(playAgain);
             }
+
+            Item playerMenu = new Item(new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1025).hideAllFlags().toItemStack(), 7, "Item.player_menu", e -> ProfileInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
+            playerMenu.setBlinking(gamePlayer2 -> !gamePlayer2.getPlayerData().getUnclaimedRewards(UnclaimedReward.Type.DAILYMETER).isEmpty()
+                    || !gamePlayer.getPlayerData().getUnclaimedRewards(UnclaimedReward.Type.LEVELUP).isEmpty()
+                    || !gamePlayer.getPlayerData().getUnclaimedRewards(UnclaimedReward.Type.QUEST).isEmpty());
+            playerMenu.setBlinkingItemCustomModelData(1026);
+
+            Item quests = new Item(new ItemBuilder(Material.BOOK).hideAllFlags().toItemStack(), 5, "Item.quests", e -> QuestInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
+            quests.setBlinking(gamePlayer2 -> !gamePlayer2.getPlayerData().getUnclaimedRewards(UnclaimedReward.Type.QUEST).isEmpty());
+            quests.setBlinkingItemCustomModelData(1010);
+
+            itemManager.registerItem(playerMenu, quests);
+
             itemManager.give(player);
 
             oldWinstreaks.put(gamePlayer, gamePlayer.getPlayerData().getPlayerStat("Winstreak").getStatScore());
@@ -752,7 +779,7 @@ public class Game {
             }else{
                 gamePlayer.getOnlinePlayer().playSound(player, "jsplugins:gamebonus", 0.8F, 1F);
 
-                for (Resource resource : Minigame.getInstance().getEconomies()) {
+                for (Resource resource : ResourcesManager.getResources()) {
                     int earned = ResourcesManager.getEarned(gamePlayer, resource);
                     if (earned > 0) {
                         Component component = Component.text("  §7• " + (resource.getImg_char() != null ? resource.getImg_char() : "") + " " + resource.getColor() + earned + " §7" + resource.getDisplayName());
@@ -786,7 +813,7 @@ public class Game {
                                         MessageManager.get(gamePlayer, "chat.rewardsummary.bonus")
                                                 .replace("%economy_color%", "" + resource.getColor())
                                                 .replace("%reward%", "" + coins)
-                                                .replace("%economy_name%", resource.getDisplayName())
+                                                .replace("%economy_name%", resource.getColor() + resource.getDisplayName())
                                                 .replace("%bonus%", "" + percent)
                                                 .send();
                                         break;

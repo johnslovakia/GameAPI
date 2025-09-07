@@ -12,6 +12,7 @@ public class WorldListener implements Listener {
     public void onWorldInit(WorldInitEvent e) {
         e.getWorld().setAutoSave(false);
         e.getWorld().setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+        e.getWorld().setGameRule(GameRule.LOCATOR_BAR, false);
         e.getWorld().setKeepSpawnInMemory(false);
     }
 }

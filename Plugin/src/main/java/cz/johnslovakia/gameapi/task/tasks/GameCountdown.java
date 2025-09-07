@@ -30,10 +30,14 @@ public class GameCountdown implements TaskInterface {
     public void onStart(Task task) {
 
         for (GamePlayer gamePlayer : task.getGame().getParticipants()){
+            PlayerData data = gamePlayer.getPlayerData();
             new BukkitRunnable(){
                 @Override
                 public void run() {
-                    gamePlayer.getPlayerData().saveAll();
+                    data.saveAll();
+
+                    data.getKitInventories().clear();
+                    data.getVotesForMaps().clear();
                 }
             }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
 
