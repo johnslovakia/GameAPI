@@ -1,67 +1,103 @@
 package cz.johnslovakia.gameapi.modules.stats;
 
+import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.database.DatabaseMigrationHelper;
+import cz.johnslovakia.gameapi.database.Type;
+import cz.johnslovakia.gameapi.events.GameJoinEvent;
 import cz.johnslovakia.gameapi.modules.Module;
+import cz.johnslovakia.gameapi.modules.game.GameInstance;
+import cz.johnslovakia.gameapi.modules.game.lobby.LobbyLocation;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 
-import me.zort.sqllib.SQLDatabaseConnection;
-import me.zort.sqllib.api.data.Row;
-import me.zort.sqllib.internal.query.UpdateQuery;
-import me.zort.sqllib.transaction.Transaction;
-import me.zort.sqllib.transaction.TransactionFlow;
+import cz.johnslovakia.gameapi.utils.BatchConfig;
+import cz.johnslovakia.gameapi.utils.CachedBatchStorage;
+import cz.johnslovakia.gameapi.utils.ConfigAPI;
+import lombok.Getter;
 
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.scheduler.BukkitTask;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class StatsModule implements Module, Listener {
 
+    @Getter
     private List<Stat> stats = new ArrayList<>();
-    private Map<PlayerIdentity, Map<String, Integer>> cache = new HashMap<>();
-    private Set<PlayerIdentity> dirtyPlayers = ConcurrentHashMap.newKeySet();
+    private CachedBatchStorage<PlayerIdentity, Map<String, Integer>> storage;
 
-    private BukkitTask autoSaveTask;
+    @Getter
+    private StatsHolograms statsHolograms;
+    @Getter
+    private StatsTable statsTable;
 
 
     @Override
     public void initialize() {
-        autoSaveTask = Bukkit.getScheduler().runTaskTimerAsynchronously(
-                Shared.getInstance().getPlugin(),
-                this::saveDirtyPlayers,
-                20L * 60 * 5,
-                20L * 60 * 5);
+        this.storage = new CachedBatchStorage<>(
+                "player_stats",
+                BatchConfig.builder("player_stats")
+                        .maxBatchSize(50)
+                        .flushIntervalSeconds(180)
+                        .build(),
+                this::loadStatsFromDB,
+                this::saveStatsToDB,
+                this::mergeStatsMaps
+        );
+
+        this.statsHolograms = new StatsHolograms(this);
+        this.statsTable = new StatsTable(this);
+
+        DatabaseMigrationHelper.ensureNicknameUnique(Minigame.getInstance().getName() + "_stats");
     }
 
     @Override
     public void terminate() {
+        if (storage != null) {
+            storage.shutdown();
+        }
         stats = null;
-        cache = null;
-        dirtyPlayers = null;
-        autoSaveTask.cancel();
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent e) {
         PlayerIdentity playerIdentity = PlayerIdentityRegistry.get(e.getPlayer());
-        savePlayerStatsAsync(playerIdentity);
-
-        dirtyPlayers.remove(playerIdentity);
-        cache.remove(playerIdentity);
+        storage.invalidate(playerIdentity);
     }
 
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent e) {
-        PlayerIdentity playerIdentity = PlayerIdentityRegistry.get(e.getPlayer());
+    public void onPlayerJoin(GameJoinEvent e) {
+        storage.get(e.getGamePlayer()).thenAccept(stats -> {
+            ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", Minigame.getInstance().getPlugin());
+            GameInstance game = e.getGame();
 
-        loadPlayerStats(playerIdentity);
+            LobbyLocation statsHologram = config.getLobbyLocation(game, "statsHologram");
+            if (statsHologram != null){
+                Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task -> {
+                    statsHolograms.createPlayerStatisticsHologram(e.getGamePlayer(), statsHologram.getLocation());
+                });
+            }
+                /*LobbyLocation topStatsHologram = config.getLobbyLocation(game, "topStatsHologram");
+                if (topStatsHologram != null){
+                    statsHolograms.createTOPStatisticsHologram(topStatsHologram.getLocation(), player);
+                }*/
+        });
+    }
+
+    //TODO: .
+    public void createDatabaseTable(){
+        statsTable.createTable();
+
+        registerStat(new Stat("Winstreak").hideFromPlayer());
+        statsTable.createNewColumn(Type.INT, "Winstreak");
     }
 
     public void registerStat(Stat... stats) {
@@ -74,77 +110,173 @@ public class StatsModule implements Module, Listener {
         }
     }
 
-    private void saveDirtyPlayers(){
-        for (PlayerIdentity playerIdentity : dirtyPlayers){
-            savePlayerStatsAsync(playerIdentity);
-            dirtyPlayers.remove(playerIdentity);
+    private Map<PlayerIdentity, Map<String, Integer>> loadStatsFromDB(Set<PlayerIdentity> playerIdentities) throws SQLException {
+        Map<PlayerIdentity, Map<String, Integer>> results = new HashMap<>();
+
+        if (playerIdentities.isEmpty() || stats.isEmpty()) {
+            return results;
+        }
+
+        Connection conn = Shared.getInstance().getDatabase().getConnection().getConnection();
+        if (conn == null) return results;
+
+        String placeholders = String.join(",", Collections.nCopies(playerIdentities.size(), "?"));
+
+        StringBuilder sqlBuilder = new StringBuilder("SELECT Nickname");
+        for (Stat stat : stats) {
+            sqlBuilder.append(", ").append(stat.getName().replace(" ", "_"));
+        }
+        sqlBuilder.append(" FROM ").append(Minigame.getInstance().getName() + "_stats");
+        sqlBuilder.append(" WHERE Nickname IN (").append(placeholders).append(")");
+
+        try (PreparedStatement stmt = conn.prepareStatement(sqlBuilder.toString())) {
+            int i = 1;
+            Map<String, PlayerIdentity> nicknameMap = new HashMap<>();
+            for (PlayerIdentity playerIdentity : playerIdentities) {
+                stmt.setString(i++, playerIdentity.getName());
+                nicknameMap.put(playerIdentity.getName(), playerIdentity);
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String nickname = rs.getString("Nickname");
+                    PlayerIdentity playerIdentity = nicknameMap.get(nickname);
+
+                    if (playerIdentity == null) continue;
+
+                    Map<String, Integer> statsMap = new HashMap<>();
+
+                    for (Stat stat : stats) {
+                        try {
+                            int value = rs.getInt(stat.getName());
+                            statsMap.put(stat.getName(), value);
+                        } catch (SQLException e) {
+                            statsMap.put(stat.getName(), 0);
+                        }
+                    }
+
+                    results.put(playerIdentity, statsMap);
+                }
+            }
+        }
+
+        for (PlayerIdentity playerIdentity : playerIdentities) {
+            results.putIfAbsent(playerIdentity, new HashMap<>());
+        }
+
+        return results;
+    }
+
+    private void saveStatsToDB(Map<PlayerIdentity, CachedBatchStorage.PendingChange<PlayerIdentity, Map<String, Integer>>> changes)
+            throws SQLException {
+        if (changes.isEmpty()) return;
+
+        Connection conn = Shared.getInstance().getDatabase().getConnection().getConnection();
+        if (conn == null) return;
+
+        conn.setAutoCommit(false);
+
+        try {
+            Set<String> allStatNames = new HashSet<>();
+            for (CachedBatchStorage.PendingChange<PlayerIdentity, Map<String, Integer>> change : changes.values()) {
+                allStatNames.addAll(change.getDelta().keySet());
+            }
+
+            if (allStatNames.isEmpty()) {
+                conn.commit();
+                return;
+            }
+
+            StringBuilder sql = new StringBuilder("INSERT INTO " + Minigame.getInstance().getName() + "_stats" + " (Nickname");
+            StringBuilder values = new StringBuilder(" VALUES (?");
+            StringBuilder onDuplicate = new StringBuilder(" ON DUPLICATE KEY UPDATE ");
+
+            List<String> statNamesList = new ArrayList<>(allStatNames);
+
+            for (int i = 0; i < statNamesList.size(); i++) {
+                String statName = statNamesList.get(i).replace(" ", "_");
+                sql.append(", ").append(statName);
+                values.append(", ?");
+
+                if (i > 0) onDuplicate.append(", ");
+                onDuplicate.append(statName).append(" = ").append(statName).append(" + VALUES(").append(statName).append(")");
+            }
+
+            sql.append(")").append(values).append(")").append(onDuplicate);
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+
+                for (CachedBatchStorage.PendingChange<PlayerIdentity, Map<String, Integer>> change : changes.values()) {
+                    String nickname = change.getKey().getName();
+                    Map<String, Integer> statsMap = change.getDelta();
+
+                    int paramIndex = 1;
+
+                    stmt.setString(paramIndex++, nickname);
+
+                    for (String statName : statNamesList) {
+                        int value = statsMap.getOrDefault(statName, 0);
+                        stmt.setInt(paramIndex++, value);
+                    }
+                    stmt.addBatch();
+                }
+
+                stmt.executeBatch();
+                conn.commit();
+            }
+
+        } catch (SQLException e) {
+            conn.rollback();
+            throw e;
+        } finally {
+            conn.setAutoCommit(true);
         }
     }
 
-    private CompletableFuture<Map<String, Long>> loadPlayerStats(PlayerIdentity playerIdentity) {
-        return CompletableFuture.supplyAsync(() ->
-                cache.computeIfAbsent(playerIdentity, key -> {
-                    Optional<Row> result = Shared.getInstance().getDatabase().getConnection()
-                            .select()
-                            .from(TABLE_NAME)
-                            .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
-                            .obtainOne();
+    private Map<String, Integer> mergeStatsMaps(Map<String, Integer> existing, Map<String, Integer> delta) {
+        Map<String, Integer> result = new HashMap<>(existing);
 
-                    Map<String, Long> statsMap = new HashMap<>();
-                    if (result.isEmpty()) return statsMap;
+        for (Map.Entry<String, Integer> entry : delta.entrySet()) {
+            result.merge(entry.getKey(), entry.getValue(), Integer::sum);
+        }
 
-                    Row row = result.get();
-                    for (Stat stat : stats) {
-                        statsMap.put(stat.getName(), row.getLong(stat.getName()));
-                    }
-
-                    return statsMap;
-                })
-        );
+        return result;
     }
 
-    public void savePlayerStatsAsync(PlayerIdentity playerIdentity){
-        CompletableFuture.runAsync(() -> {
-            try {
-                Map<String, Integer> stats = cache.get(playerIdentity);
-                if (stats == null) return;
 
-                SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection();
 
-                Transaction transaction = connection.beginTransaction();
-                TransactionFlow.Builder flow = transaction.flow()
-                        .commitOnSuccess(true)
-                        .rollbackOnFailure(true)
-                        .autoClose(true);
+    public void increasePlayerStat(PlayerIdentity playerIdentity, String statName, int amount) {
+        Map<String, Integer> delta = new HashMap<>();
+        delta.put(statName, amount);
 
-                for (Map.Entry<String, Integer> entry : stats.entrySet()) {
-                    flow.step(new UpdateQuery()
-                            .table(TABLE_NAME)
-                            .set(entry.getKey(), entry.getValue())
-                            .where().isEqual("Nickname", playerIdentity.getName()));
-                }
-
-                flow.create().execute();
-            } catch (Exception e) {
-                Bukkit.getLogger().severe("Failed to save player data for " + playerIdentity.getName());
-                e.printStackTrace();
-            }
-        });
+        storage.modify(playerIdentity, delta);
     }
 
     public void increasePlayerStat(PlayerIdentity playerIdentity, Stat stat, int amount) {
         increasePlayerStat(playerIdentity, stat.getName(), amount);
     }
 
-    public void increasePlayerStat(PlayerIdentity playerIdentity, String statName, int amount) {
-        cache.computeIfAbsent(playerIdentity, p -> new HashMap<>()).merge(statName, amount, Integer::sum);
-        dirtyPlayers.add(playerIdentity);
+    public void setPlayerStat(PlayerIdentity playerIdentity, String statName, int value) {
+        Map<String, Integer> newMap = new HashMap<>();
+        newMap.put(statName, value);
+
+        Map<String, Integer> current = storage.getCached(playerIdentity);
+        if (current != null) {
+            newMap.putAll(current);
+        }
+        newMap.put(statName, value);
+
+        storage.set(playerIdentity, newMap);
     }
 
-    public long getPlayerStat(PlayerIdentity player, String statName) {
-        Map<String, Integer> playerStats = cache.get(player);
-        if (playerStats == null) return 0L;
+    public int getPlayerStat(PlayerIdentity playerIdentity, String statName) {
+        Map<String, Integer> statsMap = storage.getCached(playerIdentity);
 
-        return playerStats.getOrDefault(statName, 0);
+        if (statsMap == null) {
+            storage.get(playerIdentity);
+            return 0;
+        }
+
+        return statsMap.getOrDefault(statName, 0);
     }
 }
