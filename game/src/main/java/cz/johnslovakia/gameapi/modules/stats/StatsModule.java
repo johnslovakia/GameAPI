@@ -117,8 +117,6 @@ public class StatsModule implements Module, Listener {
             return results;
         }
 
-        Connection conn = Shared.getInstance().getDatabase().getConnection().getConnection();
-        if (conn == null) return results;
 
         String placeholders = String.join(",", Collections.nCopies(playerIdentities.size(), "?"));
 
@@ -129,7 +127,9 @@ public class StatsModule implements Module, Listener {
         sqlBuilder.append(" FROM ").append(Minigame.getInstance().getName() + "_stats");
         sqlBuilder.append(" WHERE Nickname IN (").append(placeholders).append(")");
 
-        try (PreparedStatement stmt = conn.prepareStatement(sqlBuilder.toString())) {
+        try (Connection conn = Shared.getInstance().getDatabase().getConnection().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sqlBuilder.toString())) {
+
             int i = 1;
             Map<String, PlayerIdentity> nicknameMap = new HashMap<>();
             for (PlayerIdentity playerIdentity : playerIdentities) {
@@ -167,56 +167,39 @@ public class StatsModule implements Module, Listener {
         return results;
     }
 
-    private void saveStatsToDB(Map<PlayerIdentity, CachedBatchStorage.PendingChange<PlayerIdentity, Map<String, Integer>>> changes)
-            throws SQLException {
+    private void saveStatsToDB(Map<PlayerIdentity, CachedBatchStorage.PendingChange<PlayerIdentity, Map<String, Integer>>> changes) throws SQLException {
         if (changes.isEmpty()) return;
 
-        Connection conn = Shared.getInstance().getDatabase().getConnection().getConnection();
-        if (conn == null) return;
+        Set<String> allStatNames = new HashSet<>();
+        for (CachedBatchStorage.PendingChange<PlayerIdentity, Map<String, Integer>> change : changes.values()) {
+            allStatNames.addAll(change.getDelta().keySet());
+        }
+        if (allStatNames.isEmpty()) return;
 
-        conn.setAutoCommit(false);
+        StringBuilder sql = new StringBuilder("INSERT INTO " + Minigame.getInstance().getName() + "_stats" + " (Nickname");
+        StringBuilder values = new StringBuilder(" VALUES (?");
+        StringBuilder onDuplicate = new StringBuilder(" ON DUPLICATE KEY UPDATE ");
+        List<String> statNamesList = new ArrayList<>(allStatNames);
+        for (int i = 0; i < statNamesList.size(); i++) {
+            String statName = statNamesList.get(i).replace(" ", "_");
+            sql.append(", ").append(statName);
+            values.append(", ?");
+            if (i > 0) onDuplicate.append(", ");
+            onDuplicate.append(statName).append(" = ").append(statName).append(" + VALUES(").append(statName).append(")");
+        }
+        sql.append(")").append(values).append(")").append(onDuplicate);
 
-        try {
-            Set<String> allStatNames = new HashSet<>();
-            for (CachedBatchStorage.PendingChange<PlayerIdentity, Map<String, Integer>> change : changes.values()) {
-                allStatNames.addAll(change.getDelta().keySet());
-            }
-
-            if (allStatNames.isEmpty()) {
-                conn.commit();
-                return;
-            }
-
-            StringBuilder sql = new StringBuilder("INSERT INTO " + Minigame.getInstance().getName() + "_stats" + " (Nickname");
-            StringBuilder values = new StringBuilder(" VALUES (?");
-            StringBuilder onDuplicate = new StringBuilder(" ON DUPLICATE KEY UPDATE ");
-
-            List<String> statNamesList = new ArrayList<>(allStatNames);
-
-            for (int i = 0; i < statNamesList.size(); i++) {
-                String statName = statNamesList.get(i).replace(" ", "_");
-                sql.append(", ").append(statName);
-                values.append(", ?");
-
-                if (i > 0) onDuplicate.append(", ");
-                onDuplicate.append(statName).append(" = ").append(statName).append(" + VALUES(").append(statName).append(")");
-            }
-
-            sql.append(")").append(values).append(")").append(onDuplicate);
-
+        try (Connection conn = Shared.getInstance().getDatabase().getConnection().getConnection()) {
+            conn.setAutoCommit(false);
             try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
 
                 for (CachedBatchStorage.PendingChange<PlayerIdentity, Map<String, Integer>> change : changes.values()) {
                     String nickname = change.getKey().getName();
                     Map<String, Integer> statsMap = change.getDelta();
-
                     int paramIndex = 1;
-
                     stmt.setString(paramIndex++, nickname);
-
                     for (String statName : statNamesList) {
-                        int value = statsMap.getOrDefault(statName, 0);
-                        stmt.setInt(paramIndex++, value);
+                        stmt.setInt(paramIndex++, statsMap.getOrDefault(statName, 0));
                     }
                     stmt.addBatch();
                 }
@@ -224,12 +207,8 @@ public class StatsModule implements Module, Listener {
                 stmt.executeBatch();
                 conn.commit();
             }
-
         } catch (SQLException e) {
-            conn.rollback();
             throw e;
-        } finally {
-            conn.setAutoCommit(true);
         }
     }
 
