@@ -1,0 +1,45 @@
+package cz.johnslovakia.gameapi.users.achievements;
+
+import cz.johnslovakia.users.GamePlayer;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDate;
+import java.util.UUID;
+
+@Getter @Setter
+public class PlayerAchievementData {
+
+    private final Achievement achievement;
+    private final UUID uuid;
+
+    private Status status;
+    private AchievementStage stage;
+    private int progress;
+    private LocalDate completionDate;
+
+    public PlayerAchievementData(UUID uuid, Achievement achievement, AchievementStage stage, int progress) {
+        this.uuid = uuid;
+        this.achievement = achievement;
+        this.stage = stage;
+        this.progress = progress;
+
+        this.status = Status.LOCKED;
+    }
+
+    public PlayerAchievementData(UUID uuid, Achievement achievement, Status status) {
+        this.uuid = uuid;
+        this.achievement = achievement;
+        this.status = status;
+    }
+
+    public void increaseProgress(){
+        if (progress < stage.goal()) {
+            progress++;
+        }
+    }
+
+    public enum Status{
+        LOCKED, UNLOCKED;
+    }
+}

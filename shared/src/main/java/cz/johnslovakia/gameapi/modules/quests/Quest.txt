@@ -1,0 +1,64 @@
+package cz.johnslovakia.gameapi.modules.quests;
+
+import com.google.gson.JsonObject;
+
+import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.modules.ModuleManager;
+import cz.johnslovakia.gameapi.modules.messages.MessageModule;
+import cz.johnslovakia.gameapi.rewards.Reward;
+import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedReward;
+import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
+import cz.johnslovakia.gameapi.utils.eTrigger.Trigger;
+
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
+
+import java.util.Set;
+
+public interface Quest {
+
+    QuestType getType();
+    String getName();
+    default String getDisplayName(){
+        return getName();
+    }
+    Reward getReward();
+    int getCompletionGoal();
+    Set<Trigger<?>> getTriggers();
+
+    default void complete(Player player){
+        PlayerDataManager.get(player).getQuestData(this).setStatus(PlayerQuestData.Status.COMPLETED);
+
+        new BukkitRunnable(){
+            @Override
+            public void run() {
+                player.playSound(player, "jsplugins:completed", 20.0F, 20.0F);
+                player.sendMessage(ModuleManager.getModule(MessageModule.class).get(player, "chat.quests.completed")
+                        .replace("%type%", ModuleManager.getModule(MessageModule.class).get(player, "quest_type." + getType().toString().toLowerCase()).getTranslated())
+                        .replace("%quest_name%", getName())
+                        .replace("%description%", ModuleManager.getModule(MessageModule.class).get(player, getTranslationKey()).getTranslated())
+                        .getTranslated());
+
+                JsonObject json = new JsonObject();
+                json.addProperty("questName", getName());
+                json.addProperty("questType", getType().name());
+
+                getReward().setAsClaimable(PlayerIdentityRegistry.get(player), UnclaimedReward.Type.QUEST, json);
+            }
+        }.runTaskLater(Shared.getInstance().getPlugin(), 1L);
+    }
+
+    default void addProgress(Player player){
+        PlayerData playerData = PlayerDataManager.get(player);
+        PlayerQuestData questData = playerData.getQuestData(this);
+
+        questData.increaseProgress();
+        if (questData.getProgress() >= getCompletionGoal()){
+            complete(player);
+        }
+    }
+
+    default String getTranslationKey(){
+        return getType().name().toLowerCase() + "_quest." + getName().toLowerCase().replace(" ", "_");
+    }
+}

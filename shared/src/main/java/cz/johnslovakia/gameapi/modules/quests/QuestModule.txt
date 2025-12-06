@@ -1,0 +1,31 @@
+package cz.johnslovakia.gameapi.modules.quests;
+
+import cz.johnslovakia.gameapi.modules.Module;
+import cz.johnslovakia.gameapi.users.PlayerIdentity;
+
+import java.util.List;
+
+public class QuestModule implements Module {
+
+    @Override
+    public void initialize() {
+
+    }
+
+    @Override
+    public void terminate() {
+
+    }
+
+    public void increaseProgressIfActive(PlayerIdentity playerIdentity, String questKey){
+
+    }
+
+    public List<Quest> getPlayerQuests(PlayerIdentity playerIdentity){
+
+    }
+
+    public List<Quest> getPlayerQuestsByStatus(PlayerIdentity playerIdentity){
+
+    }
+}

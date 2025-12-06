@@ -180,6 +180,7 @@ public class StatsModule implements Module, Listener {
         StringBuilder values = new StringBuilder(" VALUES (?");
         StringBuilder onDuplicate = new StringBuilder(" ON DUPLICATE KEY UPDATE ");
         List<String> statNamesList = new ArrayList<>(allStatNames);
+
         for (int i = 0; i < statNamesList.size(); i++) {
             String statName = statNamesList.get(i).replace(" ", "_");
             sql.append(", ").append(statName);
@@ -189,10 +190,12 @@ public class StatsModule implements Module, Listener {
         }
         sql.append(")").append(values).append(")").append(onDuplicate);
 
-        try (Connection conn = Shared.getInstance().getDatabase().getConnection().getConnection()) {
+        Connection conn = null;
+        try {
+            conn = Minigame.getInstance().getDatabase().getConnection().getConnection();
             conn.setAutoCommit(false);
-            try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
 
+            try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
                 for (CachedBatchStorage.PendingChange<PlayerIdentity, Map<String, Integer>> change : changes.values()) {
                     String nickname = change.getKey().getName();
                     Map<String, Integer> statsMap = change.getDelta();
@@ -207,8 +210,20 @@ public class StatsModule implements Module, Listener {
                 stmt.executeBatch();
                 conn.commit();
             }
+
         } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {}
+            }
             throw e;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException ignored) {}
+            }
         }
     }
 

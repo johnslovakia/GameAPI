@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.database.JSConfigs;
 import cz.johnslovakia.gameapi.database.PlayerTable;
 import cz.johnslovakia.gameapi.events.DailyXPGainEvent;
+import cz.johnslovakia.gameapi.modules.dailyRewardTrack.DailyRewardTrackModule;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.Module;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
@@ -18,11 +19,26 @@ import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardType;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 
+import cz.johnslovakia.gameapi.utils.CharRepo;
+import cz.johnslovakia.gameapi.utils.Logger;
+import cz.johnslovakia.gameapi.utils.StringUtils;
+import cz.johnslovakia.gameapi.utils.TextBackground;
+import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import me.zort.sqllib.api.data.Row;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.ShadowColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -31,6 +47,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -116,6 +133,35 @@ public class LevelModule implements Module, Listener {
 
     public int getPlayerLevel(PlayerIdentity playerIdentity){
         return getPlayerData(playerIdentity).getLevel();
+    }
+
+    public Component getPlayerLevelColored(PlayerIdentity playerIdentity){
+        PlayerLevelData data = getPlayerData(playerIdentity);
+        if (data == null) return Component.text("§c0");
+
+        if (data.getLevel() >= 100){
+            return Component.text()
+                    .append(Component.text("1", TextColor.fromHexString("#5fb243")))
+                    .append(Component.text("0", TextColor.fromHexString("#d86dd8")))
+                    .append(Component.text("0", TextColor.fromHexString("#e14d45")))
+                    .build();
+        }
+
+        return Component.text(data.getLevel())
+                .color(data.getLevelEvolution().color());
+    }
+
+    public Component getLevelColored(int level){
+        if (level >= 100){
+            return Component.text()
+                    .append(Component.text("1", TextColor.fromHexString("#5fb243")))
+                    .append(Component.text("0", TextColor.fromHexString("#d86dd8")))
+                    .append(Component.text("0", TextColor.fromHexString("#e14d45")))
+                    .build();
+        }
+
+        return Component.text(level)
+                .color(getLevelEvolution(level).color());
     }
 
     public LevelRange getPlayerLevelRange(PlayerIdentity playerIdentity){
@@ -244,10 +290,13 @@ public class LevelModule implements Module, Listener {
         new BukkitRunnable(){
             @Override
             public void run() {
-                playerIdentity.getOnlinePlayer().playSound(playerIdentity.getOnlinePlayer(), "jsplugins:completed", 20.0F, 20.0F);
-                ModuleManager.getModule(MessageModule.class).get(playerIdentity, "chat.level.levelUp")
-                        .replace("%level%", String.valueOf(newLevel))
-                        .send();
+                if (playerIdentity.getOnlinePlayer() != null) {
+                    playerIdentity.getOnlinePlayer().playSound(playerIdentity.getOnlinePlayer(), "jsplugins:completed", 20.0F, 20.0F);
+                    ModuleManager.getModule(MessageModule.class).get(playerIdentity, "chat.level.levelUp")
+                            .replace("%level%", String.valueOf(newLevel))
+                            .send();
+                    levelUpBanner(playerIdentity, newLevel);
+                }
 
                 for (int lvl = currentLevel + 1; lvl <= newLevel; lvl++) {
                     Reward reward = getRewardForLevel(lvl);
@@ -263,6 +312,15 @@ public class LevelModule implements Module, Listener {
         }.runTaskLater(Shared.getInstance().getPlugin(), 1L);
     }
 
+    public void levelUpBanner(PlayerIdentity playerIdentity, int level) {
+        Component text = Component.text("§f\uE00B ").font(Key.key("jsplugins", "actionbar_offset"))
+                .shadowColor(ShadowColor.shadowColor(0))
+                .append(Component.text("§fYou reached level ")) //TODO: translation
+                .append(getLevelColored(level))
+                .append(getLevelEvolution(level).getIcon().font(Key.key("jsplugins", "actionbar_offset")))
+                .append(Component.text(" §f\uE00B").font(Key.key("jsplugins", "actionbar_offset"))); //TODO: translation
+        playerIdentity.getOnlinePlayer().sendActionBar(TextBackground.getTextWithBackgroundBossBar(text));
+    }
 
 
 
@@ -275,17 +333,25 @@ public class LevelModule implements Module, Listener {
     }
 
     public static LevelModule loadOrCreateLevelModule() {
-        Gson gson = new GsonBuilder()
-                .setPrettyPrinting()
-                .create();
+        try {
+            Gson gson = new GsonBuilder()
+                    .setPrettyPrinting()
+                    .registerTypeAdapter(TextColor.class, new TextColorAdapter())
+                    .create();
 
-        String json = new JSConfigs(Shared.getInstance().getDatabase().getConnection()).loadConfig("LevelModule");
+            String json = new JSConfigs(Shared.getInstance().getDatabase().getConnection()).loadConfig("LevelModule");
 
-        if (json != null) {
-            return gson.fromJson(json, LevelModule.class);
-        } else {
+            if (json != null && json.contains("\"color\"")) {
+                return gson.fromJson(json, LevelModule.class);
+            } else {
+                LevelModule defaultManager = LevelModule.createDefault();
+                saveLevelModule(defaultManager);
+                return defaultManager;
+            }
+        } catch (Exception ex){
             LevelModule defaultManager = LevelModule.createDefault();
             saveLevelModule(defaultManager);
+            ex.printStackTrace();
             return defaultManager;
         }
     }
@@ -293,6 +359,7 @@ public class LevelModule implements Module, Listener {
     public static void saveLevelModule(LevelModule levelManager) {
         Gson gson = new GsonBuilder()
                 .setPrettyPrinting()
+                .registerTypeAdapter(TextColor.class, new TextColorAdapter())
                 .create();
 
         String json = gson.toJson(levelManager);
@@ -322,17 +389,17 @@ public class LevelModule implements Module, Listener {
                     .addLevelRange(81, 90, 40000).withReward("Coins", 7500)
                     .addLevelRange(91, 100, 50000).withReward("Coins", 10000)
 
-                    .addLevelEvolution(0, "\uE000", 1027, 1028)
-                    .addLevelEvolution(10, "\uE001", 1029, 1030)
-                    .addLevelEvolution(20, "\uE002", 1031, 1032)
-                    .addLevelEvolution(30, "\uE003", 1033, 1034)
-                    .addLevelEvolution(40, "\uE004", 1035, 1036)
-                    .addLevelEvolution(50, "\uE005", 1037, 1038)
-                    .addLevelEvolution(60, "\uE006", 1039, 1040)
-                    .addLevelEvolution(70, "\uE007", 1041, 1042)
-                    .addLevelEvolution(80, "\uE008", 1043, 1044)
-                    .addLevelEvolution(90, "\uE009", 1045, 1046)
-                    .addLevelEvolution(100, "\uE00A", 1047, 1048)
+                    .addLevelEvolution(0, "\uE000", TextColor.fromHexString("#707070"),1027, 1028)
+                    .addLevelEvolution(10, "\uE001", TextColor.fromHexString("#d0d0d0"), 1029, 1030)
+                    .addLevelEvolution(20, "\uE002", TextColor.fromHexString("#4bd81c"), 1031, 1032)
+                    .addLevelEvolution(30, "\uE003", TextColor.fromHexString("#63dfdf"), 1033, 1034)
+                    .addLevelEvolution(40, "\uE004", TextColor.fromHexString("#3080d0"), 1035, 1036)
+                    .addLevelEvolution(50, "\uE005", TextColor.fromHexString("#e06ef4"), 1037, 1038)
+                    .addLevelEvolution(60, "\uE006", TextColor.fromHexString("#8d39bb"), 1039, 1040)
+                    .addLevelEvolution(70, "\uE007", TextColor.fromHexString("#8d39bb"), 1041, 1042)
+                    .addLevelEvolution(80, "\uE008", TextColor.fromHexString("#dc9935"), 1043, 1044)
+                    .addLevelEvolution(90, "\uE009", TextColor.fromHexString("#c94646"), 1045, 1046)
+                    .addLevelEvolution(100, "\uE00A", NamedTextColor.GOLD, 1047, 1048)
 
                     .addLevelReward(2).withReward("CosmeticTokens", 2)
                     .addLevelReward(5, 10, 15, 20, 25, 30, 35, 40, 45).withReward("CosmeticTokens", 4)
@@ -382,8 +449,8 @@ public class LevelModule implements Module, Listener {
             }
         }
 
-        public Builder addLevelEvolution(int startLevel, String icon, int itemCustomModelData, int blinkingItemCustomModelData) {
-            LevelEvolution evolution = new LevelEvolution(startLevel, icon, itemCustomModelData, blinkingItemCustomModelData);
+        public Builder addLevelEvolution(int startLevel, String icon, TextColor color, int itemCustomModelData, int blinkingItemCustomModelData) {
+            LevelEvolution evolution = new LevelEvolution(startLevel, icon, color, itemCustomModelData, blinkingItemCustomModelData);
             levelModule.getLevelEvolutions().add(evolution);
             return this;
         }

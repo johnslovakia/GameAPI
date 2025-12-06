@@ -1,0 +1,49 @@
+package cz.johnslovakia.gameapi.events;
+
+import cz.johnslovakia.gameapi.modules.game.GameInstance;
+import cz.johnslovakia.gameapi.users.GamePlayer;
+import lombok.Getter;
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
+
+@Getter
+public class GameJoinEvent extends Event {
+
+    private static final HandlerList handlers = new HandlerList();
+
+    private boolean isCancelled;
+
+    private final GameInstance game;
+    private final GamePlayer gamePlayer;
+    private final JoinType joinType;
+
+
+    public GameJoinEvent(GameInstance game, GamePlayer gamePlayer, JoinType joinType){
+        this.game = game;
+        this.gamePlayer = gamePlayer;
+        this.joinType = joinType;
+    }
+
+
+    public boolean isCancelled() {
+        return isCancelled;
+    }
+
+    public void setCancelled(boolean cancelled) {
+        this.isCancelled = cancelled;
+    }
+
+    public HandlerList getHandlers() {
+        return handlers;
+    }
+
+    public static HandlerList getHandlerList(){
+        return handlers;
+    }
+
+
+    public enum JoinType{
+        LOBBY, SPECTATOR, REJOIN, JOIN_AFTER_START;
+    }
+
+}

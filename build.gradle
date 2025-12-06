@@ -1,0 +1,55 @@
+//build.gradle GameAPI
+plugins {
+    id 'java'
+}
+
+allprojects {
+    group = 'cz.johnslovakia'
+    version = '2.0'
+
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        mavenLocal()
+        maven {
+            name = "sonatype"
+            url = "https://oss.sonatype.org/content/groups/public/"
+        }
+        maven {
+            name = "PaperMC"
+            url = uri("https://repo.papermc.io/repository/maven-public/")
+        }
+        maven {
+            url 'https://jitpack.io'
+        }
+        maven {
+            url = 'https://repo.infernalsuite.com/repository/maven-snapshots/'
+        }
+        maven {
+            name = 'alessiodp-repo'
+            url = 'https://repo.alessiodp.com/releases/'
+        }
+        maven {
+            name = "simonsators-repo"
+            url = uri("https://simonsator.de/repo/")
+        }
+        maven {
+            url = 'https://maven.enginehub.org/repo/'
+        }
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'java-library'
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+}

@@ -1,0 +1,81 @@
+package cz.johnslovakia.gameapi.users.achievements;
+
+import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.modules.ModuleManager;
+import cz.johnslovakia.gameapi.modules.messages.MessageModule;
+import cz.johnslovakia.gameapi.users.PlayerData;
+
+import cz.johnslovakia.gameapi.users.PlayerDataManager;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
+
+import java.time.LocalDate;
+import java.util.List;
+
+public interface Achievement {
+
+    String getName();
+    default String getDisplayName(){
+        return getName();
+    }
+    List<AchievementStage> getStages();
+    Set<Trigger<?>> getTriggers();
+
+    default void complete(Player player, AchievementStage stage){
+        PlayerData playerData = PlayerDataManager.get(player);
+
+        if (playerData.getAchievementData(this).isEmpty()) return;
+
+
+        PlayerAchievementData data = playerData.getAchievementData(this).get();
+
+        data.setStatus(PlayerAchievementData.Status.UNLOCKED);
+        data.setCompletionDate(LocalDate.now());
+
+
+        new BukkitRunnable(){
+            @Override
+            public void run() {
+                player.playSound(player, "jsplugins:completed", 20.0F, 20.0F);
+                /*ModuleManager.getModule(MessageModule.class).get(player, "chat.achievements.unlocked")
+                        .replace("%name%", getName())
+                        .replace("%description%", ModuleManager.getModule(MessageModule.class).get(player, getTranslationKey()).getTranslated())
+                        .send();*/
+
+                Component textComponent = ModuleManager.getModule(MessageModule.class).get(player, "chat.achievements.unlocked")
+                            .replace("%name%", getName())
+                            .replace("%description%", ModuleManager.getModule(MessageModule.class).get(player, getTranslationKey()).getTranslated())
+                            .getTranslated()
+                        .hoverEvent(HoverEvent.showText(ModuleManager.getModule(MessageModule.class).get(player, getTranslationKey()).getTranslated()));
+                player.sendMessage(textComponent);
+
+                //
+                // new Reward(new RewardItem("Achievement Points", getPoints())).applyReward(gamePlayer);
+            }
+        }.runTaskLater(Shared.getInstance().getPlugin(), 1L);
+
+        if (data.getStage().stage() < getStages().size()){ //otestovat
+            data.setStage(getStages().get(data.getStage().stage()));
+            data.setProgress(0);
+        }
+    }
+
+    default void addProgress(Player player){
+        PlayerData playerData = PlayerDataManager.get(player);
+
+        if (playerData.getAchievementData(this).isEmpty())
+            return;
+
+        PlayerAchievementData achievementData = playerData.getAchievementData(this).get();
+
+        achievementData.increaseProgress();
+        if (achievementData.getProgress() >= achievementData.getStage().goal())
+            complete(player, achievementData.getStage());
+    }
+
+    default String getTranslationKey(){
+        return "achievement." + getName().toLowerCase().replace(" ", "_");
+    }
+}
