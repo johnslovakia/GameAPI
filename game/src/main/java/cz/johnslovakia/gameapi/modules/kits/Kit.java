@@ -137,7 +137,7 @@ public class Kit implements Listener{
         Player player = gamePlayer.getOnlinePlayer();
         Resource resource = kitManager.getResource();
 
-        ModuleManager.getModule(ResourcesModule.class).getPlayerBalance(player, resource).thenRun(balance -> {
+        ModuleManager.getModule(ResourcesModule.class).getPlayerBalance(player, resource).thenAccept(balance -> {
             if ((kitManager.getDefaultKit() != null && kitManager.getDefaultKit().equals(this)) || balance >= getPrice() || kitManager.hasKitPermission(gamePlayer, this) || (gamePlayer.getPlayerData().getPurchasedKitsThisGame() != null && gamePlayer.getPlayerData().getPurchasedKitsThisGame().contains(this))) {
                 if (gamePlayer.hasKit() ){
                     if (gamePlayer.getGameSession().getSelectedKit().equals(this)){
