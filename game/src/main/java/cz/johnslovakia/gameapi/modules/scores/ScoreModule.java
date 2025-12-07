@@ -63,6 +63,14 @@ public class ScoreModule implements Module {
         scores.put(score.getName(), score);
     }
 
+    public int getPlayerScore(PlayerIdentity playerIdentity, String name){
+        return ((GamePlayer) playerIdentity).getGameSession().getScore(name);
+    }
+
+    public int getPlayerScore(PlayerIdentity playerIdentity, Score score){
+        return ((GamePlayer) playerIdentity).getGameSession().getScore(score.getName());
+    }
+
     public Optional<Score> getScore(String name){
         return Optional.ofNullable(scores.get(name));
     }
