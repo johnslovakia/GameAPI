@@ -60,4 +60,29 @@ public class MapLocation {
         }
         return location;
     }
+
+    public MapLocation setX(double x) {
+        this.x = x;
+        return this;
+    }
+
+    public MapLocation setY(double y) {
+        this.y = y;
+        return this;
+    }
+
+    public MapLocation setZ(double z) {
+        this.z = z;
+        return this;
+    }
+
+    public MapLocation setYaw(float yaw) {
+        this.yaw = yaw;
+        return this;
+    }
+
+    public MapLocation setPitch(float pitch) {
+        this.pitch = pitch;
+        return this;
+    }
 }
