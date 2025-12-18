@@ -1,7 +1,8 @@
 {
-  "latest_version": "1.1",
-  "update_message": "LevelSystem, Changes and Bug Fixes",
+  "latest_version": "1.1.1",
+  "update_message": "Bug Fixes",
   "update_messages": {
-    "1.1": "LevelSystem, Changes and Bug Fixes"
+    "1.1": "LevelSystem, Changes and Bug Fixes",
+    "1.1.1": "Bug Fixes"
   }
 }
