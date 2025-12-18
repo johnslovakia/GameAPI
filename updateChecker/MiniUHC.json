@@ -1,8 +1,9 @@
 {
-  "latest_version": "2.1.1",
-  "update_message": "LevelSystem, Changes and Bug Fixes",
+  "latest_version": "2.1.2",
+  "update_message": "Bug Fixes",
   "update_messages": {
     "2.1": "LevelSystem, Changes and Bug Fixes",
-    "2.1.1": "Bug Fixes"
+    "2.1.1": "Bug Fixes",
+    "2.1.2": "Bug Fixes"
   }
 }
