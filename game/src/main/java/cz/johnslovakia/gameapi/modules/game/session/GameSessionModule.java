@@ -24,6 +24,8 @@ public class GameSessionModule extends GameModule {
     }
 
     public PlayerGameSession createPlayerSession(PlayerIdentity playerIdentity){
+        if (playerSessions.containsKey(playerIdentity)) return getPlayerSession(playerIdentity);
+
         PlayerGameSession session = new PlayerGameSession(playerIdentity, getGame());
         playerSessions.put(playerIdentity, session);
         return session;

@@ -14,6 +14,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Display;
+import org.bukkit.entity.Interaction;
 import org.bukkit.entity.TextDisplay;
 
 import java.util.HashMap;
@@ -91,9 +92,8 @@ public class StatsHolograms {
 
 
             entity.text(component);
-
             entity.setBillboard(Display.Billboard.FIXED);
-            //entity.setVisibleByDefault(false);
+            entity.setVisibleByDefault(false);
             entity.setPersistent(false);
         });
 
@@ -121,6 +121,7 @@ public class StatsHolograms {
 
     public void showTOPStatisticHologram(Location location, PlayerIdentity playerIdentity) {
         //TODO: dodělat, ?optimalizovat at se to nedotazuje pro každého hráče
+
         /*GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         statsModule manager = Minigame.getInstance().getstatsModule();
         List<Stat> statList = manager.getStats();

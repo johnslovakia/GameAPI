@@ -170,19 +170,6 @@ public class HatsCategory extends CosmeticsCategory implements Listener {
                     gamePlayer.getOnlinePlayer().getInventory().setHelmet(item.toItemStack());
                 });
 
-
-        /*if (gamePlayer.getGame() != null) {
-            if (Minigame.getInstance().getSettings().isCanDropCosmeticHat() && gamePlayer.getGame().getState().equals(GameState.INGAME))
-                item.setLore(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "item.hat.q_to_remove").getTranslated());
-        }*/ //TODO: někde dát
-
         addCosmetic(classic, headphones, straw, miner, aureole, devilhorns, nosignal, viking, clown, santa, witch, pirate);
     }
-
-
-    /*@EventHandler
-    public void onEntityDeath(PlayerDeathEvent e) {
-        //already in PVPListener.java
-        e.getDrops().removeIf(drop -> drop.getType().equals(Material.CARVED_PUMPKIN) && drop.hasItemMeta() && drop.getItemMeta().hasCustomModelData());
-    }*/
 }

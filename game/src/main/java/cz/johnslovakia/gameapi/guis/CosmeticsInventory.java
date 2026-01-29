@@ -1,6 +1,5 @@
 package cz.johnslovakia.gameapi.guis;
 
-import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.Cosmetic;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticRarityComparator;
@@ -9,34 +8,16 @@ import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.users.PlayerData;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
-
-import cz.johnslovakia.gameapi.utils.StringUtils;
-
-import me.zort.containr.Component;
-import me.zort.containr.Element;
-import me.zort.containr.GUI;
-
-import cz.johnslovakia.gameapi.Minigame;
-import cz.johnslovakia.gameapi.modules.ModuleManager;
-import cz.johnslovakia.gameapi.modules.cosmetics.Cosmetic;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticRarityComparator;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsCategory;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
-import cz.johnslovakia.gameapi.modules.messages.MessageModule;
-import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
-import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.users.PlayerManager;
-import cz.johnslovakia.gameapi.utils.ItemBuilder;
-
 import cz.johnslovakia.gameapi.utils.StringUtils;
 
 import me.zort.containr.Component;
 import me.zort.containr.Element;
 import me.zort.containr.GUI;
+
+
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;

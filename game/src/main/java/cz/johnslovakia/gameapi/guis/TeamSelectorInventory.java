@@ -66,14 +66,14 @@ public class TeamSelectorInventory implements Listener {
                             .init(container -> {
                                 for (GameTeam team : game.getModule(TeamModule.class).getTeams().values()) {
 
-                                    ItemBuilder item = new ItemBuilder((Material.valueOf(team.getDyeColor().toString().toUpperCase() + "_BANNER") != null ? Material.valueOf(team.getDyeColor().toString().toUpperCase() + "_BANNER") : Material.WHITE_BANNER), (!team.getMembers().isEmpty() ? team.getMembers().size() : 1));//.setWool(team.getDyeColor());
-                                    item.toItemStack().setAmount((!team.getMembers().isEmpty() ? team.getMembers().size() : 1));
+                                    ItemBuilder item = new ItemBuilder((Material.valueOf(team.getDyeColor().toString().toUpperCase() + "_BANNER") != null ? Material.valueOf(team.getDyeColor().toString().toUpperCase() + "_BANNER") : Material.WHITE_BANNER), (!team.getAliveMembers().isEmpty() ? team.getAliveMembers().size() : 1));//.setWool(team.getDyeColor());
+                                    item.toItemStack().setAmount((!team.getAliveMembers().isEmpty() ? team.getAliveMembers().size() : 1));
                                     item.setName("§l" + team.getChatColor() + StringUtils.colorizer(team.getName()));
                                     item.removeLore();
-                                    item.addLoreLine("§f" + team.getMembers().size() + "/" + game.getSettings().getMaxTeamPlayers());
-                                    if (!team.getMembers().isEmpty()) {
+                                    item.addLoreLine("§f" + team.getAliveMembers().size() + "/" + game.getSettings().getMaxTeamPlayers());
+                                    if (!team.getAliveMembers().isEmpty()) {
                                         item.addLoreLine("");
-                                        for (GamePlayer teamPlayer : team.getMembers()) {
+                                        for (GamePlayer teamPlayer : team.getAliveMembers()) {
                                             item.addLoreLine(team.getChatColor() + teamPlayer.getOnlinePlayer().getName());
                                         }
                                     }

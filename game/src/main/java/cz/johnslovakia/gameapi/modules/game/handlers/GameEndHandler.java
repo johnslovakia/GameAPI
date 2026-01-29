@@ -108,9 +108,11 @@ public class GameEndHandler {
             LevelModule levelManager = ModuleManager.getModule(LevelModule.class);
             if (levelManager != null) {
                 PlayerLevelData levelProgress = levelManager.getPlayerData(gamePlayer);
-                float xpProgress = (float) levelProgress.getXpOnCurrentLevel() / levelProgress.getLevelRange().neededXP();
-                player.setExp(Math.min(xpProgress, 1.0f));
-                player.setLevel(levelProgress.getLevel());
+                if (levelProgress != null) {
+                    float xpProgress = (float) levelProgress.getXpOnCurrentLevel() / levelProgress.getXpToNextLevel();
+                    player.setExp(Math.min(xpProgress, 1.0f));
+                    player.setLevel(levelProgress.getLevel());
+                }
             }
 
 
@@ -173,46 +175,6 @@ public class GameEndHandler {
             }
 
 
-            Location location;
-            if (gameInstance.getSettings().isTeleportPlayersAfterEnd()){
-                location = gameInstance.getModule(LobbyModule.class).getLobbyLocation().getLocation();
-            }else{
-                if (gameInstance.getCurrentMap().getMainArea() != null) {
-                    location = gameInstance.getCurrentMap().getMainArea().getCenter();
-                }else{
-                    location = new Location(gameInstance.getCurrentMap().getWorld(), 0, 90, 0);
-                }
-            }
-
-
-            new BukkitRunnable(){
-                Location newLocation;
-
-                @Override
-                public void run() {
-                    if (gameService.getGameByID(gameInstance.getID()).isEmpty() || gameInstance.getState() != GameState.ENDING){
-                        this.cancel();
-                        return;
-                    }
-
-                    newLocation = location.add(RandomUtils.randomInteger(-20, 20), 0,  RandomUtils.randomInteger(-20, 20));
-                    if (newLocation.getWorld() == null){
-                        return;
-                    }
-                    newLocation = newLocation.getWorld().getHighestBlockAt(newLocation).getLocation();
-                    newLocation = newLocation.add(0, RandomUtils.randomInteger(5, 10), 0);
-
-                    Utils.spawnFireworks(newLocation, 1, Color.WHITE, FireworkEffect.Type.BALL);
-                    Color color = Color.YELLOW;
-                    if (gameInstance.getSettings().isUseTeams() && winner != null){
-                        color = ((GameTeam) winner).getColor();
-                    }
-                    Utils.spawnFireworks(newLocation, 1, color, FireworkEffect.Type.BALL);
-                }
-            }.runTaskTimer(Minigame.getInstance().getPlugin(), 0L, 30L);
-
-
-
             if (gameInstance.getSpectatorManager().getInventoryManager().getPlayers().contains(gamePlayer.getOnlinePlayer())) {
                 gameInstance.getSpectatorManager().getInventoryManager().unloadInventory(gamePlayer);
             }
@@ -237,7 +199,7 @@ public class GameEndHandler {
                     || !unclaimedRewardsModule.getPlayerUnclaimedRewardsByType(gamePlayer, UnclaimedRewardType.QUEST).isEmpty());
             playerMenu.setBlinkingItemCustomModelData(1026);
 
-            Item quests = new Item(new ItemBuilder(Material.BOOK).hideAllFlags().toItemStack(), 5, "Item.quests", e -> QuestInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
+            Item quests = new Item(new ItemBuilder(Material.BOOK).hideAllFlags().toItemStack(), 6, "Item.quests", e -> QuestInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
             quests.setBlinking(gamePlayer2 -> !unclaimedRewardsModule.getPlayerUnclaimedRewardsByType(gamePlayer2, UnclaimedRewardType.QUEST).isEmpty());
             quests.setBlinkingItemCustomModelData(1010);
 
@@ -249,13 +211,50 @@ public class GameEndHandler {
             gamePlayer.getOnlinePlayer().sendMessage("");
         }
 
+        Location location;
+        if (gameInstance.getSettings().isTeleportPlayersAfterEnd()){
+            location = gameInstance.getModule(LobbyModule.class).getLobbyLocation().getLocation();
+        }else{
+            if (gameInstance.getCurrentMap().getMainArea() != null) {
+                location = gameInstance.getCurrentMap().getMainArea().getCenter();
+            }else{
+                location = new Location(gameInstance.getCurrentMap().getWorld(), 0, 90, 0);
+            }
+        }
+
+        new BukkitRunnable(){
+            Location newLocation;
+
+            @Override
+            public void run() {
+                if (gameService.getGameByID(gameInstance.getID()).isEmpty() || gameInstance.getState() != GameState.ENDING){
+                    this.cancel();
+                    return;
+                }
+
+                newLocation = location.add(RandomUtils.randomInteger(-20, 20), 0,  RandomUtils.randomInteger(-20, 20));
+                if (newLocation.getWorld() == null){
+                    return;
+                }
+                newLocation = newLocation.getWorld().getHighestBlockAt(newLocation).getLocation();
+                newLocation = newLocation.add(0, RandomUtils.randomInteger(5, 10), 0);
+
+                Utils.spawnFireworks(newLocation, 1, Color.WHITE, FireworkEffect.Type.BALL);
+                Color color = Color.YELLOW;
+                if (gameInstance.getSettings().isUseTeams() && winner != null){
+                    color = ((GameTeam) winner).getColor();
+                }
+                Utils.spawnFireworks(newLocation, 1, color, FireworkEffect.Type.BALL);
+            }
+        }.runTaskTimer(Minigame.getInstance().getPlugin(), 0L, 30L);
+
         if (winner != null) {
             if (winner.getWinnerType().equals(Winner.WinnerType.TEAM)) {
                 GameTeam wTeam = (GameTeam) winner;
                 for (GameTeam lTeam : gameInstance.getModule(TeamModule.class).getTeams().values().stream().filter(team -> team != wTeam).toList()) {
-                    lTeam.getMembers().forEach(loser -> statsModule.setPlayerStat(loser, "Winstreak", 0));
+                    lTeam.getAllMembers().forEach(loser -> statsModule.setPlayerStat(loser, "Winstreak", 0));
                 }
-                for (GamePlayer gamePlayer : wTeam.getMembers()) {
+                for (GamePlayer gamePlayer : wTeam.getAllMembers()) {
                     statsModule.increasePlayerStat(gamePlayer, "Winstreak", 1);
                 }
             } else {
@@ -434,6 +433,9 @@ public class GameEndHandler {
 
 
                     Collection<Component> lines = session.getEarnedBySource(resource).entrySet().stream()
+                            .sorted(Map.Entry.<Score, Integer>comparingByValue(Comparator.reverseOrder())
+                                    .thenComparing(entry -> entry.getKey().getDisplayName(gamePlayer))
+                            )
                             .map(entry -> Component.text()
                                     .append(Component.text("§f" + (entry.getKey().hasPluralName() ? + session.getScore(entry.getKey().getName()) + "x " : "") + entry.getKey().getDisplayName(gamePlayer)))
                                     .append(Component.text(" §7→ "))

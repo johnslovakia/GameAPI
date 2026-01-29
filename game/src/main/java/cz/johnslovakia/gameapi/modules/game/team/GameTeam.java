@@ -14,6 +14,7 @@ import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.GameUtils;
 import cz.johnslovakia.gameapi.utils.PartyUtils;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.key.Key;
@@ -35,7 +36,7 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
     private final GameInstance game;
     private final TeamColor teamColor;
 
-    //TODO: zkontrolovat jestli to tu nedrží data i po vymazaní z PlayerManageru
+    @Getter(AccessLevel.PACKAGE)
     private final List<GamePlayer> members = new ArrayList<>();
     private final HashMap<String, Object> metadata = new HashMap<>();
 
@@ -132,7 +133,16 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
                     }
 
                     GameUtils.setTeamNameTag(player, getName() + "_" + game.getID(), getChatColor());
-                    player.playerListName((ModuleManager.getModule(LevelModule.class) != null ? ModuleManager.getModule(LevelModule.class).getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")).append(Component.text(" " + player.getName()).font(Key.key("minecraft", "default")).color(getTeamColor().getTextColor())));
+                    LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
+                    Component levelIcon = Component.empty();
+                    if (levelModule != null && levelModule.getPlayerData(gamePlayer) != null) {
+                        levelIcon = levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon();
+                    }
+
+                    player.playerListName(levelIcon
+                            .append(Component.text(" " + player.getName())
+                                .font(Key.key("minecraft", "default"))
+                                    .color(getTeamColor().getTextColor())));
                     player.setDisplayName(getChatColor() + player.getName());
 
                     if (!cause.equals(TeamJoinCause.AUTO)) {
@@ -160,6 +170,23 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
             return false;
         }
         return false;
+    }
+
+    public void rejoin(GamePlayer gamePlayer){
+        Player player = gamePlayer.getOnlinePlayer();
+
+        GameUtils.setTeamNameTag(player, getName() + "_" + game.getID(), getChatColor());
+        LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
+        Component levelIcon = Component.empty();
+        if (levelModule != null && levelModule.getPlayerData(gamePlayer) != null) {
+            levelIcon = levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon();
+        }
+
+        player.playerListName(levelIcon
+                .append(Component.text(" " + player.getName())
+                        .font(Key.key("minecraft", "default"))
+                        .color(getTeamColor().getTextColor())));
+        player.setDisplayName(getChatColor() + player.getName());
     }
 
     public void quitPlayer(GamePlayer gamePlayer){
@@ -195,7 +222,11 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
     }
 
     public List<GamePlayer> getAliveMembers() {
-        return getAllMembers().stream().filter(gamePlayer -> gamePlayer.getGameSession().getState().equals(GamePlayerState.PLAYER)).toList();
+        return getAllMembers().stream().filter(gamePlayer -> gamePlayer.getGameSession() != null && gamePlayer.getGameSession().getState().equals(GamePlayerState.PLAYER)).toList();
+    }
+
+    public List<GamePlayer> getOnlineMembers() {
+        return getAllMembers().stream().filter(GamePlayer::isOnline).toList();
     }
 
     public List<GamePlayer> getDisconnectedMembers() {

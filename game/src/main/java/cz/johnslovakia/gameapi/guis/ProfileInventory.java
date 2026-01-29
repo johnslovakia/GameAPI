@@ -123,7 +123,6 @@ public class ProfileInventory {
 
                     int bonus = getBonus(gamePlayer);
 
-                    //TODO: nezobrazovat pokud není LevelSystem
                     if (ModuleManager.getInstance().hasModule(LevelModule.class)) {
                         Optional<LevelUpUnclaimedReward> levelUpUnclaimedReward = unclaimedRewardsModule
                                 .getPlayerUnclaimedRewardsByType(gamePlayer, UnclaimedRewardType.LEVELUP).stream()
@@ -143,14 +142,14 @@ public class ProfileInventory {
                                 .getTranslated());
                         level.addLoreLine("");
                         if (levelUpUnclaimedReward.isEmpty()) {
-                            level.addLoreLine(Utils.getStringProgressBar(levelProgress.getXpOnCurrentLevel(), levelProgress.getLevelRange().neededXP()));
+                            level.addLoreLine(Utils.getStringProgressBar(levelProgress.getXpOnCurrentLevel(), levelProgress.getXpToNextLevel()));
                             level.addLoreLine(messageModule.get(player, "inventory.profile_menu.your_level.progress")
                                     .replace("%level%", "" + (levelProgress.getLevel() + 1))
                                     .replace("%xp%", StringUtils.betterNumberFormat(levelProgress.getXpOnCurrentLevel()))
-                                    .replace("%needed_xp%", StringUtils.betterNumberFormat(levelProgress.getLevelRange().neededXP()))
+                                    .replace("%needed_xp%", StringUtils.betterNumberFormat(levelProgress.getXpToNextLevel()))
                                     .getTranslated());
                         } else {
-                            int neededXP = levelModule.getLevelRange(levelUpUnclaimedReward.get().getLevel()).neededXP();
+                            int neededXP = levelModule.getLevelRange(levelUpUnclaimedReward.get().getLevel()).getXPForLevel(levelUpUnclaimedReward.get().getLevel());
                             level.addLoreLine(Utils.getStringProgressBar(neededXP, neededXP));
                             level.addLoreLine(messageModule.get(player, "inventory.profile_menu.your_level.progress")
                                     .replace("%level%", "" + (levelProgress.getLevel() + 1))
@@ -406,11 +405,6 @@ public class ProfileInventory {
                             player.playSound(player, Sound.UI_BUTTON_CLICK, 1F, 1F);
                         }
                     }).build());
-
-
-                    //TODO: statistics
-                    //TODO: udělat, že pravé kliknutí bude tato minihra a levé všechny minihry, možnost zakázat v configu nebo shift + kliknutí budou všechny minihry
-
                 }).build();
         inventory.open(gamePlayer.getOnlinePlayer());
 

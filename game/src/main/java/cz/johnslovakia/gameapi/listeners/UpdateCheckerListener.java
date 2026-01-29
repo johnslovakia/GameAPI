@@ -14,6 +14,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
 
 public class UpdateCheckerListener implements Listener {
 
+
+
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
         Player player = e.getPlayer();
@@ -56,7 +58,7 @@ public class UpdateCheckerListener implements Listener {
                         "§c[!] §fYour version of the §a" + minigame.getName()
                                 + " §fplugin is §coutdated! §fUpdating to the latest version "
                                 + updateChecker.getLatestVersion()
-                                + " is §arecommended! §7(hover for more)")
+                                + " is §arecommended! §6(hover for more)")
                 .hoverEvent(HoverEvent.showText(hover));
 
         player.sendMessage(message);

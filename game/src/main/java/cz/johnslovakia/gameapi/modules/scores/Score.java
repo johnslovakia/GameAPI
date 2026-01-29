@@ -36,6 +36,7 @@ public class Score {
     private final int rewardLimit;
     private final Stat linkedStat;
     private final Reward reward;
+    private final int rewardFrequency;
     private Set<Trigger<?>> triggers = new HashSet<>();;
 
     private final boolean allowedMessage;
@@ -46,6 +47,7 @@ public class Score {
         this.displayName = builder.displayName;
         this.pluralName = builder.pluralName;
         this.reward = builder.reward;
+        this.rewardFrequency = builder.rewardFrequency;
         this.allowedMessage = builder.message;
         this.scoreRanking = builder.scoreRanking;
         this.linkedStat = builder.linkedStat;
@@ -68,6 +70,7 @@ public class Score {
     }
 
     public String getDisplayName(GamePlayer gamePlayer){
+        if (gamePlayer.getGameSession() == null) return displayName;
         if (gamePlayer.getGameSession().getScore(getName()) > 1 && pluralName != null){
             return getPluralName();
         }
@@ -150,6 +153,7 @@ public class Score {
         private String pluralName = null;
         @Setter
         private Reward reward;
+        private int rewardFrequency = 1;
         private boolean message = true;
 
         private boolean scoreRanking = false;
@@ -197,6 +201,14 @@ public class Score {
             for (RewardItem item : rewardItems){
                 reward.addRewardItem(item);
             }
+            return this;
+        }
+
+        public Builder setRewardFrequency(int frequency) {
+            if (frequency < 1) {
+                throw new IllegalArgumentException("Reward frequency must be at least 1, got: " + frequency);
+            }
+            this.rewardFrequency = frequency;
             return this;
         }
 

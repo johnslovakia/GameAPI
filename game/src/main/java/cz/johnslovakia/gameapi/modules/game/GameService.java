@@ -5,6 +5,7 @@ import cz.johnslovakia.gameapi.modules.kits.KitManager;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.GameResetEvent;
 import cz.johnslovakia.gameapi.events.NewArenaEvent;
+import cz.johnslovakia.gameapi.modules.levels.LevelModule;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.serverManagement.DataManager;
 import cz.johnslovakia.gameapi.modules.serverManagement.IGame;
@@ -149,6 +150,10 @@ public class GameService implements Module {
                 if (gamePlayer.getOnlinePlayer().isOnline()) {
                     players.add(gamePlayer.getOnlinePlayer());
                 }else{
+                    LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
+                    if (levelModule != null){
+                        levelModule.getCache().remove(gamePlayer);
+                    }
                     PlayerIdentityRegistry.unregister(gamePlayer.getUniqueId());
                 }
             });

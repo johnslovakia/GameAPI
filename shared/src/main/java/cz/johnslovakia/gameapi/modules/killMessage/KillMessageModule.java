@@ -2,10 +2,16 @@ package cz.johnslovakia.gameapi.modules.killMessage;
 
 import cz.johnslovakia.gameapi.modules.Module;
 
+import cz.johnslovakia.gameapi.modules.ModuleManager;
+import cz.johnslovakia.gameapi.modules.cosmetics.Cosmetic;
+import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsCategory;
+import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
+import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import org.bukkit.damage.DamageType;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class KillMessageModule implements Module {
@@ -99,5 +105,15 @@ public class KillMessageModule implements Module {
 
     public KillMessage getById(String id) {
         return registeredMessages.getOrDefault(id.toLowerCase(), registeredMessages.get("default"));
+    }
+
+    public KillMessage getForPlayer(PlayerIdentity playerIdentity) {
+        CosmeticsModule cosmeticsModule = ModuleManager.getModule(CosmeticsModule.class);
+        if (cosmeticsModule == null) return registeredMessages.get("default");
+
+        return Optional.ofNullable(cosmeticsModule.getCategoryByName("Kill messages"))
+                .map(category -> cosmeticsModule.getPlayerSelectedCosmetic(playerIdentity, category))
+                .map(cosmetic -> registeredMessages.get(cosmetic.getName().toLowerCase()))
+                .orElse(registeredMessages.get("default"));
     }
 }

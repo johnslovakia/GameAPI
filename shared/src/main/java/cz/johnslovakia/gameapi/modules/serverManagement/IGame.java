@@ -6,6 +6,7 @@ import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.Utils;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -16,7 +17,7 @@ public class IGame {
     private final IMinigame minigame;
     private final String name;
 
-    @Setter
+    @Setter @Getter(AccessLevel.PACKAGE)
     private GameData gameData;
 
     public IGame(IMinigame minigame, String name) {

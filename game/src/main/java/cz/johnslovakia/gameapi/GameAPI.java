@@ -71,6 +71,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
+import java.sql.SQLException;
 import java.util.*;
 
 @Getter
@@ -88,7 +89,7 @@ public class GameAPI{
     private Economy vaultEconomy;
     private ProtocolManager protocolManager;
 
-    //TODO: přepsat celou tuto třídu
+    //TODO: přepsat ?
     public GameAPI(Minigame minigame) {
         instance = this;
         this.minigame = minigame;
@@ -137,89 +138,117 @@ public class GameAPI{
                 LiteralCommandNode<CommandSourceStack> rateCommand = Commands.literal("rate")
                         .executes(context -> {
                             CommandSender sender = context.getSource().getSender();
-                            if (!(sender instanceof Player player)) {
-                                return 0;
-                            }
+                            if (!(sender instanceof Player player)) return 0;
+
                             player.sendMessage(Component.text("Usage: /rate <1-5> or your feedback", NamedTextColor.YELLOW));
                             return 0;
                         })
                         .then(Commands.argument("rating", IntegerArgumentType.integer(1, 5))
                                 .executes(context -> {
                                     CommandSender sender = context.getSource().getSender();
-                                    if (!(sender instanceof Player player)) {
-                                        return 0;
-                                    }
+                                    if (!(sender instanceof Player player)) return 0;
 
                                     int rating = IntegerArgumentType.getInteger(context, "rating");
 
-                                    SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
-                                    if (connection == null) {
-                                        return 0;
+                                    try (SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection()) {
+                                        if (connection == null) return 0;
+
+                                        Optional<Row> result = connection.select()
+                                                .from("TestServer")
+                                                .where().isEqual("Nickname", player.getName())
+                                                .obtainOne();
+
+                                        player.sendMessage(Component.text(
+                                                "Thanks for your feedback! We truly appreciate it!",
+                                                NamedTextColor.GREEN
+                                        ));
+
+                                        if (result.isEmpty()) {
+                                            connection.insert()
+                                                    .into("TestServer", "Nickname", "Minigame", "Stars", "Version")
+                                                    .values(
+                                                            player.getName(),
+                                                            Minigame.getInstance().getName(),
+                                                            rating,
+                                                            Minigame.getInstance().getPlugin().getDescription().getVersion()
+                                                    )
+                                                    .execute();
+
+                                            if (rating < 5) {
+                                                player.sendMessage(Component.text(
+                                                        "We'd appreciate it if you shared the reason for your rating: /rate <feedback>",
+                                                        TextColor.color(199, 15, 209)
+                                                ));
+                                                player.sendMessage("§eWe'll keep improving the plugin to make it as great as possible.");
+                                            }
+                                        } else {
+                                            connection.update()
+                                                    .table("TestServer")
+                                                    .set("Stars", rating)
+                                                    .where().isEqual("Nickname", player.getName())
+                                                    .execute();
+
+                                            if (result.get().get("Feedback") == null && rating < 5) {
+                                                player.sendMessage(Component.text(
+                                                        "We'd appreciate it if you shared the reason for your rating: /rate <feedback>",
+                                                        TextColor.color(170, 7, 179)
+                                                ));
+                                                player.sendMessage("§eWe'll keep improving the plugin to make it as great as possible.");
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
                                     }
 
-                                    Optional<Row> result2 = connection.select()
-                                            .from("TestServer")
-                                            .where().isEqual("Nickname", player.getName())
-                                            .obtainOne();
-
-                                    player.sendMessage(Component.text("Thanks for your feedback! We truly appreciate it!", NamedTextColor.GREEN));
-                                    if (result2.isEmpty()) {
-                                        connection.insert()
-                                                .into("TestServer", "Nickname", "Minigame", "Stars", "Version")
-                                                .values(player.getName(), Minigame.getInstance().getName(), rating, Minigame.getInstance().getPlugin().getDescription().getVersion())
-                                                .execute();
-                                        if (rating < 5){
-                                            player.sendMessage(Component.text("We'd appreciate it if you shared the reason for your rating: /rate <feedback>", TextColor.color(199, 15, 209)));
-                                            player.sendMessage("§eWe'll keep improving the plugin to make it as great as possible.");
-                                        }
-                                    }else{
-                                        connection.update()
-                                                .table("TestServer")
-                                                .set("Stars", rating)
-                                                .execute();
-                                        if (result2.get().get("Feedback") == null && rating < 5){
-                                            player.sendMessage(Component.text("We'd appreciate it if you shared the reason for your rating: /rate <feedback>", TextColor.color(170, 7, 179)));
-                                            player.sendMessage("§eWe'll keep improving the plugin to make it as great as possible.");
-                                        }
-                                    }
                                     return 1;
                                 })
                         )
                         .then(Commands.argument("feedback", StringArgumentType.greedyString())
                                 .executes(context -> {
                                     CommandSender sender = context.getSource().getSender();
-                                    if (!(sender instanceof Player player)) {
-                                        return 0;
-                                    }
+                                    if (!(sender instanceof Player player)) return 0;
 
                                     String feedback = context.getArgument("feedback", String.class);
 
-                                    SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
-                                    if (connection == null) {
-                                        return 0;
+                                    try (SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection()) {
+                                        if (connection == null) return 0;
+
+                                        Optional<Row> result = connection.select()
+                                                .from("TestServer")
+                                                .where().isEqual("Nickname", player.getName())
+                                                .obtainOne();
+
+                                        if (result.isEmpty()) {
+                                            connection.insert()
+                                                    .into("TestServer", "Nickname", "Minigame", "Feedback", "Version")
+                                                    .values(
+                                                            player.getName(),
+                                                            Minigame.getInstance().getName(),
+                                                            feedback,
+                                                            Minigame.getInstance().getPlugin().getDescription().getVersion()
+                                                    )
+                                                    .execute();
+                                        } else {
+                                            connection.update()
+                                                    .table("TestServer")
+                                                    .set("Feedback", feedback)
+                                                    .where().isEqual("Nickname", player.getName())
+                                                    .execute();
+                                        }
+
+                                        player.sendMessage(Component.text(
+                                                "Thanks for your feedback! We truly appreciate it!",
+                                                NamedTextColor.GREEN
+                                        ));
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
                                     }
 
-                                    Optional<Row> result2 = connection.select()
-                                            .from("TestServer")
-                                            .where().isEqual("Nickname", player.getName())
-                                            .obtainOne();
-
-                                    if (result2.isEmpty()) {
-                                        connection.insert()
-                                                .into("TestServer", "Nickname", "Minigame", "Feedback", "Version")
-                                                .values(player.getName(), Minigame.getInstance().getName(), feedback, Minigame.getInstance().getPlugin().getDescription().getVersion())
-                                                .execute();
-                                    }else{
-                                        connection.update()
-                                                .table("TestServer")
-                                                .set("Feedback", feedback)
-                                                .execute();
-                                    }
-                                    player.sendMessage(Component.text("Thanks for your feedback! We truly appreciate it!", NamedTextColor.GREEN));
                                     return 1;
                                 })
                         )
                         .build();
+
                 commands.registrar().register(rateCommand);
             }
         });
@@ -454,6 +483,7 @@ public class GameAPI{
         }
 
         resourcesModule.registerResource(coins.build(), experiencePoints, cosmeticTokens);
+
         moduleManager.registerModule(new CosmeticsModule());
 
         minigame.setupPlayerScores();
@@ -462,10 +492,7 @@ public class GameAPI{
         MinigameTable minigameTable = minigame.getMinigameTable();
         PlayerTable playerTable = new PlayerTable();
 
-        SQLDatabaseConnection connection = Minigame.getInstance().getDatabase().getConnection();
-
-
-        JSConfigs.createTable(connection);
+        JSConfigs.createTable();
         LevelModule levelModule;
         if (minigame.getSettings().isUseLevelSystem()) {
             levelModule = LevelModule.loadOrCreateLevelModule();
@@ -525,23 +552,27 @@ public class GameAPI{
         if (levelModule != null || dailyRewardTrackModule != null){
             experiencePoints.observe((gamePlayer, amount, type) -> {
                 if (type == ResourceChangeType.DEPOSIT) {
-                    Player player = gamePlayer.getOnlinePlayer();
-
                     if (levelModule != null) {
                         Bukkit.getScheduler().runTaskAsynchronously(plugin, task -> levelModule.checkLevelUp(gamePlayer));
 
-                        PlayerLevelData levelProgress = levelModule.getPlayerData(gamePlayer);
-                        levelProgress.calculate().thenRun(() -> {
-                            float xpProgress = (float) levelProgress.getXpOnCurrentLevel() / levelProgress.getLevelRange().neededXP();
+                        if (gamePlayer.getOfflinePlayer().isOnline()) {
+                            Player player = gamePlayer.getOnlinePlayer();
+                            PlayerLevelData levelProgress = levelModule.getPlayerData(gamePlayer);
+                            if (levelProgress != null) {
+                                levelProgress.calculate().thenRun(() -> {
+                                    float xpProgress = (float) levelProgress.getXpOnCurrentLevel() / levelProgress.getXpToNextLevel();
 
-                            if (!((GamePlayer)gamePlayer).getGame().getState().equals(GameState.INGAME)) {
-                                Bukkit.getScheduler().runTask(minigame.getPlugin(), task -> {
-                                    player.setExp(Math.min(xpProgress, 1.0f));
-                                    player.setLevel(levelProgress.getLevel());
+                                    if (!((GamePlayer) gamePlayer).getGame().getState().equals(GameState.INGAME)) {
+                                        Bukkit.getScheduler().runTask(minigame.getPlugin(), task -> {
+                                            player.setExp(Math.min(xpProgress, 1.0f));
+                                            player.setLevel(levelProgress.getLevel());
+                                        });
+                                    }
                                 });
                             }
-                        });
+                        }
                     }
+
 
                     if (dailyRewardTrackModule != null && levelModule != null) {
                         if (dailyRewardTrackModule.getPlayerCurrentTier(gamePlayer) != null) {

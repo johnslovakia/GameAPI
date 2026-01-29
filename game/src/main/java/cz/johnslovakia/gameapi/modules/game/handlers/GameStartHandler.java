@@ -177,7 +177,6 @@ public class GameStartHandler {
         }
 
 
-        //TODO: udělat podporu i pro hry, kde to portuje na lobby na konci hry
         WorldManager.unload(gameInstance.getModule(LobbyModule.class).getLobbyLocation().getWorld());
 
 

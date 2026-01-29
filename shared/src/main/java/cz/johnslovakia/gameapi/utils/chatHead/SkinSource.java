@@ -1,17 +1,16 @@
 package cz.johnslovakia.gameapi.utils.chatHead;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.JoinConfiguration;
-import net.kyori.adventure.text.format.TextColor;
-
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.OfflinePlayer;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 /**
  * Abstract class to manage SkinSources
@@ -61,7 +60,7 @@ public abstract class SkinSource {
      * @return           An array of BaseComponents representing the player's head.
      *                   Each BaseComponent represents a single pixel, forming a 8x8 grid of pixels.
      */
-    abstract public Component getHead(OfflinePlayer player, boolean overlay);
+    abstract public BaseComponent[] getHead(OfflinePlayer player, boolean overlay);
 
 
     /**
@@ -70,31 +69,50 @@ public abstract class SkinSource {
      * @param hexColors The 8x8 grid in hex form.
      * @return The 8x8 grid in BaseComponent[].
      */
-    public static Component toComponent(String[] hexColors) {
+    public BaseComponent[] toBaseComponent(String[] hexColors) {
+        // Check if the retrieved colors array is valid (has at least 64 elements)
         if (hexColors == null || hexColors.length < 64) {
             throw new IllegalArgumentException("Hex colors must have at least 64 elements.");
         }
 
-        List<Component> components = new ArrayList<>(64);
+        // Initialize a 2D array to store TextComponents representing each pixel of the players head
+        TextComponent[][] components = new TextComponent[8][8];
 
         for (int i = 0; i < 64; i++) {
+            int row = i / 8;
+            int col = i % 8;
             char unicodeChar = (char) ('\uF000' + (i % 8) + 1);
-            String text;
+            TextComponent component = new TextComponent();
 
+            // Determine the character and styling based on the position of the pixel within the 8x8 grid
             if (i == 7 || i == 15 || i == 23 || i == 31 || i == 39 || i == 47 || i == 55) {
-                text = "" + unicodeChar + '\uF101';
+                component.setText(unicodeChar + Character.toString('\uF101'));
             } else if (i == 63) {
-                text = "" + unicodeChar;
+                component.setText(Character.toString(unicodeChar));
             } else {
-                text = "" + unicodeChar + '\uF102';
+                component.setText(unicodeChar + Character.toString('\uF102'));
             }
 
-            TextColor color = TextColor.fromHexString(hexColors[i]);
-            Component pixel = Component.text(text, color);
-            components.add(pixel);
+            // Set the color of the TextComponent based on the corresponding hexadecimal color
+            component.setColor(ChatColor.of(hexColors[i]));
+            components[row][col] = component;
         }
 
-        return Component.join(JoinConfiguration.noSeparators(), components);
+        // Create a default TextComponent with no text and the default font.
+        TextComponent defaultFont = new TextComponent();
+        defaultFont.setText("");
+        defaultFont.setFont("minecraft:default");
+
+        // Construct the array of BaseComponents representing the player's head by appending the TextComponents
+        BaseComponent[] baseComponents = new ComponentBuilder()
+                .append(Arrays.stream(components)
+                        .flatMap(Arrays::stream)
+                        .toArray(TextComponent[]::new))
+                .append(defaultFont)
+                .create();
+
+        return baseComponents; // Return the array of BaseComponents representing the players head
+
     }
 
     /**
@@ -117,27 +135,39 @@ public abstract class SkinSource {
         try {
             BufferedImage skinImage = ImageIO.read(new URL(playerSkinUrl));
 
+            // If the skin image is less than 64 pixels in height, it’s an old skin without overlays.
+            if (skinImage.getHeight() < 64) {
+                overlay = false;
+            }
+
             int faceStartX = 8, faceStartY = 8;
             int faceWidth = 8, faceHeight = 8;
+            int overlayStartX = 40, overlayStartY = 8;
 
-            int overlayStartX = 40;
-            int overlayStartY = 8;
-
+            // Extract the face region.
             BufferedImage faceImage = skinImage.getSubimage(faceStartX, faceStartY, faceWidth, faceHeight);
-            BufferedImage overlayImage = skinImage.getSubimage(overlayStartX, overlayStartY, faceWidth, faceHeight);
+
+            // Only extract the overlay if it's enabled and the skin supports it.
+            BufferedImage overlayImage = null;
+            if (overlay) {
+                overlayImage = skinImage.getSubimage(overlayStartX, overlayStartY, faceWidth, faceHeight);
+            }
 
             int index = 0;
             for (int x = 0; x < faceHeight; x++) {
                 for (int y = 0; y < faceWidth; y++) {
                     int rgbFace = faceImage.getRGB(x, y);
-                    int rgbOverlay = overlayImage.getRGB(x, y);
-
-                    // Check if the overlay pixel is not transparent
-                    if ((rgbOverlay >> 24) != 0x00 && overlay) {
-                        colors[index++] = String.format("#%06X", (rgbOverlay & 0xFFFFFF)); // Use overlay color
-                    } else {
-                        colors[index++] = String.format("#%06X", (rgbFace & 0xFFFFFF)); // Use face color
+                    // If overlay is enabled, check the corresponding overlay pixel.
+                    if (overlay && overlayImage != null) {
+                        int rgbOverlay = overlayImage.getRGB(x, y);
+                        // If the overlay pixel is not fully transparent, use it.
+                        if ((rgbOverlay >> 24) != 0x00) {
+                            colors[index++] = String.format("#%06X", (rgbOverlay & 0xFFFFFF));
+                            continue;
+                        }
                     }
+                    // Otherwise, use the face pixel.
+                    colors[index++] = String.format("#%06X", (rgbFace & 0xFFFFFF));
                 }
             }
         } catch (IOException e) {

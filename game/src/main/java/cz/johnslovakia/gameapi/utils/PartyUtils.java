@@ -20,7 +20,7 @@ public class PartyUtils {
                 GameInstance game = gamePlayer.getGame();
                 GameTeam team = game.getModule(TeamModule.class).getSmallestTeam();
 
-                if (team.getMembers().size() < game.getSettings().getMaxTeamPlayers()) {
+                if (team.getOnlineMembers().size() < game.getSettings().getMaxTeamPlayers()) {
                     team.joinPlayer(gamePlayer, TeamJoinCause.PARTY_OTHER_TEAM);
                 } else {
                     leftedAlone.add(gamePlayer);

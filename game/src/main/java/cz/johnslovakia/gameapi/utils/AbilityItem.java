@@ -1,7 +1,5 @@
 package cz.johnslovakia.gameapi.utils;
 
-import cz.johnslovakia.gameapi.Minigame;
-import cz.johnslovakia.gameapi.MinigameSettings;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.Language;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
@@ -21,13 +19,14 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 @Getter
 public class AbilityItem implements Listener{
 
-    public static NamespacedKey ABILITY_ITEM_ID;// = new NamespacedKey(Minigame.getInstance().getPlugin(), "ability_id");
+    private static NamespacedKey ABILITY_ITEM_ID;// = new NamespacedKey(Minigame.getInstance().getPlugin(), "ability_id");
 
     public static boolean isAbilityItem(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return false;
@@ -41,15 +40,10 @@ public class AbilityItem implements Listener{
 
 
     @Getter
-    public static List<AbilityItem> abilityItems = new ArrayList<>();
+    public static Map<String, AbilityItem> abilityItems = new ConcurrentHashMap<>();
 
     public static AbilityItem getAbilityItem(String name){
-        for (AbilityItem abilityItem : abilityItems){
-            if (abilityItem.getName().equalsIgnoreCase(name)){
-                return abilityItem;
-            }
-        }
-        return null;
+        return abilityItems.get(name);
     }
 
     public static Optional<AbilityItem> getAbilityItem(ItemStack item) {
@@ -64,9 +58,7 @@ public class AbilityItem implements Listener{
             return Optional.empty();
         }
 
-        return abilityItems.stream()
-                .filter(ai -> ai.getName().equalsIgnoreCase(id))
-                .findAny();
+        return Optional.ofNullable(abilityItems.get(id));
     }
 
     /*public static Optional<AbilityItem> getAbilityItem(ItemStack item){
@@ -80,7 +72,6 @@ public class AbilityItem implements Listener{
     private final List<Validator<?>> validators;
     private final Map<Action, Consumer<ActionContext>> actions;
     private final Map<Action, Cooldown> cooldowns;
-    private final Map<GamePlayer, Cooldown> playerCooldowns = new HashMap<>();
     private final String loreTranslationKey;
     private final boolean consumable;
 
@@ -95,7 +86,11 @@ public class AbilityItem implements Listener{
         this.loreTranslationKey = builder.loreTranslationKey;
         this.consumable = builder.consumable;
 
-        abilityItems.add(this);
+        abilityItems.put(builder.name, this);
+    }
+
+    public Cooldown getCooldown(Action action){
+        return cooldowns.get(action);
     }
 
     public void consume(Player player, ItemStack itemStack){

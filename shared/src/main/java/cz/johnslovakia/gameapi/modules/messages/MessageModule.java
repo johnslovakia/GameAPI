@@ -25,6 +25,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -33,7 +34,7 @@ import java.util.logging.Level;
 public class MessageModule implements Module, Listener {
 
     private final JavaPlugin plugin;
-    private List<FileGroup> fileGroups = new ArrayList<>();
+    private List<FileGroup> fileGroups;
 
     private Map<String, Map<Language, String>> messages = new HashMap<>();
     private ConcurrentMap<PlayerIdentity, Language> playerLanguages = new ConcurrentHashMap<>();
@@ -43,6 +44,10 @@ public class MessageModule implements Module, Listener {
         this.fileGroups = fileGroups;
     }
 
+    public MessageModule(JavaPlugin plugin, FileGroup... fileGroups) {
+        this.plugin = plugin;
+        this.fileGroups = Arrays.asList(fileGroups);
+    }
 
     @Override
     public void initialize() {
@@ -95,37 +100,48 @@ public class MessageModule implements Module, Listener {
 
     public void setPlayerLanguage(PlayerIdentity playerIdentity, Language language, boolean message) {
         Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
-            SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection();
-            if (connection == null) {
-                return;
-            }
-            QueryResult result = connection.update()
-                    .table(PlayerTable.TABLE_NAME)
-                    .set("Language", language.getName())
-                    .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
-                    .execute();
+            if (Shared.getInstance().getDatabase() == null) return;
 
-            if (result.isSuccessful()) {
-                playerLanguages.put(playerIdentity, language);
-                if (message)
-                    get(playerIdentity, "chat.language.changed")
-                            .replace("%language%", StringUtils.capitalize(language.getName()))
-                            .send();
-            } else {
-                if (message)
-                    playerIdentity.getOnlinePlayer().sendMessage("§cSomething went wrong. I can't change your language.");
-                Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+                if (connection == null) return;
+
+                QueryResult result = connection.update()
+                        .table(PlayerTable.TABLE_NAME)
+                        .set("Language", language.getName())
+                        .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
+                        .execute();
+
+                if (result.isSuccessful()) {
+                    playerLanguages.put(playerIdentity, language);
+                    if (message) {
+                        get(playerIdentity, "chat.language.changed")
+                                .replace("%language%", StringUtils.capitalize(language.getName()))
+                                .send();
+                    }
+                } else {
+                    if (message) {
+                        playerIdentity.getOnlinePlayer().sendMessage("§cSomething went wrong. I can't change your language.");
+                    }
+                    Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+                }
+
+            } catch (Exception e) {
+                Logger.log("Failed to set language for " + playerIdentity.getOnlinePlayer().getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+                e.printStackTrace();
             }
         });
     }
 
     public Language getPlayerLanguage(PlayerIdentity playerIdentity) {
         return playerLanguages.computeIfAbsent(playerIdentity, player -> {
-            try {
-                Optional<Row> result = Shared.getInstance().getDatabase().getConnection().select()
+            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+                if (connection == null) return Language.getDefaultLanguage();
+
+                Optional<Row> result = connection.select()
                         .from(PlayerTable.TABLE_NAME)
                         .where().isEqual("Nickname", player.getOnlinePlayer().getName())
                         .obtainOne();
+
                 return result
                         .map(row -> Language.getLanguage(row.getString("Language")))
                         .orElse(Language.getDefaultLanguage());

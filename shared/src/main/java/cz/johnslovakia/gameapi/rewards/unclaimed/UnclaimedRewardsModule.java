@@ -84,17 +84,17 @@ public class UnclaimedRewardsModule implements Listener, Module {
         return CompletableFuture.supplyAsync(() -> {
             List<UnclaimedReward> unclaimedRewards = new ArrayList<>();
 
-            try {
-                SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection();
+            if (Shared.getInstance().getDatabase() == null) return unclaimedRewards;
+
+            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+                if (connection == null) return unclaimedRewards;
 
                 QueryRowsResult<Row> result = connection.select()
                         .from("unclaimed_rewards")
                         .where().isEqual("Nickname", playerIdentity.getName())
                         .obtainAll();
 
-                if (result.isEmpty()) {
-                    return unclaimedRewards;
-                }
+                if (result.isEmpty()) return unclaimedRewards;
 
                 for (Row row : result) {
                     try {
@@ -123,14 +123,15 @@ public class UnclaimedRewardsModule implements Listener, Module {
 
                         unclaimedRewards.add(unclaimedReward);
                         addUnclaimedReward(playerIdentity, unclaimedReward);
+
                     } catch (Exception e) {
                         Logger.log("Failed to parse unclaimed reward for player " + playerIdentity.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
                     }
                 }
 
-            } catch (Exception exception) {
-                Logger.log("Failed to load unclaimed rewards for player " + playerIdentity.getName() + ": " + exception.getMessage(), Logger.LogType.ERROR);
-                exception.printStackTrace();
+            } catch (Exception e) {
+                Logger.log("Failed to load unclaimed rewards for player " + playerIdentity.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+                e.printStackTrace();
             }
 
             return unclaimedRewards;

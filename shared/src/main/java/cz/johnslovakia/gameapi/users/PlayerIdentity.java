@@ -24,7 +24,7 @@ public interface PlayerIdentity {
     }
 
     class EmptyFriendsInterface implements FriendsInterface {
-        static final EmptyFriendsInterface INSTANCE = new EmptyFriendsInterface();
+        public static final EmptyFriendsInterface INSTANCE = new EmptyFriendsInterface();
 
         @Override
         public boolean hasFriends() {
@@ -43,7 +43,7 @@ public interface PlayerIdentity {
     }
 
     class EmptyPartyInterface implements PartyInterface {
-        static final EmptyPartyInterface INSTANCE = new EmptyPartyInterface();
+        public static final EmptyPartyInterface INSTANCE = new EmptyPartyInterface();
 
         @Override
         public boolean isInParty() {

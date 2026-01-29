@@ -75,10 +75,10 @@ public class KitInventoryEditor implements Listener {
         ItemStack[] hotbarItems = Arrays.copyOfRange(currentKitInventory.getContents(), 0, 9);
         ItemStack[] topInventoryItems = Arrays.copyOfRange(currentKitInventory.getContents(), 9, 36);
 
-        for (int i = 0; i <= 8; i++) { //<
+        for (int i = 0; i <= 8; i++) {
             gui.setItem(i + 36, hotbarItems[i]); // Hotbar
         }
-        for (int i = 0; i <= 26; i++) { //<
+        for (int i = 0; i <= 26; i++) {
             gui.setItem(i, topInventoryItems[i]); // Top inventory
         }
 

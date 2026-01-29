@@ -63,8 +63,8 @@ public class TeamModule extends GameModule {
         return highest;
     }
 
-    public Optional<GameTeam> getTeam(String name){
-        return Optional.ofNullable(teams.get(name));
+    public GameTeam getTeam(String name){
+        return teams.get(name);
     }
 
 

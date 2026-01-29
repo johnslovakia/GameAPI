@@ -82,49 +82,75 @@ public class CosmeticsModule implements Listener, Module {
         Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {savePlayerCosmetics(playerIdentity);});
     }
 
-    public void savePlayerCosmetics(PlayerIdentity playerIdentity){
-        SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection();
+    public void savePlayerCosmetics(PlayerIdentity playerIdentity) {
+        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+            if (connection == null) {
+                Logger.log("Database connection is null when saving cosmetics for " + playerIdentity.getOnlinePlayer().getName(), Logger.LogType.ERROR);
+                return;
+            }
 
-        QueryResult cosmeticResult = connection.update()
-                .table(PlayerTable.TABLE_NAME)
-                .set("Cosmetics", CosmeticsStorage.toJSON(playerIdentity, selectedCosmetics.get(playerIdentity), purchasedCosmetics.get(playerIdentity)).toString())
-                .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
-                .execute();
-        if (!cosmeticResult.isSuccessful()) {
-            Logger.log("Something went wrong when saving cosmetics data! The following message is for Developers: ", Logger.LogType.ERROR);
-            Logger.log(cosmeticResult.getRejectMessage(), Logger.LogType.ERROR);
+            QueryResult cosmeticResult = connection.update()
+                    .table(PlayerTable.TABLE_NAME)
+                    .set("Cosmetics", CosmeticsStorage.toJSON(
+                            playerIdentity,
+                            selectedCosmetics.get(playerIdentity),
+                            purchasedCosmetics.get(playerIdentity)
+                    ).toString())
+                    .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
+                    .execute();
+
+            if (!cosmeticResult.isSuccessful()) {
+                Logger.log("Something went wrong when saving cosmetics data! The following message is for Developers: ", Logger.LogType.ERROR);
+                Logger.log(cosmeticResult.getRejectMessage(), Logger.LogType.ERROR);
+                playerIdentity.getOnlinePlayer().sendMessage("§cAn error occurred while saving cosmetics data. Sorry for the inconvenience.");
+            }
+
+        } catch (Exception e) {
+            Logger.log("Failed to save cosmetics data for player " + playerIdentity.getOnlinePlayer().getName()
+                    + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
+            e.printStackTrace();
             playerIdentity.getOnlinePlayer().sendMessage("§cAn error occurred while saving cosmetics data. Sorry for the inconvenience.");
         }
     }
 
 
-    public void loadPlayerCosmetics(PlayerIdentity playerIdentity){
-        SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection();
+    public void loadPlayerCosmetics(PlayerIdentity playerIdentity) {
+        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+            if (connection == null) {
+                Logger.log("Database connection is null when loading cosmetics for " + playerIdentity.getOnlinePlayer().getName(), Logger.LogType.ERROR);
+                playerIdentity.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (0)");
+                return;
+            }
 
+            Optional<Row> result = connection.select()
+                    .from(PlayerTable.TABLE_NAME)
+                    .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
+                    .obtainOne();
 
-        Optional<Row> result = connection.select()
-                .from(PlayerTable.TABLE_NAME)
-                .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
-                .obtainOne();
-        if (result.isEmpty()) {
-            Logger.log("I can't get cosmetics data for player " + playerIdentity.getOnlinePlayer().getName() + ". (1)", Logger.LogType.ERROR);
-            playerIdentity.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (1)");
-        }else {
-            try{
+            if (result.isEmpty()) {
+                Logger.log("I can't get cosmetics data for player " + playerIdentity.getOnlinePlayer().getName() + ". (1)", Logger.LogType.ERROR);
+                playerIdentity.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (1)");
+                return;
+            }
+
+            try {
                 String jsonString = result.get().getString("Cosmetics");
                 if (jsonString != null) {
                     JSONObject jsonObject = new JSONObject(jsonString);
 
                     for (CosmeticsCategory category : getCategories()) {
-                        if (!jsonObject.getJSONArray("purchased").isEmpty())
+                        if (jsonObject.has("purchased") && !jsonObject.getJSONArray("purchased").isEmpty()) {
                             purchasedCosmetics.put(playerIdentity, CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("purchased")));
+                        }
 
+                        if (jsonObject.has("selected") && !jsonObject.getJSONArray("selected").isEmpty()) {
+                            List<Cosmetic> cosmetics = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("selected"))
+                                    .stream()
+                                    .filter(c -> getCategory(c) != null && getCategory(c).equals(category))
+                                    .toList();
 
-                        if (!jsonObject.getJSONArray("selected").isEmpty()) {
-                            List<Cosmetic> cosmetics = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("selected")).stream().filter(c -> getCategory(c) != null && getCategory(c).equals(category)).toList();
                             if (!cosmetics.isEmpty()) {
-                                //selectedCosmetics.put(category, cosmetics.get(0));
-                                cosmetics.getFirst().select(playerIdentity, false);
+                                cosmetics.get(0).select(playerIdentity, false);
                             }
                         }
                     }
@@ -134,6 +160,11 @@ public class CosmeticsModule implements Listener, Module {
                 playerIdentity.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (2)");
                 exception.printStackTrace();
             }
+
+        } catch (Exception e) {
+            Logger.log("Failed to load cosmetics data for player " + playerIdentity.getOnlinePlayer().getName() + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
+            playerIdentity.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (SQL)");
+            e.printStackTrace();
         }
     }
 

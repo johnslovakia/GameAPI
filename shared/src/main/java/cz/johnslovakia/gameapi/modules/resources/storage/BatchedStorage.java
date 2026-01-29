@@ -34,7 +34,7 @@ public class BatchedStorage implements ResourceStorage {
                 "resource-" + resourceName,
                 BatchConfig.builder("resource-" + resourceName)
                         .maxBatchSize(50)
-                        .flushIntervalSeconds(180)
+                        .flushIntervalSeconds(60)
                         .build(),
                 this::loadBalanceFromDB,
                 this::saveBalanceToDB,
@@ -53,40 +53,34 @@ public class BatchedStorage implements ResourceStorage {
 
     @Override
     public void onEnable() {
-        SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection();
-        if (connection != null) {
-            Connection conn = Shared.getInstance().getDatabase().getConnection().getConnection();
+        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+            if (dbConn == null) return;
 
-            try (
-                    PreparedStatement checkStmt = conn.prepareStatement(
-                            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?"
-                    )
-            ) {
+            Connection conn = dbConn.getConnection();
+            String checkSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?";
+
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
                 checkStmt.setString(1, Shared.getInstance().getDatabase().getDatabase());
                 checkStmt.setString(2, tableName);
                 checkStmt.setString(3, resourceName);
 
-                ResultSet rs = checkStmt.executeQuery();
-                boolean exists = false;
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    boolean exists = false;
+                    if (rs.next()) {
+                        exists = rs.getInt(1) > 0;
+                    }
 
-                if (rs.next()) {
-                    exists = rs.getInt(1) > 0;
-                }
-
-                rs.close();
-
-                if (!exists) {
-                    try (Statement alterStmt = conn.createStatement()) {
+                    if (!exists) {
                         String sql = "ALTER TABLE `" + tableName + "` ADD `" + resourceName + "` INT DEFAULT 0";
-                        alterStmt.executeUpdate(sql);
-                    } catch (SQLException e) {
-                        e.printStackTrace();
+                        try (Statement alterStmt = conn.createStatement()) {
+                            alterStmt.executeUpdate(sql);
+                        }
                     }
                 }
-
-            } catch (SQLException e) {
-                e.printStackTrace();
             }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
@@ -97,29 +91,33 @@ public class BatchedStorage implements ResourceStorage {
             return results;
         }
 
-
         String placeholders = String.join(",", Collections.nCopies(playerIdentities.size(), "?"));
         String sql = "SELECT Nickname, " + resourceName +
                 " FROM " + tableName +
                 " WHERE Nickname IN (" + placeholders + ")";
 
-        try (Connection conn = Shared.getInstance().getDatabase().getConnection().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            int i = 1;
-            Map<String, PlayerIdentity> nicknameMap = new HashMap<>();
-            for (PlayerIdentity playerIdentity : playerIdentities) {
-                stmt.setString(i++, playerIdentity.getName());
-                nicknameMap.put(playerIdentity.getName(), playerIdentity);
-            }
+        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+            if (dbConn != null) {
+                Connection conn = dbConn.getConnection();
 
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String nickname = rs.getString("Nickname");
-                    PlayerIdentity playerIdentity = nicknameMap.get(nickname);
-                    if (playerIdentity == null) continue;
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    int i = 1;
+                    Map<String, PlayerIdentity> nicknameMap = new HashMap<>();
+                    for (PlayerIdentity playerIdentity : playerIdentities) {
+                        stmt.setString(i++, playerIdentity.getName());
+                        nicknameMap.put(playerIdentity.getName(), playerIdentity);
+                    }
 
-                    int balance = rs.getInt(resourceName);
-                    results.put(playerIdentity, balance);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        while (rs.next()) {
+                            String nickname = rs.getString("Nickname");
+                            PlayerIdentity playerIdentity = nicknameMap.get(nickname);
+                            if (playerIdentity == null) continue;
+
+                            int balance = rs.getInt(resourceName);
+                            results.put(playerIdentity, balance);
+                        }
+                    }
                 }
             }
         }
@@ -135,8 +133,10 @@ public class BatchedStorage implements ResourceStorage {
             throws SQLException {
         if (changes.isEmpty()) return;
 
-        try (SQLDatabaseConnection sql = Shared.getInstance().getDatabase().getConnection()) {
-            Connection conn = sql.getConnection();
+        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+            if (dbConn == null) return;
+
+            Connection conn = dbConn.getConnection();
             conn.setAutoCommit(false);
 
             String setSql = "INSERT INTO " + tableName + " (Nickname, " + resourceName + ")" +
@@ -169,12 +169,8 @@ public class BatchedStorage implements ResourceStorage {
                     }
                 }
 
-                if (setCount > 0) {
-                    setStmt.executeBatch();
-                }
-                if (modifyCount > 0) {
-                    modifyStmt.executeBatch();
-                }
+                if (setCount > 0) setStmt.executeBatch();
+                if (modifyCount > 0) modifyStmt.executeBatch();
 
                 conn.commit();
             } catch (SQLException e) {

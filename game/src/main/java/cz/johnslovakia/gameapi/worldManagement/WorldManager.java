@@ -44,14 +44,16 @@ public class WorldManager {
 
         String worldName = world.getName();
 
+        boolean wait = false;
         if (!world.getPlayers().isEmpty()){
             world.getPlayers().forEach(player -> {
                 player.sendMessage("§cAn error occurred, you are being sent to the lobby");
                 GameUtils.sendToLobby(player, false);
             });
+            wait = true;
         }
 
-        Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), () -> {
+        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
             try {
                 boolean success = Bukkit.unloadWorld(world, false);
                 if (!success) {
@@ -77,7 +79,7 @@ public class WorldManager {
                     }
                 }
             });
-        });
+        }, wait ? 65L : 0L);
     }
 
     public static void delete(File file){
@@ -98,12 +100,7 @@ public class WorldManager {
 
         World bukkitWorld = Bukkit.getWorld(worldName);
         if (bukkitWorld != null){
-            //TODO: potřeba přepsat a udělat lepší system při podpoře více verzí!
-            if (GameAPI.getInstance().getVersion().contains("1_20")){
-                bukkitWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
-            }else{
-                bukkitWorld.setGameRuleValue("doDaylightCycle", "false");
-            }
+            bukkitWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
         }
 
     }

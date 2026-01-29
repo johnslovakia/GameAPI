@@ -27,6 +27,7 @@ import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.Row;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
@@ -62,7 +63,8 @@ public class LevelModule implements Module, Listener {
     @Getter(AccessLevel.PACKAGE)
     private List<LevelEvolution> levelEvolutions = new ArrayList<>();
 
-    private Map<PlayerIdentity, PlayerLevelData> cache = new ConcurrentHashMap<>();
+    @Getter
+    public transient Map<PlayerIdentity, PlayerLevelData> cache = new ConcurrentHashMap<>();
 
 
     @Override
@@ -78,49 +80,67 @@ public class LevelModule implements Module, Listener {
         cache = null;
     }
 
-    @EventHandler
+    /*@EventHandler
     public void onPlayerQuit(PlayerQuitEvent e) {
+        PlayerIdentity playerIdentity = PlayerIdentityRegistry.get(e.getPlayer());
         cache.remove(PlayerIdentityRegistry.get(e.getPlayer()));
-    }
-
-    //TODO: 1. ukládání dat do databáze...
-    //      2. podívat se na všechny metody a jejich využití
-    //      3. přidat věci z PlayerData
-    //      4.
-
-
+    }*/
 
     public CompletableFuture<PlayerLevelData> loadPlayerData(PlayerIdentity playerIdentity) {
-        return CompletableFuture.supplyAsync(() ->
-                cache.computeIfAbsent(playerIdentity, key -> {
-                    Optional<Row> result = Shared.getInstance().getDatabase().getConnection().select()
-                            .from(PlayerTable.TABLE_NAME)
-                            .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
-                            .obtainOne();
+        if (!ModuleManager.getInstance().hasModule(LevelModule.class)) {
+            Logger.log("LevelModule is not registered!", Logger.LogType.ERROR);
+        }
 
-                    if (result.isEmpty()) return new PlayerLevelData(playerIdentity, 1, 0);
+        PlayerLevelData cached = cache.get(playerIdentity);
+        if (cached != null) {
+            return CompletableFuture.completedFuture(cached);
+        }
 
-                    Row row = result.get();
-                    int dailyXP = row.getInt("DailyXP");
+        return CompletableFuture.supplyAsync(() -> {
+            if (Shared.getInstance().getDatabase() == null) return null;
 
-                    return ModuleManager.getModule(ResourcesModule.class)
-                            .getPlayerBalance(playerIdentity, "ExperiencePoints")
-                            .thenApply(xp -> {
-                                int level = calculateLevelFromXp(xp);
-                                PlayerLevelData data = new PlayerLevelData(playerIdentity, level, dailyXP);
-                                float xpProgress = (float) data.getXpOnCurrentLevel() / data.getLevelRange().neededXP();
+            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+                if (connection == null) return null;
 
-                                Player player = playerIdentity.getOnlinePlayer();
-                                if (player != null) {
-                                    player.setExp(Math.min(xpProgress, 1.0f));
-                                    player.setLevel(data.getLevel());
-                                }
+                Optional<Row> result = connection.select()
+                        .from(PlayerTable.TABLE_NAME)
+                        .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
+                        .obtainOne();
 
-                                return new PlayerLevelData(playerIdentity, level, dailyXP);
-                            })
-                            .join();
-                })
-        );
+                return result.orElse(null);
+            } catch (Exception e) {
+                Logger.log("Failed to load player level data for " + playerIdentity.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+                e.printStackTrace();
+                return null;
+            }
+        }).thenCompose(row -> {
+            if (row == null) {
+                PlayerLevelData defaultData = new PlayerLevelData(playerIdentity, 1, 0);
+                cache.put(playerIdentity, defaultData);
+                return CompletableFuture.completedFuture(defaultData);
+            }
+
+            int dailyXP = row.getInt("DailyXP");
+
+            return ModuleManager.getModule(ResourcesModule.class)
+                    .getPlayerBalance(playerIdentity, "ExperiencePoints")
+                    .thenCompose(xp -> {
+                        int level = calculateLevelFromXp(xp);
+                        PlayerLevelData data = new PlayerLevelData(playerIdentity, level, dailyXP);
+
+                        return data.calculate().thenApply(v -> {
+                            float xpProgress = (float) data.getXpOnCurrentLevel() / data.getXpToNextLevel();
+                            Player player = playerIdentity.getOnlinePlayer();
+                            if (player != null) {
+                                player.setExp(Math.min(xpProgress, 1.0f));
+                                player.setLevel(level);
+                            }
+
+                            cache.put(playerIdentity, data);
+                            return data;
+                        });
+                    });
+        });
     }
 
     public PlayerLevelData getPlayerData(PlayerIdentity playerIdentity) {
@@ -167,12 +187,15 @@ public class LevelModule implements Module, Listener {
     public LevelRange getPlayerLevelRange(PlayerIdentity playerIdentity){
         return getPlayerData(playerIdentity).getLevelRange();
     }
+    public LevelRange getPlayerNextLevelRange(PlayerIdentity playerIdentity){
+        return getLevelRange(getPlayerData(playerIdentity).getLevel() + 1);
+    }
 
     public void addDailyXP(PlayerIdentity playerIdentity, int amount) {
         PlayerLevelData data = getPlayerData(playerIdentity);
 
         int oldXP = data.getDailyXP();
-        int newXP = data.getDailyXP() + amount;
+        int newXP = oldXP + amount;
         data.setDailyXP(newXP);
 
         DailyXPGainEvent event = new DailyXPGainEvent(playerIdentity, oldXP, newXP, amount);
@@ -180,7 +203,10 @@ public class LevelModule implements Module, Listener {
 
         Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
             CompletableFuture.runAsync(() -> {
-                try (Connection conn = Shared.getInstance().getDatabase().getConnection().getConnection()) {
+                try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+                    if (dbConn == null) return;
+
+                    Connection conn = dbConn.getConnection();
                     String sql = "UPDATE " + PlayerTable.TABLE_NAME + " SET DailyXP = ? WHERE Nickname = ?";
 
                     try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -188,6 +214,7 @@ public class LevelModule implements Module, Listener {
                         ps.setString(2, playerIdentity.getName());
                         ps.executeUpdate();
                     }
+
                 } catch (Exception e) {
                     Bukkit.getLogger().severe("Failed to save player data for " + playerIdentity.getName());
                     e.printStackTrace();
@@ -236,19 +263,22 @@ public class LevelModule implements Module, Listener {
 
     private int calculateLevelFromXp(int totalXp) {
         int xpSum = 0;
-        int level = 1;
+        int currentLevel = 1;
 
         for (LevelRange range : levelRanges) {
-            for (int i = 0; i < range.getLength(); i++) {
-                xpSum += range.neededXP();
-                if (totalXp < xpSum) {
-                    return level;
+            for (int lvl = range.startLevel(); lvl <= range.endLevel(); lvl++) {
+                int xpNeeded = range.getXPForLevel(lvl);
+
+                if (totalXp < xpSum + xpNeeded) {
+                    return currentLevel;
                 }
-                level++;
+
+                xpSum += xpNeeded;
+                currentLevel++;
             }
         }
 
-        return level;
+        return currentLevel;
     }
 
     public Reward getRewardForLevel(int level){
@@ -268,6 +298,7 @@ public class LevelModule implements Module, Listener {
 
     public void checkLevelUp(PlayerIdentity playerIdentity) {
         PlayerLevelData data = getPlayerData(playerIdentity);
+        if (data == null) return;
         int currentLevel = data.getLevel();
 
         if (currentLevel >= levelRanges.getLast().endLevel())
@@ -279,7 +310,6 @@ public class LevelModule implements Module, Listener {
             if (newLevel > currentLevel) {
                 performLevelUp(playerIdentity, currentLevel, newLevel);
                 data.setLevel(newLevel);
-                //savePlayerDataAsync(playerIdentity, data); //počítá se to ted z xp
             }
         });
     }
@@ -290,12 +320,14 @@ public class LevelModule implements Module, Listener {
         new BukkitRunnable(){
             @Override
             public void run() {
-                if (playerIdentity.getOnlinePlayer() != null) {
-                    playerIdentity.getOnlinePlayer().playSound(playerIdentity.getOnlinePlayer(), "jsplugins:completed", 20.0F, 20.0F);
+                Player player = playerIdentity.getOnlinePlayer();
+                if (player != null) {
+                    player.playSound(playerIdentity.getOnlinePlayer(), "jsplugins:completed", 20.0F, 20.0F);
                     ModuleManager.getModule(MessageModule.class).get(playerIdentity, "chat.level.levelUp")
                             .replace("%level%", String.valueOf(newLevel))
                             .send();
                     levelUpBanner(playerIdentity, newLevel);
+                    player.setLevel(newLevel);
                 }
 
                 for (int lvl = currentLevel + 1; lvl <= newLevel; lvl++) {
@@ -315,11 +347,11 @@ public class LevelModule implements Module, Listener {
     public void levelUpBanner(PlayerIdentity playerIdentity, int level) {
         Component text = Component.text("§f\uE00B ").font(Key.key("jsplugins", "actionbar_offset"))
                 .shadowColor(ShadowColor.shadowColor(0))
-                .append(Component.text("§fYou reached level ")) //TODO: translation
+                .append(ModuleManager.getModule(MessageModule.class).get(playerIdentity, "chat.actionbar.level_up").getTranslated())
                 .append(getLevelColored(level))
                 .append(getLevelEvolution(level).getIcon().font(Key.key("jsplugins", "actionbar_offset")))
-                .append(Component.text(" §f\uE00B").font(Key.key("jsplugins", "actionbar_offset"))); //TODO: translation
-        playerIdentity.getOnlinePlayer().sendActionBar(TextBackground.getTextWithBackgroundBossBar(text));
+                .append(Component.text(" §f\uE00B").font(Key.key("jsplugins", "actionbar_offset")));
+        playerIdentity.getOnlinePlayer().sendActionBar(TextBackground.getTextWithBackground(text));
     }
 
 
@@ -339,16 +371,18 @@ public class LevelModule implements Module, Listener {
                     .registerTypeAdapter(TextColor.class, new TextColorAdapter())
                     .create();
 
-            String json = new JSConfigs(Shared.getInstance().getDatabase().getConnection()).loadConfig("LevelModule");
+            String json = new JSConfigs().loadConfig("LevelModule");
 
-            if (json != null && json.contains("\"color\"")) {
+            if (json != null && json.contains("\"color\"") && json.contains("\"scaling\"")) {
                 return gson.fromJson(json, LevelModule.class);
             } else {
+                Logger.log("Old or missing LevelModule format detected - creating new default config", Logger.LogType.WARNING);
                 LevelModule defaultManager = LevelModule.createDefault();
                 saveLevelModule(defaultManager);
                 return defaultManager;
             }
-        } catch (Exception ex){
+        } catch (Exception ex) {
+            Logger.log("Failed to load LevelModule, creating default: " + ex.getMessage(), Logger.LogType.ERROR);
             LevelModule defaultManager = LevelModule.createDefault();
             saveLevelModule(defaultManager);
             ex.printStackTrace();
@@ -363,7 +397,7 @@ public class LevelModule implements Module, Listener {
                 .create();
 
         String json = gson.toJson(levelManager);
-        new JSConfigs(Shared.getInstance().getDatabase().getConnection()).saveConfig("LevelModule", json);
+        new JSConfigs().saveConfig("LevelModule", json);
     }
 
     public static class Builder {
@@ -378,16 +412,16 @@ public class LevelModule implements Module, Listener {
 
         public static Builder createDefault() {
             return new Builder()
-                    .addLevelRange(0, 10, 10000).withReward("Coins", 1000)
-                    .addLevelRange(11, 20, 15000).withReward("Coins", 2000)
-                    .addLevelRange(21, 30, 20000).withReward("Coins", 3000)
-                    .addLevelRange(31, 40, 20000).withReward("Coins", 3000)
-                    .addLevelRange(41, 50, 25000).withReward("Coins", 4000)
-                    .addLevelRange(51, 60, 25000).withReward("Coins", 4000)
-                    .addLevelRange(61, 70, 30000).withReward("Coins", 5000)
-                    .addLevelRange(71, 80, 30000).withReward("Coins", 5000)
-                    .addLevelRange(81, 90, 40000).withReward("Coins", 7500)
-                    .addLevelRange(91, 100, 50000).withReward("Coins", 10000)
+                    .addLevelRange(0, 10, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 1000)
+                    .addLevelRange(11, 20, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 2000)
+                    .addLevelRange(21, 30, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 3000)
+                    .addLevelRange(31, 40, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 3000)
+                    .addLevelRange(41, 50, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 4000)
+                    .addLevelRange(51, 60, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 4000)
+                    .addLevelRange(61, 70, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 5000)
+                    .addLevelRange(71, 80, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 5000)
+                    .addLevelRange(81, 90, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 7500)
+                    .addLevelRange(91, 100, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 10000)
 
                     .addLevelEvolution(0, "\uE000", TextColor.fromHexString("#707070"),1027, 1028)
                     .addLevelEvolution(10, "\uE001", TextColor.fromHexString("#d0d0d0"), 1029, 1030)
@@ -408,8 +442,18 @@ public class LevelModule implements Module, Listener {
                     .done();
         }
 
-        public LevelRangeBuilder addLevelRange(int startLevel, int endLevel, int neededXP) {
-            LevelRangeBuilder rangeBuilder = new LevelRangeBuilder(this, startLevel, endLevel, neededXP);
+        public LevelRangeBuilder addLevelRange(int startLevel, int endLevel, int xpPerLevel) {
+            LevelRangeBuilder rangeBuilder = new LevelRangeBuilder(
+                    this, startLevel, endLevel, xpPerLevel, LevelRange.XPScaling.FLAT
+            );
+            pendingRanges.add(rangeBuilder);
+            return rangeBuilder;
+        }
+
+        public LevelRangeBuilder addLevelRange(int startLevel, int endLevel, int baseXP, LevelRange.XPScaling scaling) {
+            LevelRangeBuilder rangeBuilder = new LevelRangeBuilder(
+                    this, startLevel, endLevel, baseXP, scaling
+            );
             pendingRanges.add(rangeBuilder);
             return rangeBuilder;
         }
@@ -418,14 +462,16 @@ public class LevelModule implements Module, Listener {
             private final Builder parent;
             private final int startLevel;
             private final int endLevel;
-            private final int neededXP;
+            private final int baseXP;
+            private final LevelRange.XPScaling scaling;
             private Reward reward;
 
-            private LevelRangeBuilder(Builder parent, int startLevel, int endLevel, int neededXP) {
+            private LevelRangeBuilder(Builder parent, int startLevel, int endLevel, int baseXP, LevelRange.XPScaling scaling) {
                 this.parent = parent;
                 this.startLevel = startLevel;
                 this.endLevel = endLevel;
-                this.neededXP = neededXP;
+                this.baseXP = baseXP;
+                this.scaling = scaling;
             }
 
             public Builder withReward(String resource, int amount) {
@@ -445,7 +491,7 @@ public class LevelModule implements Module, Listener {
 
             LevelRange build() {
                 Reward finalReward = reward != null ? reward : new Reward();
-                return new LevelRange(startLevel, endLevel, neededXP, finalReward);
+                return new LevelRange(startLevel, endLevel, baseXP, scaling, finalReward);
             }
         }
 

@@ -144,11 +144,7 @@ public class GameMap {
         if (game.getSettings().isUseTeams()) {
             for (GameTeam gameTeam : game.getModule(TeamModule.class).getTeams().values()) {
                 int spawn = 0;
-                for (GamePlayer gamePlayer : gameTeam.getMembers()) {
-                    if (!gamePlayer.isOnline()) {
-                        continue;
-                    }
-
+                for (GamePlayer gamePlayer : gameTeam.getOnlineMembers()) {
                     Player player = gamePlayer.getOnlinePlayer();
 
                     try {

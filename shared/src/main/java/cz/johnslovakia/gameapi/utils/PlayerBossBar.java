@@ -50,11 +50,6 @@ public class PlayerBossBar {
         bossBarMap.put(uuid, this);
     }
 
-
-
-    //TODO: mazat cache
-    //TODO: možnost vybrat font
-
     public void setName(Component component){
         Component name = Component.text("")
                 .append(TextBackground.getTextWithBackgroundBossBar(component));
@@ -104,27 +99,4 @@ public class PlayerBossBar {
     private Component off(int px) {
         return Component.text(StringUtils.calculateNegativeSpaces(px)).font(Key.key("jsplugins", "gameapi"));
     }
-
-
-
-    /*public Component getBackground(String text) {
-        double textWidth = 0;
-        for (char ch : text.toCharArray()){
-            textWidth += StringUtils.DefaultFontInfo.getDefaultFontInfo(ch).getLength() + 1;
-        }
-
-
-        int backgroundCharCount = (int) Math.ceil(textWidth / 13);
-        Component backgroundComponent = Component.text(("\uD8FB\uDF9Cẉ").repeat(backgroundCharCount));
-
-        double size = backgroundCharCount * 13;
-
-        Logger.log(backgroundCharCount + " " + textWidth + " " + size, Logger.LogType.INFO);
-
-        return backgroundComponent
-                .shadowColor(ShadowColor.shadowColor(0))
-                .append(backgroundComponent)
-                .append(Component.text(StringUtils.calculateNegativeSpaces(-((int) size))))
-                .font(Key.key("jsplugins", "bossbar_offset"));
-    }*/
 }

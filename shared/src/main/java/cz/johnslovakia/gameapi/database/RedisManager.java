@@ -17,7 +17,6 @@ public class RedisManager {
     public final JedisPool pool;
 
     public RedisManager(String host, int port, String password, String username) {
-        //this.pool = new JedisPool(host, port);
         GenericObjectPoolConfig<Jedis> poolConfig = new GenericObjectPoolConfig<>();
         poolConfig.setMaxTotal(20);
         poolConfig.setMaxIdle(10);

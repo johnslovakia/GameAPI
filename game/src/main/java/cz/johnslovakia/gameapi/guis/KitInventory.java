@@ -213,10 +213,8 @@ public class KitInventory implements Listener {
                                                 if (game.getState() == GameState.STARTING || game.getState() == GameState.WAITING) {
                                                     kit.select(gamePlayer);
                                                 } else {
-                                                    kit.select(gamePlayer); //bylo false k tomu
-                                                    if (selectedKit == kit) {
-                                                        kit.activate(gamePlayer);
-                                                    }
+                                                    kit.select(gamePlayer);
+                                                    kit.activate(gamePlayer);
                                                 }
                                                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 20.0F, 20.0F);
                                                 player.closeInventory();
@@ -243,7 +241,7 @@ public class KitInventory implements Listener {
                                                     if (game.getState() == GameState.STARTING || game.getState() == GameState.WAITING) {
                                                         kit.select(gamePlayer);
                                                     } else {
-                                                        kit.select(gamePlayer); //bylo false k tomu
+                                                        kit.select(gamePlayer);
                                                         if (selectedKit == kit) {
                                                             kit.activate(gamePlayer);
                                                         }

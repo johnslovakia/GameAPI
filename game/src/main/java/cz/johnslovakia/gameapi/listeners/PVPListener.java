@@ -30,13 +30,6 @@ import java.util.*;
 
 public class PVPListener implements Listener {
 
-
-    //public static Map<GamePlayer, List<GamePlayer>> damagers = new HashMap<>();
-    //public static Map<GamePlayer, Map<GamePlayer, Long>> lastDamager = new HashMap<>();
-
-
-    //TODO: optimalizovat
-
     private final static List<LastDamager> lastDamager = new ArrayList<>();
     private final static List<Damager> damagers = new ArrayList<>();
 

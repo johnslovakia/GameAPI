@@ -82,15 +82,14 @@ public class DailyRewardTrackModule implements Module, Listener {
                 return;
             }
 
-            SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection();
-            if (connection == null) {
-                return;
-            }
+            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+                if (connection == null) {
+                    return;
+                }
 
-            String tableName = PlayerTable.TABLE_NAME;
-            LocalDate today = LocalDate.now();
+                String tableName = PlayerTable.TABLE_NAME;
+                LocalDate today = LocalDate.now();
 
-            try {
                 Optional<Row> result = connection.select()
                         .from(tableName)
                         .where().isEqual("Nickname", playerIdentity.getName())
@@ -122,7 +121,7 @@ public class DailyRewardTrackModule implements Module, Listener {
                                 stmt.executeUpdate();
                             }
 
-                            if (ModuleManager.getInstance().hasModule(LevelModule.class)){
+                            if (ModuleManager.getInstance().hasModule(LevelModule.class)) {
                                 ModuleManager.getModule(LevelModule.class).getPlayerData(playerIdentity).setDailyXP(0);
                             }
                             dailyRewardsClaims.put(playerIdentity, 0);
@@ -132,6 +131,7 @@ public class DailyRewardTrackModule implements Module, Listener {
                         }
                     }
                 }
+
             } catch (SQLException e) {
                 Logger.log("Error loading player data for " + playerIdentity.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
                 e.printStackTrace();
@@ -143,16 +143,25 @@ public class DailyRewardTrackModule implements Module, Listener {
         dailyRewardsClaims.put(playerIdentity, claims);
     }
 
-    public void savePlayerDailyRewardsClaim(PlayerIdentity playerIdentity){
+    public void savePlayerDailyRewardsClaim(PlayerIdentity playerIdentity) {
         Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
-            SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection();
-            String tableName = PlayerTable.TABLE_NAME;
+            if (Shared.getInstance().getDatabase() == null) return;
 
-            connection.update()
-                    .table(tableName)
-                    .set("DailyRewards_claims", getPlayerDailyClaims(playerIdentity))
-                    .where().isEqual("Nickname", playerIdentity.getName())
-                    .execute();
+            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+                if (connection == null) return;
+
+                String tableName = PlayerTable.TABLE_NAME;
+
+                connection.update()
+                        .table(tableName)
+                        .set("DailyRewards_claims", getPlayerDailyClaims(playerIdentity))
+                        .where().isEqual("Nickname", playerIdentity.getName())
+                        .execute();
+
+            } catch (Exception e) {
+                Logger.log("Failed to save daily rewards claims for " + playerIdentity.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+                e.printStackTrace();
+            }
         });
     }
 
@@ -303,7 +312,7 @@ public class DailyRewardTrackModule implements Module, Listener {
                 .setPrettyPrinting()
                 .create();
 
-        String json = new JSConfigs(Shared.getInstance().getDatabase().getConnection()).loadConfig("DailyRewardTrackModule");
+        String json = new JSConfigs().loadConfig("DailyRewardTrackModule");
 
         if (json != null) {
             return gson.fromJson(json, DailyRewardTrackModule.class);
@@ -320,7 +329,7 @@ public class DailyRewardTrackModule implements Module, Listener {
                 .create();
 
         String json = gson.toJson(dailyRewardTrackModule);
-        new JSConfigs(Shared.getInstance().getDatabase().getConnection()).saveConfig("DailyRewardTrackModule", json);
+        new JSConfigs().saveConfig("DailyRewardTrackModule", json);
     }
 
     public static class Builder {
@@ -339,10 +348,10 @@ public class DailyRewardTrackModule implements Module, Listener {
                     .addTier(750)
                         .withRandomReward("Coins", 400, 600)
                         .withChanceReward("CosmeticTokens", 1, 4)
-                    .addTier(1000)
+                    .addTier(750)
                         .withRandomReward("Coins", 500, 700)
                         .withChanceReward("CosmeticTokens", 1, 8)
-                    .addTier(1250)
+                    .addTier(1000)
                         .withRandomReward("Coins", 600, 700)
                         .withChanceReward("CosmeticTokens", 1, 12)
                     .addTier(1500)

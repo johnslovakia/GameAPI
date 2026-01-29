@@ -12,6 +12,7 @@ import cz.johnslovakia.gameapi.modules.game.session.GameSessionModule;
 import cz.johnslovakia.gameapi.modules.game.session.PlayerGameSession;
 import cz.johnslovakia.gameapi.modules.game.team.GameTeam;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
+import cz.johnslovakia.gameapi.modules.messages.Message;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.users.friends.FriendsInterface;
 import cz.johnslovakia.gameapi.users.parties.PartiesHook;
@@ -21,6 +22,7 @@ import cz.johnslovakia.gameapi.users.parties.FriendSystemHook;
 import cz.johnslovakia.gameapi.users.parties.PartyAndFriendsHook;
 
 import cz.johnslovakia.gameapi.utils.GameUtils;
+import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -61,12 +63,16 @@ public class GamePlayer extends Winner implements PlayerIdentity {
         if (lifecycleState.equals(PlayerLifecycleState.LIGHTWEIGHT)) return;
 
         playerData = null;
-        gameID = null;
-        metadata = null;
+        //gameID = null;
+        metadata.clear();
     }
 
     public PlayerData getPlayerData() {
-        if (lifecycleState.equals(PlayerLifecycleState.LIGHTWEIGHT)) return new PlayerData(this);
+        if (playerData == null) {
+            Logger.log("Recreating PlayerData for " + getName() + " (was in LIGHTWEIGHT state)", Logger.LogType.INFO);
+            this.playerData = new PlayerData(this);
+            lifecycleState = PlayerLifecycleState.FULL;
+        }
         return playerData;
     }
 
@@ -112,6 +118,14 @@ public class GamePlayer extends Winner implements PlayerIdentity {
                 this.friends = new cz.johnslovakia.gameapi.users.friends.FriendSystemHook(this);
             }
         }
+    }
+
+    public Message createMessage(String translationKey){
+        return ModuleManager.getModule(MessageModule.class).get(this, translationKey);
+    }
+
+    public void sendMessage(String translationKey){
+        ModuleManager.getModule(MessageModule.class).get(this, translationKey).send();
     }
 
     public boolean isRespawning(){
@@ -192,7 +206,6 @@ public class GamePlayer extends Winner implements PlayerIdentity {
         getOnlinePlayer().getAttribute(Attribute.MAX_HEALTH).setBaseValue(20D);
         getOnlinePlayer().setHealth(20);
         getOnlinePlayer().setFoodLevel(20);
-        //TODO: vymyslet lépe pro level system
         if (getGame().getState().equals(GameState.INGAME) || getGame().isPreparation()) {
             getOnlinePlayer().setLevel(0);
             getOnlinePlayer().setExp(0);
@@ -229,7 +242,7 @@ public class GamePlayer extends Winner implements PlayerIdentity {
     }
 
     public boolean isOnline(){
-        return getOnlinePlayer() != null || getGameSession().getState().equals(GamePlayerState.DISCONNECTED);
+        return getOnlinePlayer() != null && (getGameSession() != null && !getGameSession().getState().equals(GamePlayerState.DISCONNECTED));
     }
 
     public boolean isSpectator() {

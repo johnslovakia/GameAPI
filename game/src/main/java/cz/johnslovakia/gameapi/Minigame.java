@@ -74,36 +74,49 @@ public abstract class Minigame {
         }
     }
 
+    public void updateSettings(Consumer<MinigameSettings.Builder> updater) {
+        MinigameSettings.Builder builder = this.settings.toBuilder();
+        updater.accept(builder);
+        this.settings = builder.build();
+    }
+
     public void addLanguage(String languageName, InputStreamWithName... languages){
         for (InputStreamWithName language : languages){
             this.languageFiles.put(languageName, language);
         }
     }
 
-    public void setDatabase(Database database){
+    public void setDatabase(Database database) {
         this.database = database;
 
-        SQLDatabaseConnection connection = database.getConnection();
-        if (connection == null){
+        if (database == null) {
             return;
         }
-        if (Bukkit.getPluginManager().getPlugin("SlimeWorldPlugin"/*"SlimeWorldManager"*/) != null) {
+
+        if (Bukkit.getPluginManager().getPlugin("SlimeWorldPlugin") != null) {
             new SlimeWorldLoader(database.getAswmLoader());
         }
 
-        QueryResult result = connection.exec(() ->
-                "CREATE TABLE IF NOT EXISTS TestServer ("
-                        + "id INT AUTO_INCREMENT PRIMARY KEY," +
-                        "Nickname VARCHAR(32)," +
-                        "Minigame VARCHAR(64)," +
-                        "Version VARCHAR(32)," +
-                        "Stars INT," +
-                        "Feedback TEXT" +
-                        ");");
+        try (SQLDatabaseConnection connection = database.getConnection()) {
+            if (connection == null) {
+                return;
+            }
 
-        if (!result.isSuccessful()) {
-            Logger.log("Failed to create TestServer table!", Logger.LogType.ERROR);
-            Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+            QueryResult result = connection.exec(() ->
+                    "CREATE TABLE IF NOT EXISTS TestServer (" +
+                            "id INT AUTO_INCREMENT PRIMARY KEY," +
+                            "Nickname VARCHAR(32)," +
+                            "Minigame VARCHAR(64)," +
+                            "Version VARCHAR(32)," +
+                            "Stars INT," +
+                            "Feedback TEXT" +
+                            ");"
+            );
+
+            if (!result.isSuccessful()) {
+                Logger.log("Failed to create TestServer table!", Logger.LogType.ERROR);
+                Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+            }
         }
     }
 

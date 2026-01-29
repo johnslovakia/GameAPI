@@ -1,7 +1,6 @@
 package cz.johnslovakia.gameapi.utils.chatHead;
 
-import net.kyori.adventure.text.Component;
-
+import net.md_5.bungee.api.chat.BaseComponent;
 import org.bukkit.OfflinePlayer;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,14 +33,15 @@ public class MojangSource extends SkinSource {
      * {@inheritDoc}
      */
     @Override
-    public Component getHead(OfflinePlayer player, boolean overlay) {
+    public BaseComponent[] getHead(OfflinePlayer player, boolean overlay) {
 
         String skin = getPlayerSkinFromMojang((useUUIDWhenRetrieve() ? player.getUniqueId().toString() : getUUIDFromName(player)));
         if (Objects.equals(skin, "Unable to retrieve player skin URL.")){
-            return toComponent(getPixelColorsFromSkin(getPlayerSkinFromMojang("9cb6a52c-55bc-456b-9513-f4cf19cdf9e3"), overlay));
+            return toBaseComponent(getPixelColorsFromSkin(getPlayerSkinFromMojang("9cb6a52c-55bc-456b-9513-f4cf19cdf9e3"), overlay));
         }else {
-            return toComponent(getPixelColorsFromSkin(getPlayerSkinFromMojang(player.getUniqueId().toString()), overlay));
+            return toBaseComponent(getPixelColorsFromSkin(getPlayerSkinFromMojang(player.getUniqueId().toString()), overlay));
         }
+
     }
 
     /**
@@ -140,5 +140,6 @@ public class MojangSource extends SkinSource {
         }
         return "Unable to retrieve player skin URL."; //TODO Add error handling
     }
+
 
 }

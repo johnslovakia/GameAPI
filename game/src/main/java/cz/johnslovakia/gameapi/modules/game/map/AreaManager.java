@@ -77,6 +77,7 @@ public class AreaManager {
         if (game.getState() != GameState.INGAME) return getLimitedSettings(gamePlayer);
         if (game.getCurrentMap() == null) return null;
         if (gamePlayer.isSpectator()) return getLimitedSettings(gamePlayer);
+        if (gamePlayer.getAreas() == null) return game.getCurrentMap().getSettings();
         if (gamePlayer.getAreas().isEmpty()) return game.getCurrentMap().getSettings();
 
         AreaSettings settings = null;

@@ -5,23 +5,21 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import lombok.Getter;
+import me.zort.sqllib.SQLDatabaseConnection;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 @Getter
 public class IMinigame {
 
     private final DataManager dataManager;
     private final String name;
-    private final List<IGame> games = new ArrayList<>();
+    private final Map<String, IGame> games = new HashMap<>();
 
     public IMinigame(DataManager dataManager, String name) {
         this.dataManager = dataManager;
@@ -29,6 +27,7 @@ public class IMinigame {
         load();
     }
 
+    //TODO: refresh
     public void load() {
         if (dataManager.useRedisForServerData()) {
             loadFromRedis();
@@ -44,53 +43,41 @@ public class IMinigame {
             for (String key : keys) {
                 String[] parts = key.split("\\.");
                 if (parts.length >= 3) {
-                    games.add(new IGame(this, parts[2]));
+                    games.put(parts[2], new IGame(this, parts[2]));
                 }
             }
         }
     }
 
     private void loadFromMySQL() {
-        dataManager.getServerDataMySQL().getConnection().connect();
+        try (SQLDatabaseConnection connection = dataManager.getServerDataMySQL().getConnection()) {
+            if (connection == null) return;
 
-        String query = "SELECT * FROM games WHERE minigame = ?";
-        PreparedStatement statement = null;
+            String query = "SELECT * FROM games WHERE minigame = ?";
+            try (PreparedStatement statement = Objects.requireNonNull(connection.getConnection()).prepareStatement(query)) {
+                statement.setString(1, getName());
 
-        try {
-            statement = Objects.requireNonNull(
-                    dataManager.getServerDataMySQL().getConnection().getConnection()
-            ).prepareStatement(query);
-            statement.setString(1, getName());
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        String arenaName = resultSet.getString("name");
+                        Timestamp lastUpdate = resultSet.getTimestamp("last_updated");
+                        long differenceInHours = (System.currentTimeMillis() - lastUpdate.getTime()) / 1000 / 60 / 60;
 
-            try (ResultSet resultSet = statement.executeQuery()) {
-                while (resultSet.next()) {
-                    String arenaName = resultSet.getString("name");
+                        if (differenceInHours >= 24) {
+                            connection.delete()
+                                    .from("games")
+                                    .where().isEqual("name", arenaName)
+                                    .execute();
+                            continue;
+                        }
 
-                    Timestamp lastUpdate = resultSet.getTimestamp("last_updated");
-                    long differenceInHours = (System.currentTimeMillis() - lastUpdate.getTime()) / 1000 / 60 / 60;
-
-                    if (differenceInHours >= 24) {
-                        dataManager.getServerDataMySQL().getConnection()
-                                .delete()
-                                .from("games")
-                                .where().isEqual("name", arenaName)
-                                .execute();
-                        continue;
+                        if (!games.containsKey(arenaName))
+                            games.put(arenaName, new IGame(this, arenaName));
                     }
-
-                    games.add(new IGame(this, arenaName));
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            if (statement != null) {
-                try {
-                    statement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
         }
     }
 
@@ -104,7 +91,7 @@ public class IMinigame {
 
     public List<GameData> getServersData() {
         List<GameData> list = new ArrayList<>();
-        for (IGame arena : games) {
+        for (IGame arena : games.values()) {
             GameData data = getGameDataByGame(arena);
             if (data != null) {
                 list.add(data);
@@ -114,7 +101,7 @@ public class IMinigame {
     }
 
     public boolean isThereFreeGame() {
-        return games.stream().anyMatch(IGame::isOpen);
+        return games.values().stream().anyMatch(IGame::isOpen);
     }
 
     public GameData getGameDataByGame(IGame server) {
@@ -151,35 +138,27 @@ public class IMinigame {
 
     private GameData fetchGameDataFromMySQL(IGame server) {
         String query = "SELECT * FROM games WHERE name = ? LIMIT 1";
-        PreparedStatement statement = null;
 
-        try {
-            statement = dataManager.getServerDataMySQL()
-                    .getConnection()
-                    .getConnection()
-                    .prepareStatement(query);
-            statement.setString(1, server.getName());
+        try (SQLDatabaseConnection connection = dataManager.getServerDataMySQL().getConnection()) {
+            if (connection == null) return createDefaultGameData(server);
 
-            try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    int maxPlayers = resultSet.getInt("max_players");
-                    String data = resultSet.getString("data");
-                    JsonObject jsonData = JsonParser.parseString(data).getAsJsonObject();
+            try (PreparedStatement statement = Objects.requireNonNull(connection.getConnection()).prepareStatement(query)) {
+                statement.setString(1, server.getName());
 
-                    return parseGameData(server, jsonData, jsonData, maxPlayers);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        int maxPlayers = resultSet.getInt("max_players");
+                        String data = resultSet.getString("data");
+                        JsonObject jsonData = JsonParser.parseString(data).getAsJsonObject();
+
+                        return parseGameData(server, jsonData, jsonData, maxPlayers);
+                    }
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            if (statement != null) {
-                try {
-                    statement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
         }
+
         return createDefaultGameData(server);
     }
 

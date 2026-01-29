@@ -161,7 +161,7 @@ public class GameInstance {
                 @Override
                 public void run() {
                     if (getCurrentMap().getWorld() != null) {
-                        state = GameState.WAITING;
+                        setState(GameState.WAITING);
                         callback.accept(true);
                         this.cancel();
                         return;
@@ -324,10 +324,12 @@ public class GameInstance {
     }
 
     public boolean isPreparation(){
-        return getModule(TaskModule.class).getTask("PreparationTask").isPresent();
+        if (getRunningMainTask() == null) return false;;
+        return getRunningMainTask().getId().equalsIgnoreCase("PreparationTask");
     }
 
     public GameMap getCurrentMap() {
+        if (getModule(MapModule.class) == null) return null;
         for (GameMap map : getModule(MapModule.class).getMaps()) {
             if (map.isWinned() && !map.isPlayed()) return map;
         }

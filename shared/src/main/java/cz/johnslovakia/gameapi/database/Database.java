@@ -12,7 +12,6 @@ import java.sql.SQLException;
 @Getter
 public class Database {
 
-    //private final SQLDatabaseConnection connection;
     private SQLConnectionPool pool;
     private MysqlLoader aswmLoader;
 
@@ -30,7 +29,7 @@ public class Database {
         this.useSSL = useSSL;
 
         SQLConnectionPool.Options options = new SQLConnectionPool.Options();
-        options.setMaxConnections(20); // Connections limit in the pool.
+        options.setMaxConnections(100); // Connections limit in the pool.
         options.setBorrowObjectTimeout(5000L); // Timeout for borrowing objects from the pool.
         options.setBlockWhenExhausted(true);
 
@@ -48,9 +47,9 @@ public class Database {
         }
     }
 
-    public SQLDatabaseConnection getConnection(){
-        try (SQLDatabaseConnection resource = pool.getResource()) {
-            return resource;
+    public SQLDatabaseConnection getConnection() {
+        try {
+            return pool.getResource();
         } catch(SQLException e) {
             throw new RuntimeException(e);
         }

@@ -24,6 +24,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.vehicle.VehicleDestroyEvent;
@@ -452,50 +453,14 @@ public class MapSettingsListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void onSwap(PlayerSwapHandItemsEvent e) {
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
 
-    /*@EventHandler
-    public void onLogin(PlayerLoginEvent e) {
-        if (e.getResult() != PlayerLoginEvent.Result.ALLOWED) {
-            return;
+        if (!gamePlayer.getGame().getState().equals(GameState.INGAME)) {
+            e.setCancelled(true);
         }
-        if (GameManager.getGame() == null){
-            return;
-        }
-
-        if (GameManager.getGame().getState() == GameState.RESTARTING) {
-            e.getPlayer().sendMessage(Prefix.LOCAL_PREFIX+ "§cThis game is restarting!");
-            GameUtil.newArena(e.getPlayer());
-            //e.disallow(PlayerLoginEvent.Result.KICK_OTHER, "§cThis arena is restarting!");
-            return;
-        }else if (GameManager.getGame().getState() == GameState.ENDING) {
-            e.getPlayer().sendMessage(Prefix.LOCAL_PREFIX+ "§cThis game is ending!");
-            GameUtil.newArena(e.getPlayer());
-            //e.disallow(PlayerLoginEvent.Result.KICK_OTHER, "§cThis arena is ending!");
-            return;
-        }else if (GameManager.getGame().getState() == GameState.PREPARATION) {
-            e.getPlayer().sendMessage(Prefix.LOCAL_PREFIX+ "§cThis game is in Preparation state!");
-            GameUtil.newArena(e.getPlayer());
-            //e.disallow(PlayerLoginEvent.Result.KICK_OTHER, "§cThis arena is in Preparation state!");
-            return;
-        }else if ((GameManager.getGame().getState() == GameState.LOBBY) && GameManager.getGame().getPlayers().size() >= GameManager.getGame().getSettings().getMaxPlayers()) {
-            e.getPlayer().sendMessage(Prefix.LOCAL_PREFIX+ "§cThis game is full!");
-            GameUtil.newArena(e.getPlayer());
-            //e.disallow(PlayerLoginEvent.Result.KICK_OTHER, "§cThis arena is full!");
-            return;
-        }else{
-            e.getPlayer().sendMessage(Prefix.LOCAL_PREFIX+ "§cThis game is loading!");
-            GameUtil.newArena(e.getPlayer());
-        }
-        /*if (GameManager.getGame().getState() == GameState.INGAME && (!GameManager.getGame().getSettings().isAllowedJoiningAfterStart() || !GameManager.getGame().getSettings().isEnabledReJoin())) {
-            e.disallow(PlayerLoginEvent.Result.KICK_OTHER, "§cYou can not connect to arena!");
-        }*
-
-        //TODO: Zkontrolovat
-    }*/
-
-
-
-
+    }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void playerDamagePlayer(EntityDamageByEntityEvent e){

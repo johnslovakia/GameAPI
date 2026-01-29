@@ -39,7 +39,7 @@ public class Message {
 
             Map<Language, String> langMap = ModuleManager.getModule(MessageModule.class).getMessages(key);
             if (langMap == null) {
-                rawMessages.put(recipient, "§cNo translation found for message key: " + key + " (Language: " + language.getName() + ")");
+                rawMessages.put(recipient, "§c" + key);
                 continue;
             }
 

@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.database.Type;
 import cz.johnslovakia.gameapi.events.GameJoinEvent;
 import cz.johnslovakia.gameapi.modules.Module;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
+import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.modules.game.lobby.LobbyLocation;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
@@ -17,6 +18,7 @@ import cz.johnslovakia.gameapi.utils.CachedBatchStorage;
 import cz.johnslovakia.gameapi.utils.ConfigAPI;
 import lombok.Getter;
 
+import me.zort.sqllib.SQLDatabaseConnection;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -46,7 +48,7 @@ public class StatsModule implements Module, Listener {
                 "player_stats",
                 BatchConfig.builder("player_stats")
                         .maxBatchSize(50)
-                        .flushIntervalSeconds(180)
+                        .flushIntervalSeconds(60)
                         .build(),
                 this::loadStatsFromDB,
                 this::saveStatsToDB,
@@ -75,21 +77,23 @@ public class StatsModule implements Module, Listener {
 
     @EventHandler
     public void onPlayerJoin(GameJoinEvent e) {
-        storage.get(e.getGamePlayer()).thenAccept(stats -> {
-            ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", Minigame.getInstance().getPlugin());
-            GameInstance game = e.getGame();
+        if (e.getGame().getState().equals(GameState.STARTING) || e.getGame().getState().equals(GameState.WAITING)) {
+            storage.get(e.getGamePlayer()).thenAccept(stats -> {
+                ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", Minigame.getInstance().getPlugin());
+                GameInstance game = e.getGame();
 
-            LobbyLocation statsHologram = config.getLobbyLocation(game, "statsHologram");
-            if (statsHologram != null){
-                Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task -> {
-                    statsHolograms.createPlayerStatisticsHologram(e.getGamePlayer(), statsHologram.getLocation());
-                });
-            }
+                LobbyLocation statsHologram = config.getLobbyLocation(game, "statsHologram");
+                if (statsHologram != null) {
+                    Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task -> {
+                        statsHolograms.createPlayerStatisticsHologram(e.getGamePlayer(), statsHologram.getLocation());
+                    });
+                }
                 /*LobbyLocation topStatsHologram = config.getLobbyLocation(game, "topStatsHologram");
                 if (topStatsHologram != null){
                     statsHolograms.createTOPStatisticsHologram(topStatsHologram.getLocation(), player);
                 }*/
-        });
+            });
+        }
     }
 
     //TODO: .
@@ -97,7 +101,10 @@ public class StatsModule implements Module, Listener {
         statsTable.createTable();
 
         registerStat(new Stat("Winstreak").hideFromPlayer());
-        statsTable.createNewColumn(Type.INT, "Winstreak");
+        //statsTable.createNewColumn(Type.INT, "Winstreak");
+        for (Stat stat : stats){
+            statsTable.createNewColumn(Type.INT, stat.getName().replace(" ", "_"));
+        }
     }
 
     public void registerStat(Stat... stats) {
@@ -117,9 +124,7 @@ public class StatsModule implements Module, Listener {
             return results;
         }
 
-
         String placeholders = String.join(",", Collections.nCopies(playerIdentities.size(), "?"));
-
         StringBuilder sqlBuilder = new StringBuilder("SELECT Nickname");
         for (Stat stat : stats) {
             sqlBuilder.append(", ").append(stat.getName().replace(" ", "_"));
@@ -127,8 +132,8 @@ public class StatsModule implements Module, Listener {
         sqlBuilder.append(" FROM ").append(Minigame.getInstance().getName() + "_stats");
         sqlBuilder.append(" WHERE Nickname IN (").append(placeholders).append(")");
 
-        try (Connection conn = Shared.getInstance().getDatabase().getConnection().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sqlBuilder.toString())) {
+        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection();
+             PreparedStatement stmt = dbConn.getConnection().prepareStatement(sqlBuilder.toString())) {
 
             int i = 1;
             Map<String, PlayerIdentity> nicknameMap = new HashMap<>();
@@ -141,14 +146,12 @@ public class StatsModule implements Module, Listener {
                 while (rs.next()) {
                     String nickname = rs.getString("Nickname");
                     PlayerIdentity playerIdentity = nicknameMap.get(nickname);
-
                     if (playerIdentity == null) continue;
 
                     Map<String, Integer> statsMap = new HashMap<>();
-
                     for (Stat stat : stats) {
                         try {
-                            int value = rs.getInt(stat.getName());
+                            int value = rs.getInt(stat.getName().replace(" ", "_"));
                             statsMap.put(stat.getName(), value);
                         } catch (SQLException e) {
                             statsMap.put(stat.getName(), 0);
@@ -176,7 +179,7 @@ public class StatsModule implements Module, Listener {
         }
         if (allStatNames.isEmpty()) return;
 
-        StringBuilder sql = new StringBuilder("INSERT INTO " + Minigame.getInstance().getName() + "_stats" + " (Nickname");
+        StringBuilder sql = new StringBuilder("INSERT INTO " + Minigame.getInstance().getName() + "_stats (Nickname");
         StringBuilder values = new StringBuilder(" VALUES (?");
         StringBuilder onDuplicate = new StringBuilder(" ON DUPLICATE KEY UPDATE ");
         List<String> statNamesList = new ArrayList<>(allStatNames);
@@ -190,9 +193,8 @@ public class StatsModule implements Module, Listener {
         }
         sql.append(")").append(values).append(")").append(onDuplicate);
 
-        Connection conn = null;
-        try {
-            conn = Minigame.getInstance().getDatabase().getConnection().getConnection();
+        try (SQLDatabaseConnection dbConn = Minigame.getInstance().getDatabase().getConnection()) {
+            Connection conn = dbConn.getConnection();
             conn.setAutoCommit(false);
 
             try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
@@ -209,20 +211,11 @@ public class StatsModule implements Module, Listener {
 
                 stmt.executeBatch();
                 conn.commit();
-            }
-
-        } catch (SQLException e) {
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (SQLException ignored) {}
-            }
-            throw e;
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                } catch (SQLException ignored) {}
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
             }
         }
     }

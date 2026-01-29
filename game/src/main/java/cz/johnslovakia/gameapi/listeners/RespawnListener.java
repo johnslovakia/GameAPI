@@ -24,6 +24,7 @@ public class RespawnListener implements Listener {
     public void onPlayerRespawn(PlayerRespawnEvent e) {
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (!gamePlayer.isInGame()) return;
         GameInstance game = PlayerManager.getGamePlayer(player).getGame();
         GameMap playingMap = game.getCurrentMap();
 
@@ -58,12 +59,13 @@ public class RespawnListener implements Listener {
                         }
                         second--;
                     }
-                }.runTaskLater(Minigame.getInstance().getPlugin(), 20L);
+                }.runTaskTimer(Minigame.getInstance().getPlugin(), 0L, 20L);
             }
         }else if (player.getLastDamageCause() == null || (player.getLastDamageCause() != null && player.getLastDamageCause().getCause().equals(EntityDamageEvent.DamageCause.VOID))){
             e.setRespawnLocation(getNonRespawnLocation(game));
         }else{
             e.setRespawnLocation((Location) gamePlayer.getMetadata().get("death_location"));
+            gamePlayer.getMetadata().remove("death_location");
         }
     }
 

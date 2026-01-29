@@ -44,8 +44,6 @@ public class PlayerLevelData {
         this.playerIdentity = playerIdentity;
         this.level = level;
         this.dailyXP = dailyXP;
-
-        calculate();
     }
 
     public CompletableFuture<Void> calculate(){
@@ -54,7 +52,7 @@ public class PlayerLevelData {
 
             for (LevelRange range : levelModule.getLevelRanges()) {
                 for (int lvl = range.startLevel(); lvl <= range.endLevel(); lvl++) {
-                    int xpPerLevel = range.neededXP();
+                    int xpPerLevel = range.getXPForLevel(lvl);
 
                     if (totalXp < xpSum + xpPerLevel) {
                         int xpOnCurrent = totalXp - xpSum;
@@ -70,12 +68,11 @@ public class PlayerLevelData {
                     xpSum += xpPerLevel;
                 }
             }
-            LevelRange last = levelModule.getLevelRanges().getLast();
 
-            this.levelRange = last;
+            this.levelRange = levelModule.getLevelRanges().getLast();
             this.levelEvolution = levelModule.getLevelEvolution(level);
             this.xpOnCurrentLevel = 0;
-            this.xpToNextLevel = last.neededXP();
+            this.xpToNextLevel = 0;
         });
     }
 

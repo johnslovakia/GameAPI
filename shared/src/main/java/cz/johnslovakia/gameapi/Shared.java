@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi;
 
 import cz.johnslovakia.gameapi.database.Database;
+import cz.johnslovakia.gameapi.utils.SlotHighlightSystem;
 import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
 

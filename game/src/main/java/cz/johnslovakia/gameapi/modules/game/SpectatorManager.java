@@ -23,7 +23,6 @@ public class SpectatorManager {
         GameService gameService = ModuleManager.getModule(GameService.class);
         UnclaimedRewardsModule unclaimedRewardsModule = ModuleManager.getModule(UnclaimedRewardsModule.class);
 
-        //TODO: co ty názvy?
         InventoryBuilder im = new InventoryBuilder("Spectator");
         InventoryBuilder im2 = new InventoryBuilder("Spectator");
 
@@ -56,7 +55,7 @@ public class SpectatorManager {
                 || !unclaimedRewardsModule.getPlayerUnclaimedRewardsByType(gamePlayer, UnclaimedRewardType.QUEST).isEmpty());
         playerMenu.setBlinkingItemCustomModelData(1026);
 
-        Item quests = new Item(new ItemBuilder(Material.BOOK).hideAllFlags().toItemStack(), 5, "Item.quests", e -> QuestInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
+        Item quests = new Item(new ItemBuilder(Material.BOOK).hideAllFlags().toItemStack(), 6, "Item.quests", e -> QuestInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
         quests.setBlinking(gamePlayer -> !unclaimedRewardsModule.getPlayerUnclaimedRewardsByType(gamePlayer, UnclaimedRewardType.QUEST).isEmpty());
         quests.setBlinkingItemCustomModelData(1010);
 

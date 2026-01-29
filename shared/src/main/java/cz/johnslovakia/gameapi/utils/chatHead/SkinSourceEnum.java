@@ -4,7 +4,6 @@ package cz.johnslovakia.gameapi.utils.chatHead;
  * Enum representing different sources from which to retrieve player skin information.
  * These sources determine where the skin data will be fetched from (e.g., Mojang, Crafatar, Minotar).
  */
-////https://github.com/OGminso/ChatHeadFont/tree/main
 public enum SkinSourceEnum {
     /**
      * Represents the source for retrieving player skin information from Mojang.

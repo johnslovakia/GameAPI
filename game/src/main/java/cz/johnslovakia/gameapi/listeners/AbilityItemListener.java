@@ -1,5 +1,7 @@
 package cz.johnslovakia.gameapi.listeners;
 
+import com.comphenix.protocol.PacketType;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
@@ -14,19 +16,24 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public class AbilityItemListener implements Listener {
 
@@ -117,7 +124,38 @@ public class AbilityItemListener implements Listener {
                 item.setLore(ModuleManager.getModule(MessageModule.class).get(gamePlayer, abilityItem.getLoreTranslationKey()).getTranslated());
                 e.setCurrentItem(item.toItemStack());
             }
+
+            Collection<Cooldown> cooldowns = abilityItem.getCooldowns().values();
+            for (Cooldown cooldown : cooldowns) {
+                if (cooldown.hasItemStackCooldown(player.getUniqueId())) {
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            cooldown.forceUpdateItems(player);
+                        }
+                    }.runTaskLater(Minigame.getInstance().getPlugin(), 1L);
+                    break;
+                }
+            }
         });
+    }
+
+    @EventHandler
+    public void onInventoryClose(org.bukkit.event.inventory.InventoryCloseEvent e) {
+        if (!(e.getPlayer() instanceof Player player)) {
+            return;
+        }
+
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        GameInstance game = gamePlayer.getGame();
+        if (game == null) return;
+        if (game.getState() != GameState.INGAME || game.isPreparation()) return;
+
+        for (Cooldown cooldown : Cooldown.getList()) {
+            if (cooldown.hasItemStackCooldown(player.getUniqueId())) {
+                cooldown.forceUpdateItems(player);
+            }
+        }
     }
 
 
@@ -143,30 +181,30 @@ public class AbilityItemListener implements Listener {
                     e.setCancelled(true);
                     return;
                 }
+                if (e.getEntity() instanceof Player damaged && gamePlayer.getGameSession().getTeam().equals(PlayerManager.getGamePlayer(damaged).getGameSession().getTeam())){;
+                    return;
+                }
 
                 for (AbilityItem.Action action : abilityItem.getActions().keySet()) {
                     if (!(action.equals(AbilityItem.Action.DEFAULT) || action.equals(AbilityItem.Action.ENTITY_DAMAGE))) {
                         continue;
                     }
-                    if (!runValidators(abilityItem.getValidators(), gamePlayer) && !runValidators(abilityItem.getValidators(), e)) {
-                        return;
-                    }
-
                     if (!action.equals(AbilityItem.Action.DEFAULT)) {
                         e.setCancelled(true);
                     }
 
 
-                    Cooldown cooldown = null;
-                    if (!abilityItem.getPlayerCooldowns().isEmpty() && abilityItem.getPlayerCooldowns().get(gamePlayer) != null) {
-                        cooldown = abilityItem.getPlayerCooldowns().get(gamePlayer);
-                    } else if (!abilityItem.getCooldowns().isEmpty() && abilityItem.getCooldowns().get(action) != null) {
-                        cooldown = abilityItem.getCooldowns().get(action);
-                    }
+                    Cooldown cooldown = abilityItem.getCooldown(action);
+                    boolean itemStackCooldown = cooldown != null && !abilityItem.isConsumable() && cooldown.getCooldown() <= 64;
                     if (cooldown != null && cooldown.contains(gamePlayer)) {
-                        String roundedDouble = String.valueOf(Math.round(cooldown.getCountdown(gamePlayer) * 100.0) / 100.0);
-                        ModuleManager.getModule(MessageModule.class).get(player, "chat.delay").replace("%countdown%", roundedDouble).send();
+                        if (!itemStackCooldown){
+                            String countdown = (itemStackCooldown ? String.valueOf((int) cooldown.getCountdown(gamePlayer)) : String.valueOf(Math.round(cooldown.getCountdown(gamePlayer) * 100.0) / 100.0));
+                            ModuleManager.getModule(MessageModule.class).get(player, "chat.delay").replace("%countdown%", countdown).send();
+                        }
                         e.setCancelled(true);
+                        return;
+                    }
+                    if (!runValidators(abilityItem.getValidators(), gamePlayer) || !runValidators(abilityItem.getValidators(), e)) {
                         return;
                     }
 
@@ -177,7 +215,11 @@ public class AbilityItemListener implements Listener {
 
                     }
                     if (cooldown != null) {
-                        cooldown.startCooldown(gamePlayer);
+                        if (itemStackCooldown) {
+                            cooldown.startItemStackCooldown(gamePlayer, item);
+                        }else{
+                            cooldown.startCooldown(gamePlayer);
+                        }
                     }
                 }
             });
@@ -207,28 +249,29 @@ public class AbilityItemListener implements Listener {
                 e.setCancelled(true);
                 return;
             }
+            if (e.getRightClicked() instanceof Player clicked && gamePlayer.getGameSession().getTeam().equals(PlayerManager.getGamePlayer(clicked).getGameSession().getTeam())){
+                return;
+            }
 
             for (AbilityItem.Action action : abilityItem.getActions().keySet()) {
                 if (!(action.equals(AbilityItem.Action.DEFAULT) || action.equals(AbilityItem.Action.RIGHT_CLICK_ENTITY))) {
                     continue;
                 }
-                if (!runValidators(abilityItem.getValidators(), gamePlayer) && !runValidators(abilityItem.getValidators(), e)) {
-                    return;
-                }
                 if (!action.equals(AbilityItem.Action.DEFAULT)) {
                     e.setCancelled(true);
                 }
 
-                Cooldown cooldown = null;
-                if (!abilityItem.getPlayerCooldowns().isEmpty() && abilityItem.getPlayerCooldowns().get(gamePlayer) != null) {
-                    cooldown = abilityItem.getPlayerCooldowns().get(gamePlayer);
-                } else if (!abilityItem.getCooldowns().isEmpty() && abilityItem.getCooldowns().get(action) != null) {
-                    cooldown = abilityItem.getCooldowns().get(action);
-                }
+                Cooldown cooldown = abilityItem.getCooldown(action);
+                boolean itemStackCooldown = cooldown != null && !abilityItem.isConsumable() && cooldown.getCooldown() <= 64;
                 if (cooldown != null && cooldown.contains(gamePlayer)) {
-                    String roundedDouble = String.valueOf(Math.round(cooldown.getCountdown(gamePlayer) * 100.0) / 100.0);
-                    ModuleManager.getModule(MessageModule.class).get(player, "chat.delay").replace("%countdown%", roundedDouble).send();
+                    if (!itemStackCooldown){
+                        String countdown = (itemStackCooldown ? String.valueOf((int) cooldown.getCountdown(gamePlayer)) : String.valueOf(Math.round(cooldown.getCountdown(gamePlayer) * 100.0) / 100.0));
+                        ModuleManager.getModule(MessageModule.class).get(player, "chat.delay").replace("%countdown%", countdown).send();
+                    }
                     e.setCancelled(true);
+                    return;
+                }
+                if (!runValidators(abilityItem.getValidators(), gamePlayer) || !runValidators(abilityItem.getValidators(), e)) {
                     return;
                 }
 
@@ -238,7 +281,11 @@ public class AbilityItemListener implements Listener {
                     abilityItem.consume(player, item);
                 }
                 if (cooldown != null) {
-                    cooldown.startCooldown(gamePlayer);
+                    if (itemStackCooldown) {
+                        cooldown.startItemStackCooldown(gamePlayer, item);
+                    }else{
+                        cooldown.startCooldown(gamePlayer);
+                    }
                 }
             }
         });
@@ -281,9 +328,6 @@ public class AbilityItemListener implements Listener {
                         continue;
                     }
                 }
-                if (!runValidators(abilityItem.getValidators(), gamePlayer) && !runValidators(abilityItem.getValidators(), e)) {
-                    return;
-                }
 
             /*if (!e.getAction().equals(action)){
                 continue;
@@ -301,16 +345,17 @@ public class AbilityItemListener implements Listener {
                     e.setCancelled(true);
                 }
 
-                Cooldown cooldown = null;
-                if (!abilityItem.getPlayerCooldowns().isEmpty() && abilityItem.getPlayerCooldowns().get(gamePlayer) != null) {
-                    cooldown = abilityItem.getPlayerCooldowns().get(gamePlayer);
-                } else if (!abilityItem.getCooldowns().isEmpty() && abilityItem.getCooldowns().get(action) != null) {
-                    cooldown = abilityItem.getCooldowns().get(action);
-                }
+                Cooldown cooldown = abilityItem.getCooldown(action);
+                boolean itemStackCooldown = cooldown != null && !abilityItem.isConsumable() && cooldown.getCooldown() <= 64;
                 if (cooldown != null && cooldown.contains(gamePlayer)) {
-                    String roundedDouble = String.valueOf(Math.round(cooldown.getCountdown(gamePlayer) * 100.0) / 100.0);
-                    ModuleManager.getModule(MessageModule.class).get(player, "chat.delay").replace("%countdown%", roundedDouble).send();
+                    if (!itemStackCooldown){
+                        String countdown = (itemStackCooldown ? String.valueOf((int) cooldown.getCountdown(gamePlayer)) : String.valueOf(Math.round(cooldown.getCountdown(gamePlayer) * 100.0) / 100.0));
+                        ModuleManager.getModule(MessageModule.class).get(player, "chat.delay").replace("%countdown%", countdown).send();
+                    }
                     e.setCancelled(true);
+                    return;
+                }
+                if (!runValidators(abilityItem.getValidators(), gamePlayer) || !runValidators(abilityItem.getValidators(), e)) {
                     return;
                 }
 
@@ -320,21 +365,70 @@ public class AbilityItemListener implements Listener {
                     abilityItem.consume(player, item);
                 }
                 if (cooldown != null) {
-                    cooldown.startCooldown(gamePlayer);
+                    if (itemStackCooldown) {
+                        cooldown.startItemStackCooldown(gamePlayer, item);
+                    }else{
+                        cooldown.startCooldown(gamePlayer);
+                    }
                 }
             }
         });
     }
 
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent e) {
+        if (e.getWhoClicked() instanceof Player player) {
+            GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+
+            GameInstance game = gamePlayer.getGame();
+            if (game == null) return;
+            if (game.getState() != GameState.INGAME || game.isPreparation()) return;
+
+            ItemStack item = e.getOldCursor();
+            if (item.getType().isAir() || !item.hasItemMeta()) {
+                return;
+            }
+
+            if (!AbilityItem.isAbilityItem(item)) return;
+
+            Optional<AbilityItem> abilityItemOptional = AbilityItem.getAbilityItem(item);
+            abilityItemOptional.ifPresent(abilityItem -> {
+                Collection<Cooldown> cooldowns = abilityItem.getCooldowns().values();
+
+                boolean hasCooldown = !cooldowns.isEmpty() && cooldowns.stream()
+                        .anyMatch(c -> c.contains(player));
+
+                if (hasCooldown) {
+                    e.setCancelled(true);
+                    e.setResult(Event.Result.DENY);
+
+                    for (Cooldown cooldown : cooldowns) {
+                        if (cooldown.contains(player)) {
+                            double countdown = cooldown.getCountdown(player);
+                            int amount = Math.max(1, Math.min(64, (int) Math.ceil(countdown)));
+                            ItemStack correctedItem = item.clone();
+                            correctedItem.setAmount(amount);
+                            player.setItemOnCursor(correctedItem);
+                            break;
+                        }
+                    }
+                }
+            });
+        }
+    }
+
     public <T> boolean runValidators(List<AbilityItem.Validator<?>> validators, T object) {
         for (AbilityItem.Validator<?> validator : validators) {
-            if (validator.type().isInstance(object)) {
-                @SuppressWarnings("unchecked")
-                AbilityItem.Validator<T> v = (AbilityItem.Validator<T>) validator;
-                if (!v.validator().test(object)) {
-                    if (v.consumer() != null) v.consumer().accept(object);
-                    return false;
-                }
+            if (!validator.type().isInstance(object)) continue;
+
+            @SuppressWarnings("unchecked")
+            AbilityItem.Validator<T> v = (AbilityItem.Validator<T>) validator;
+
+            boolean valid = v.validator().test(object);
+            if (!valid) {
+                Consumer<T> consumer = v.consumer();
+                if (consumer != null) consumer.accept(object);
+                return false;
             }
         }
         return true;

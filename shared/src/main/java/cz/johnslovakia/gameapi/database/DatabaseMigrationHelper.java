@@ -9,22 +9,21 @@ import java.sql.*;
 public class DatabaseMigrationHelper {
 
     public static boolean ensureNicknameUnique(String tableName) {
-        SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection();
-        if (connection == null) {
-            Logger.log("Database connection is null!", Logger.LogType.ERROR);
-            return false;
-        }
+        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+            if (dbConn == null) {
+                Logger.log("Database connection is null!", Logger.LogType.ERROR);
+                return false;
+            }
 
-        Connection conn = connection.getConnection();
+            Connection conn = dbConn.getConnection();
 
-        try {
             if (!tableExists(conn, tableName)) {
                 Logger.log("Table " + tableName + " does not exist yet. Skipping UNIQUE constraint migration.", Logger.LogType.INFO);
                 return true;
             }
 
             if (hasUniqueConstraint(conn, tableName, "Nickname")) {
-                Logger.log("UNIQUE constraint on Nickname already exists in " + tableName, Logger.LogType.INFO);
+                //Logger.log("UNIQUE constraint on Nickname already exists in " + tableName, Logger.LogType.INFO);
                 return true;
             }
 
@@ -57,9 +56,10 @@ public class DatabaseMigrationHelper {
             stmt.setString(1, database);
             stmt.setString(2, tableName);
 
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
         }
         return false;
@@ -76,9 +76,10 @@ public class DatabaseMigrationHelper {
             stmt.setString(2, tableName);
             stmt.setString(3, columnName);
 
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
         }
         return false;

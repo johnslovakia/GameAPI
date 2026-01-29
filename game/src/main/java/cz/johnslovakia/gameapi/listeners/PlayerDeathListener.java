@@ -24,9 +24,11 @@ import cz.johnslovakia.gameapi.utils.StringUtils;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import lombok.Getter;
 
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -66,10 +68,10 @@ public class PlayerDeathListener implements Listener {
         };
     }
 
-    public void eliminationBanner(GamePlayer killer, GamePlayer dead){
+    /*public void eliminationBanner(GamePlayer killer, GamePlayer dead){
         Player killerPlayer = killer.getOnlinePlayer();
         try {
-            int nameWidth = CharRepo.getPixelWidth(dead.getOnlinePlayer().getName()) + /*head pixels + space*/ (8 + 5);
+            int nameWidth = CharRepo.getPixelWidth(dead.getOnlinePlayer().getName()) + /*head pixels + space* (8 + 5);
             int needForName = (nameWidth >= 64 ? nameWidth - 64 : 64 - nameWidth) / 2;
             String nameSpaces = StringUtils.calculateNegativeSpaces(needForName);
 
@@ -77,12 +79,12 @@ public class PlayerDeathListener implements Listener {
             background.setColor(ChatColor.of("#4e5c24"));
             background.setFont("jsplugins:actionbar_offset");
 
-            Component head = ChatHeadAPI.getInstance().getHead(dead.getOfflinePlayer(), true, ChatHeadAPI.defaultSource);
+            Component head = ChatHeadAPI.getInstance().getHeadAsComponent(dead.getOfflinePlayer().getUniqueId(), true, ChatHeadAPI.defaultSource);
 
             TextComponent banner = new TextComponent("\uDAFF\uDFFB \uDAFF\uDF9C\uDAFF\uDFD8Ẍ");
             banner.setColor(ChatColor.WHITE);
             banner.addExtra("\uDAFF\uDFCE\uDAFF\uDFF2" + nameSpaces);
-            banner.addExtra("§f" + ChatHeadAPI.getInstance().getHeadAsString(dead.getOfflinePlayer())/*LegacyComponentSerializer.legacySection().serialize(head)*/);
+            banner.addExtra("§f" + ChatHeadAPI.getInstance().getHeadAsString(dead.getOfflinePlayer())/*LegacyComponentSerializer.legacySection().serialize(head)*);
             banner.addExtra("\uDB00\uDC02§f" + dead.getOnlinePlayer().getName().toUpperCase());
 
             background.addExtra(banner);
@@ -96,27 +98,27 @@ public class PlayerDeathListener implements Listener {
         // pak vemu délku jména a vypočítam kolik zbývá do 64, vydělím /2 zaokrouhlím a přidám výslednou negativní mezeru před jméno, výjde:
         // /title @a actionbar {"text":"\u1E8D","color":"#4e5c24","font":"minecraft:actionbar_offset","extra":[{"text":"󏾜󏿘\u1E8C󏿗󏿵HUNZEK_","color":"white"}]}
         ///title @a actionbar {"text":"󏿝\u1E8D","color":"#4e5c24","font":"minecraft:actionbar_offset","extra":[{"text":"󏾜󏿘\u1E8C󏿎󏿲󏿸DAMIANHRAJEEEE","color":"white"}]}
-    }
+    }*/
 
-    /*public void eliminationBanner(GamePlayer killer, GamePlayer dead){
+    public void eliminationBanner(GamePlayer killer, GamePlayer dead){
         Player killerPlayer = killer.getOnlinePlayer();
 
         try {
-            int nameWidth = CharRepo.getPixelWidth(dead.getOnlinePlayer().getName()) + /*head pixels + space* (8 + 5);
+            int nameWidth = CharRepo.getPixelWidth(dead.getOnlinePlayer().getName()) + /*head pixels + space*/ (8 + 5);
             int needForName = (nameWidth >= 64 ? nameWidth - 64 : 64 - nameWidth) / 2;
             String nameSpaces = StringUtils.calculateNegativeSpaces(needForName);
 
             Component background = Component.text("\uDAFF\uDFFB \uDAFF\uDFDDẍ");
-            background.color(TextColor.fromHexString("#4e5c24"));
-            background.font(Key.key("gameapi:actionbar_offset"));
+            background = background.color(TextColor.fromHexString("#4e5c24"));
+            background = background.font(Key.key("gameapi:actionbar_offset"));
 
             Component banner = Component.text("\uDAFF\uDFFB \uDAFF\uDF9C\uDAFF\uDFD8Ẍ"
                     + "\uDAFF\uDFCE\uDAFF\uDFF2" + nameSpaces
                     + "\uDB00\uDC02§f" + dead.getOnlinePlayer().getName().toUpperCase());
-            banner.append(ChatHeadAPI.getInstance().getHead(dead.getOfflinePlayer(), true, ChatHeadAPI.defaultSource));
-            banner.color(NamedTextColor.WHITE);
+            banner = banner.append(ChatHeadAPI.getInstance().getHeadAsComponent(dead.getOfflinePlayer().getUniqueId(), true, ChatHeadAPI.defaultSource));
+            banner = banner.color(NamedTextColor.WHITE);
 
-            background.append(banner);
+            background = background.append(banner);
 
             killerPlayer.sendActionBar(background);
         }catch (Exception e){
@@ -128,7 +130,7 @@ public class PlayerDeathListener implements Listener {
         // pak vemu délku jména a vypočítam kolik zbývá do 64, vydělím /2 zaokrouhlím a přidám výslednou negativní mezeru před jméno, výjde:
         // /title @a actionbar {"text":"\u1E8D","color":"#4e5c24","font":"minecraft:actionbar_offset","extra":[{"text":"󏾜󏿘\u1E8C󏿗󏿵HUNZEK_","color":"white"}]}
         // /title @a actionbar {"text":"󏿝\u1E8D","color":"#4e5c24","font":"minecraft:actionbar_offset","extra":[{"text":"󏾜󏿘\u1E8C󏿎󏿲󏿸DAMIANHRAJEEEE","color":"white"}]}
-    }*/
+    }
 
     @EventHandler
     public void onGamePlayerDeath(GamePlayerDeathEvent e) {
@@ -157,9 +159,10 @@ public class PlayerDeathListener implements Listener {
                 killKey = getxKillMessageKey(currentCount);
             }
 
-            ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), ModuleManager.getModule(KillMessageModule.class).getById(cosmeticsModule.getPlayerSelectedCosmetic(gamePlayer, killMessagesCategory).getName()).getTranslationKey(e.getDmgType()))
+            ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), ModuleManager.getModule(KillMessageModule.class).getForPlayer(killer).getTranslationKey(e.getDmgType()))
                     .replace("%dead%", gamePlayer.getName())
                     .replace("%killer%", killer.getName())
+                    .replace("%dead_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
                     .replace("%player_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
                     .replace("%killer_color%", useTeams ? "" + killer.getGameSession().getTeam().getChatColor() : "§a")
                     .addAndTranslate(killKey)
@@ -177,7 +180,8 @@ public class PlayerDeathListener implements Listener {
                 ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), "chat.first_blood")
                         .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                         .replace("%killer%", killer.getOnlinePlayer().getName())
-                        .getTranslated();
+                        .replace("%killer_color%", useTeams ? "" + killer.getGameSession().getTeam().getChatColor() : "§a")
+                        .send();
             }
 
             /*spawnKillProtection.merge(killer, 1, Integer::sum);
@@ -193,7 +197,7 @@ public class PlayerDeathListener implements Listener {
             }*/
 
             killer.getOnlinePlayer().playSound(killer.getOnlinePlayer().getLocation(), "jsplugins:good", 1F, 1F);
-            eliminationBanner(killer, gamePlayer);
+            //eliminationBanner(killer, gamePlayer);
         } else {
             String key;
             if (e.getDmgType() == DamageType.FALL) {
@@ -207,6 +211,7 @@ public class PlayerDeathListener implements Listener {
             ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), key)
                     .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                     .replace("%player_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
+                    .replace("%dead_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
                     .send();
         }
 
@@ -217,7 +222,7 @@ public class PlayerDeathListener implements Listener {
             int placement = totalPlayers - game.getPlacements().size();
             game.getPlacements().add(new Placement<>(gamePlayer, placement));
 
-            PlayerEliminationEvent ev = new PlayerEliminationEvent(gamePlayer, placement);
+            PlayerEliminationEvent ev = new PlayerEliminationEvent(gamePlayer, e.getKiller(), e.getAssists(),placement);
             Bukkit.getPluginManager().callEvent(ev);
 
             new BukkitRunnable() {
@@ -269,13 +274,13 @@ public class PlayerDeathListener implements Listener {
 
                 TeamModule teamModule = game.getModule(TeamModule.class);
                 int totalActiveTeams = (int) teamModule.getTeams().values().stream()
-                        .filter(team -> !team.getMembers().isEmpty())
+                        .filter(team -> !team.getAliveMembers().isEmpty())
                         .count();
 
                 int placement = totalActiveTeams - game.getPlacements().size();
                 game.getPlacements().add(new Placement<>(gameTeam, placement));
 
-                TeamEliminationEvent ev = new TeamEliminationEvent(gameTeam, placement);
+                TeamEliminationEvent ev = new TeamEliminationEvent(gameTeam, e.getKiller(), e.getAssists(), placement);
                 Bukkit.getPluginManager().callEvent(ev);
             }
         }

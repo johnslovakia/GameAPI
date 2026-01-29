@@ -41,6 +41,7 @@ public class ScoreModule implements Module {
             if (session == null) return;
 
             session.getScores().merge(score, 1, Integer::sum);
+            int currentScore = session.getScore(scoreName);
 
             Stat linkedStat = score.getLinkedStat();
             if (linkedStat != null) {
@@ -48,7 +49,10 @@ public class ScoreModule implements Module {
             }
 
             Reward reward = score.getReward();
-            if (reward != null) {
+            if (reward != null &&
+                    (score.getRewardLimit() == 0 || currentScore < score.getRewardLimit())
+                    && currentScore % score.getRewardFrequency() == 0) {
+
                 PlayerRewardRecord record = reward.applyReward(gamePlayer, score.isAllowedMessage());
                 session.getEarnedScoreRewards().computeIfAbsent(score, s -> new ArrayList<>()).add(record);
             }

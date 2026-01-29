@@ -5,6 +5,7 @@ import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
@@ -27,6 +28,16 @@ import java.net.URL;
 import java.util.*;
 
 public class Utils {
+
+    public static ItemStack createPotion(PotionEffectType type, int durationSeconds, int amplifier) {
+        ItemStack potion = new ItemStack(Material.POTION);
+        PotionMeta meta = (PotionMeta) potion.getItemMeta();
+        meta.clearCustomEffects();
+        meta.addCustomEffect(new PotionEffect(type, durationSeconds * 20, amplifier), true);
+        meta.setMainEffect(type);
+        potion.setItemMeta(meta);
+        return potion;
+    }
 
     public static int getPrice(FileConfiguration config, String path, int defaultPrice){
         int price = config.getInt(path);
@@ -240,7 +251,7 @@ public class Utils {
         text.append(roundedDouble);
         text.append("s");
 
-        if (player != null && player.isOnline()) ActionBarManager.sendActionBar(player, text.toString());
+        if (player != null && player.isOnline()) player.sendActionBar(Component.text(text.toString()));// ActionBarManager.sendActionBar(player, text.toString());
     }
 
     public static double calculateDamageApplied(double damage, double points, double toughness, int resistance, int epf) {

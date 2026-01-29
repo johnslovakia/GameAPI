@@ -4,7 +4,10 @@ import com.google.gson.JsonObject;
 import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.database.Database;
 import cz.johnslovakia.gameapi.modules.serverManagement.DataManager;
+import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.Getter;
+import me.zort.sqllib.SQLDatabaseConnection;
+import me.zort.sqllib.api.data.QueryResult;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.sql.PreparedStatement;
@@ -57,7 +60,19 @@ public class GameDataManager<T> {
                 "INDEX idx_last_updated (last_updated)" +
                 ")";
 
-        serverDataMySQL.getConnection().exec(query);
+        try (SQLDatabaseConnection connection = serverDataMySQL.getConnection()) {
+            if (connection != null) {
+                QueryResult result = connection.exec(query);
+                if (!result.isSuccessful()) {
+                    Logger.log("Failed to create 'games' table!", Logger.LogType.ERROR);
+                    Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+                }
+            } else {
+                Logger.log("Failed to get a database connection!", Logger.LogType.ERROR);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void updateGame() {
@@ -87,18 +102,18 @@ public class GameDataManager<T> {
         new BukkitRunnable() {
             @Override
             public void run() {
-                try {
-                    JsonObject jsonData = buildGameDataJson();
-                    
+                JsonObject jsonData = buildGameDataJson();
+
+                try (SQLDatabaseConnection connection = DataManager.getInstance().getServerDataMySQL().getConnection()) {
+                    if (connection == null) {
+                        Logger.log("Failed to get a database connection for updating game: " + gameName, Logger.LogType.ERROR);
+                        return;
+                    }
+
                     String query = "INSERT INTO games (name, minigame, max_players, data) VALUES (?, ?, ?, ?) " +
                             "ON DUPLICATE KEY UPDATE minigame=?, max_players=?, data=?, last_updated=CURRENT_TIMESTAMP";
 
-                    try (PreparedStatement statement = DataManager.getInstance()
-                            .getServerDataMySQL()
-                            .getConnection()
-                            .getConnection()
-                            .prepareStatement(query)) {
-                        
+                    try (PreparedStatement statement = connection.getConnection().prepareStatement(query)) {
                         statement.setString(1, gameName);
                         statement.setString(2, minigameName);
                         statement.setInt(3, maxPlayers);
@@ -106,7 +121,7 @@ public class GameDataManager<T> {
                         statement.setString(5, minigameName);
                         statement.setInt(6, maxPlayers);
                         statement.setString(7, jsonData.toString());
-                        
+
                         statement.executeUpdate();
                     }
                 } catch (SQLException e) {
@@ -115,6 +130,7 @@ public class GameDataManager<T> {
             }
         }.runTaskAsynchronously(Shared.getInstance().getPlugin());
     }
+
 
     private JsonObject buildGameDataJson() {
         JsonObject jsonData = new JsonObject();
@@ -163,31 +179,33 @@ public class GameDataManager<T> {
         new BukkitRunnable() {
             @Override
             public void run() {
-                String query = "UPDATE games SET data = JSON_SET(data, '$." + propertyName + "', ?), " +
-                        "last_updated = CURRENT_TIMESTAMP WHERE name = ?";
-
-                try (PreparedStatement statement = DataManager.getInstance()
-                        .getServerDataMySQL()
-                        .getConnection()
-                        .getConnection()
-                        .prepareStatement(query)) {
-                    
-                    if (value instanceof String) {
-                        statement.setString(1, (String) value);
-                    } else if (value instanceof Integer) {
-                        statement.setInt(1, (Integer) value);
-                    } else if (value instanceof Double) {
-                        statement.setDouble(1, (Double) value);
-                    } else if (value instanceof Boolean) {
-                        statement.setBoolean(1, (Boolean) value);
-                    } else {
-                        statement.setString(1, value.toString());
+                try (SQLDatabaseConnection connection = DataManager.getInstance().getServerDataMySQL().getConnection()) {
+                    if (connection == null) {
+                        Logger.log("Failed to get a database connection for updating property: " + propertyName, Logger.LogType.ERROR);
+                        return;
                     }
-                    
-                    statement.setString(2, gameName);
-                    statement.executeUpdate();
-                } catch (SQLException e) {
-                    e.printStackTrace();
+
+                    String query = "UPDATE games SET data = JSON_SET(data, '$." + propertyName + "', ?), " +
+                            "last_updated = CURRENT_TIMESTAMP WHERE name = ?";
+
+                    try (PreparedStatement statement = connection.getConnection().prepareStatement(query)) {
+                        if (value instanceof String) {
+                            statement.setString(1, (String) value);
+                        } else if (value instanceof Integer) {
+                            statement.setInt(1, (Integer) value);
+                        } else if (value instanceof Double) {
+                            statement.setDouble(1, (Double) value);
+                        } else if (value instanceof Boolean) {
+                            statement.setBoolean(1, (Boolean) value);
+                        } else {
+                            statement.setString(1, value.toString());
+                        }
+
+                        statement.setString(2, gameName);
+                        statement.executeUpdate();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }.runTaskAsynchronously(Shared.getInstance().getPlugin());

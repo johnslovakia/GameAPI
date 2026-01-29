@@ -8,7 +8,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-//NOT MY CODE
 
 /**
  * Representation of automatic statistic trigger. It is used to detect event calls and perform specific action on statistics dependently on which one is called.
@@ -19,7 +18,6 @@ public class CTrigger<E extends Event> {
     private final Class<E> eventClass;
     private final Function<E, Player> mapper;
     private final Predicate<E> validator;
-    //private final Function<? extends Number, ? extends Number> response;
     private final Consumer<E> response;
 
 
