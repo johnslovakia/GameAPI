@@ -1,7 +1,8 @@
 {
-  "latest_version": "2.0",
-  "update_message": "MAJOR UPDATE: custom resourcepack, 1.21 support and more!",
+  "latest_version": "2.0.1",
+  "update_message": "Support for 1.21.9+ & small bug fixes",
   "update_messages": {
-    "2.0": "MAJOR UPDATE: custom resourcepack, 1.21 support and more!"
+    "2.0": "MAJOR UPDATE: custom resourcepack, 1.21 support and more!",
+    "2.0.1": "Support for 1.21.9+ & small bug fixes"
   }
 }
