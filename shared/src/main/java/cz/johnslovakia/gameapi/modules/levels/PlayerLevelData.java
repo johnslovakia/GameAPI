@@ -47,33 +47,40 @@ public class PlayerLevelData {
     }
 
     public CompletableFuture<Void> calculate(){
-        return ModuleManager.getModule(ResourcesModule.class).getPlayerBalance(playerIdentity, "ExperiencePoints").thenAccept(totalXp -> {
-            int xpSum = 0;
+        return ModuleManager.getModule(ResourcesModule.class)
+                .getPlayerBalance(playerIdentity, "ExperiencePoints")
+                .thenAccept(totalXp -> {
+                    int xpSum = 0;
 
-            for (LevelRange range : levelModule.getLevelRanges()) {
-                for (int lvl = range.startLevel(); lvl <= range.endLevel(); lvl++) {
-                    int xpPerLevel = range.getXPForLevel(lvl);
+                    for (LevelRange range : levelModule.getLevelRanges()) {
+                        for (int lvl = range.startLevel(); lvl <= range.endLevel(); lvl++) {
+                            int xpPerLevel = range.getXPForLevel(lvl);
 
-                    if (totalXp < xpSum + xpPerLevel) {
-                        int xpOnCurrent = totalXp - xpSum;
+                            if (totalXp < xpSum + xpPerLevel) {
+                                int xpOnCurrent = totalXp - xpSum;
 
-                        this.levelRange = range;
-                        this.levelEvolution = levelModule.getLevelEvolution(level);
-                        this.xpOnCurrentLevel = xpOnCurrent;
-                        this.xpToNextLevel = xpPerLevel;
+                                this.levelRange = range;
+                                this.levelEvolution = levelModule.getLevelEvolution(level);
+                                this.xpOnCurrentLevel = xpOnCurrent;
+                                this.xpToNextLevel = xpPerLevel;
 
-                        return; //
+                                return;
+                            }
+
+                            xpSum += xpPerLevel;
+                        }
                     }
 
-                    xpSum += xpPerLevel;
-                }
-            }
-
-            this.levelRange = levelModule.getLevelRanges().getLast();
-            this.levelEvolution = levelModule.getLevelEvolution(level);
-            this.xpOnCurrentLevel = 0;
-            this.xpToNextLevel = 0;
-        });
+                    this.levelRange = levelModule.getLevelRanges().getLast();
+                    this.levelEvolution = levelModule.getLevelEvolution(level);
+                    this.xpOnCurrentLevel = 0;
+                    this.xpToNextLevel = 0;
+                })
+                .exceptionally(ex -> {
+                    Logger.log("calculate: FAILED - " + ex.getMessage(), Logger.LogType.ERROR);
+                    ex.printStackTrace();
+                    return null;
+                });
     }
 
     public void setLevel(int level) {

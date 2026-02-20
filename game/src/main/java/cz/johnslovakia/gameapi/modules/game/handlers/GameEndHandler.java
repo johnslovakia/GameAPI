@@ -180,7 +180,7 @@ public class GameEndHandler {
             }
 
             InventoryBuilder itemManager = new InventoryBuilder("Ending");
-            if (gameService.getGames().size() > 1 || (DataManager.getInstance() != null && DataManager.getInstance().getMinigame(Minigame.getInstance().getName()).get().isThereFreeGame())) {
+            if (gameService.getGames().size() > 1 || (DataManager.getInstance() != null && (DataManager.getInstance().getMinigame(Minigame.getInstance().getName()).isPresent() && DataManager.getInstance().getMinigame(Minigame.getInstance().getName()).get().isThereFreeGame()))) {
                 Item playAgain = new Item(new ItemBuilder(Material.PAPER).hideAllFlags().toItemStack(),
                         1, "item.play_again",
                         new Consumer<PlayerInteractEvent>() {

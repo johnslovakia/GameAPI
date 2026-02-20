@@ -484,7 +484,6 @@ public class GameAPI{
 
         resourcesModule.registerResource(coins.build(), experiencePoints, cosmeticTokens);
 
-        moduleManager.registerModule(new CosmeticsModule());
 
         minigame.setupPlayerScores();
 
@@ -515,6 +514,7 @@ public class GameAPI{
             playerTable.createTable();
 
             minigameTable.createNewColumn(Type.VARCHAR32, "LastDailyWinReward");
+            moduleManager.registerModule(new CosmeticsModule());
 
 
             minigame.setupOther();

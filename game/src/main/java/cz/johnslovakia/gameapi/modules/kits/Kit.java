@@ -163,7 +163,7 @@ public class Kit implements Listener{
                 return;
             }
 
-            boolean isKitManagerDefaultKit = kitManager.getDefaultKit() != null && !kitManager.getDefaultKit().equals(this);
+            boolean isKitManagerDefaultKit = kitManager.getDefaultKit() != null && kitManager.getDefaultKit().equals(this);
             if (((gamePlayer.getGame().getState() == GameState.WAITING
                     || gamePlayer.getGame().getState() == GameState.STARTING) && !isKitManagerDefaultKit)
                     || (gamePlayer.getGame().getState() == GameState.INGAME
