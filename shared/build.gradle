@@ -1,0 +1,93 @@
+//build.gradle :shared
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'maven-publish'
+    id 'io.papermc.paperweight.userdev' version '2.0.0-beta.18'
+    id 'com.gradleup.shadow' version '9.2.2'
+}
+
+dependencies {
+    paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
+
+    compileOnly 'org.projectlombok:lombok:1.18.36'
+    annotationProcessor 'org.projectlombok:lombok:1.18.36'
+
+    implementation files('C:\\Users\\filik\\.m2\\repository\\com\\github\\ZorTik\\AdvancedSQLClient\\shared\\0.7-pre5\\shared-0.7-pre5.jar')
+    implementation files('C:\\Users\\filik\\.m2\\repository\\com\\github\\ZorTik\\AdvancedSQLClient\\core\\0.7-pre5\\core-0.7-pre5.jar')
+    implementation files('C:\\Users\\filik\\.m2\\repository\\com\\github\\ZorTik\\AdvancedSQLClient\\api\\0.7-pre5\\api-0.7-pre5.jar')
+    implementation files('C:\\Users\\filik\\.m2\\repository\\com\\github\\ZorTik\\AdvancedSQLClient\\0.7-pre5\\AdvancedSQLClient-0.7-pre5.jar')
+
+    implementation 'com.github.Osiris-Team:Dyml:9.8.3'
+    implementation(platform("com.intellectualsites.bom:bom-newest:1.52"))
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core")
+    compileOnly files("C:\\Users\\filik\\pl\\PlaceholderAPI-2.11.6.jar")
+    implementation 'com.github.ZorTik:AdvancedSQLClient:0.7-pre5'
+    compileOnly "com.github.MilkBowl:VaultAPI:1.7"
+    compileOnly 'com.infernalsuite.asp:api:4.0.0-SNAPSHOT'
+    implementation 'com.infernalsuite.asp:mysql-loader:4.0.0-SNAPSHOT'
+    compileOnly group: 'com.alessiodp.parties', name: 'parties-api', version: '3.2.15'
+    compileOnly "de.simonsator:Party-and-Friends-MySQL-Edition-Spigot-API:1.6.2-RELEASE"
+    compileOnly "de.simonsator:spigot-party-api-for-party-and-friends:1.0.7-RELEASE"
+    compileOnly files("C:\\Users\\filik\\pl\\FriendSystem-Spigot-API-1.0.jar")
+    implementation("org.json:json:20230227")
+    implementation("redis.clients:jedis:4.4.3")
+    implementation("org.apache.commons:commons-pool2:2.12.1")
+    implementation("com.github.cryptomorin:XSeries:13.5.1")
+    implementation("org.apache.commons:commons-lang3:3.20.0")
+}
+
+tasks.named("assemble") {
+    dependsOn tasks.named("reobfJar")
+}
+
+shadowJar {
+    archiveBaseName = 'GameAPI-Shared'
+    archiveVersion = project.version
+    archiveClassifier = ''
+
+    dependencies {
+        include { dep ->
+            dep.moduleGroup == 'com.github.Osiris-Team' && dep.moduleName == 'Dyml'
+        }
+        include { dep ->
+            dep.moduleGroup == 'com.github.ZorTik' && dep.moduleName == 'AdvancedSQLClient'
+        }
+        include { dep ->
+            dep.moduleGroup == 'org.json' && dep.moduleName == 'json'
+        }
+        include { dep ->
+            dep.moduleGroup == 'redis.clients' && dep.moduleName == 'jedis'
+        }
+        include { dep ->
+            dep.moduleGroup == 'org.apache.commons' && dep.moduleName == 'commons-pool2'
+        }
+        include { dep ->
+            dep.moduleGroup == 'com.github.cryptomorin' && dep.moduleName == 'XSeries'
+        }
+        include { dep ->
+            dep.moduleGroup == 'com.infernalsuite.asp' && dep.moduleName == 'mysql-loader'
+        }
+    }
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) {
+            groupId = 'cz.johnslovakia'
+            artifactId = 'gameapi-shared'
+            version = project.version
+
+            artifact(tasks.shadowJar)
+        }
+    }
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}

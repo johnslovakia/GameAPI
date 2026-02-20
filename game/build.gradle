@@ -1,0 +1,93 @@
+//build.gradle :game
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'maven-publish'
+    id 'io.papermc.paperweight.userdev' version '2.0.0-beta.18'
+    id 'com.gradleup.shadow' version '9.2.2'
+}
+
+dependencies {
+    paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
+
+    compileOnly 'org.projectlombok:lombok:1.18.36'
+    annotationProcessor 'org.projectlombok:lombok:1.18.36'
+
+    implementation 'com.github.Osiris-Team:Dyml:9.8.3'
+    compileOnly files("C:\\Users\\filik\\pl\\PlaceholderAPI-2.11.6.jar")
+    implementation 'com.github.ZorTik:AdvancedSQLClient:0.7-pre5'
+
+    implementation project(":shared")
+
+    implementation files('C:/Users/filik/IdeaProjects/ContainrGUI/build/libs/ContainrGUI-1.0-SNAPSHOT.jar')
+
+    implementation files('C:\\Users\\filik\\.m2\\repository\\com\\github\\ZorTik\\AdvancedSQLClient\\shared\\0.7-pre5\\shared-0.7-pre5.jar')
+    implementation files('C:\\Users\\filik\\.m2\\repository\\com\\github\\ZorTik\\AdvancedSQLClient\\core\\0.7-pre5\\core-0.7-pre5.jar')
+    implementation files('C:\\Users\\filik\\.m2\\repository\\com\\github\\ZorTik\\AdvancedSQLClient\\api\\0.7-pre5\\api-0.7-pre5.jar')
+    implementation files('C:\\Users\\filik\\.m2\\repository\\com\\github\\ZorTik\\AdvancedSQLClient\\0.7-pre5\\AdvancedSQLClient-0.7-pre5.jar')
+
+    compileOnly "com.github.MilkBowl:VaultAPI:1.7"
+    compileOnly 'net.dmulloy2:ProtocolLib:5.4.0'
+    compileOnly 'com.infernalsuite.asp:api:4.0.0-SNAPSHOT'
+    implementation 'com.infernalsuite.asp:mysql-loader:4.0.0-SNAPSHOT'
+    implementation(platform("com.intellectualsites.bom:bom-newest:1.55"))
+    compileOnly("com.fastasyncworldedit:FastAsyncWorldEdit-Core")
+    implementation("org.json:json:20230227")
+}
+
+tasks.named("assemble") {
+    dependsOn tasks.named("reobfJar")
+}
+
+shadowJar {
+    dependencies {
+        include { dep ->
+            dep.moduleGroup == 'com.github.Osiris-Team' && dep.moduleName == 'Dyml'
+        }
+        include { dep ->
+            dep.moduleGroup == 'com.github.ZorTik' && dep.moduleName == 'AdvancedSQLClient'
+        }
+        include { dep ->
+            dep.moduleGroup == 'org.json' && dep.moduleName == 'json'
+        }
+        include { dep ->
+            dep.moduleGroup == 'redis.clients' && dep.moduleName == 'jedis'
+        }
+        include { dep ->
+            dep.moduleGroup == 'org.apache.commons' && dep.moduleName == 'commons-pool2'
+        }
+        include { dep ->
+            dep.moduleGroup == 'com.github.cryptomorin' && dep.moduleName == 'XSeries'
+        }
+        include { dep ->
+            dep.moduleGroup == 'com.infernalsuite.asp' && dep.moduleName == 'mysql-loader'
+        }
+    }
+
+    archiveBaseName = 'GameAPI-Game'
+    archiveVersion = project.version
+    archiveClassifier = ''
+
+    from project(':shared').sourceSets.main.output
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) {
+            groupId = 'cz.johnslovakia'
+            artifactId = 'gameapi-game'
+            version = project.version
+
+            artifact(tasks.shadowJar)
+        }
+    }
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}
