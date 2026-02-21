@@ -1,8 +1,9 @@
 {
-  "latest_version": "1.1.1",
-  "update_message": "Bug Fixes",
+  "latest_version": "1.2",
+  "update_message": "Lobby System, Leaderboard Hologram, and more...",
   "update_messages": {
     "1.1": "LevelSystem, Changes and Bug Fixes",
-    "1.1.1": "Bug Fixes"
+    "1.1.1": "Bug Fixes",
+    "1.2": "Lobby System, Leaderboard Hologram, and more..."
   }
 }

@@ -5,8 +5,7 @@ import cz.johnslovakia.gameapi.users.parties.PartyInterface;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public interface PlayerIdentity {
 
@@ -14,6 +13,12 @@ public interface PlayerIdentity {
     String getName();
     Player getOnlinePlayer();
     OfflinePlayer getOfflinePlayer();
+
+    Map<PlayerIdentity, Map<String, Object>> META_STORAGE = new WeakHashMap<>();
+
+    default Map<String, Object> getMetadata() {
+        return META_STORAGE.computeIfAbsent(this, k -> new HashMap<>());
+    }
 
     default FriendsInterface getFriends() {
         return EmptyFriendsInterface.INSTANCE;

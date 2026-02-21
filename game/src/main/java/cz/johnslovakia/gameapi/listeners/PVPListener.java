@@ -212,7 +212,7 @@ public class PVPListener implements Listener {
             GameInstance game = gamePlayer.getGame();
             if (game != null && game.getState() == GameState.INGAME) {
                 if (gamePlayer.isSpectator() && e.getCause().equals(EntityDamageEvent.DamageCause.VOID)){
-                    player.teleport(RespawnListener.getNonRespawnLocation(game));
+                    player.teleport(GameUtils.getNonRespawnLocation(game));
                     e.setCancelled(true);
                     return;
                 }

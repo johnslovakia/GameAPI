@@ -4,8 +4,7 @@ import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
-import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.users.PlayerData;
+import cz.johnslovakia.gameapi.users.PlayerIdentity;
 
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.StringUtils;
@@ -25,32 +24,32 @@ import java.util.function.Consumer;
 @Getter
 public class ConfirmInventory {
 
-    private final GamePlayer gamePlayer;
-    private final Consumer<GamePlayer> confirmAction;
-    private final Consumer<GamePlayer> cancelAction;
+    private final PlayerIdentity PlayerIdentity;
+    private final Consumer<PlayerIdentity> confirmAction;
+    private final Consumer<PlayerIdentity> cancelAction;
 
     private String description_key;
     private ItemStack item;
     private Map<Resource, Integer> cost;
 
-    public ConfirmInventory(GamePlayer gamePlayer, String description_key, Consumer<GamePlayer> confirmAction, Consumer<GamePlayer> cancelAction) {
-        this.gamePlayer = gamePlayer;
+    public ConfirmInventory(PlayerIdentity PlayerIdentity, String description_key, Consumer<PlayerIdentity> confirmAction, Consumer<PlayerIdentity> cancelAction) {
+        this.PlayerIdentity = PlayerIdentity;
         this.description_key = description_key;
         this.confirmAction = confirmAction;
         this.cancelAction = cancelAction;
     }
 
-    public ConfirmInventory(GamePlayer gamePlayer, ItemStack item, Resource resource, int price, Consumer<GamePlayer> confirmAction, Consumer<GamePlayer> cancelAction) {
+    public ConfirmInventory(PlayerIdentity PlayerIdentity, ItemStack item, Resource resource, int price, Consumer<PlayerIdentity> confirmAction, Consumer<PlayerIdentity> cancelAction) {
 
-        this.gamePlayer = gamePlayer;
+        this.PlayerIdentity = PlayerIdentity;
         this.item = item;
         this.cost = Map.of(resource, price);
         this.confirmAction = confirmAction;
         this.cancelAction = cancelAction;
     }
 
-    public ConfirmInventory(GamePlayer gamePlayer, ItemStack item, Map<Resource, Integer> cost, Consumer<GamePlayer> confirmAction, Consumer<GamePlayer> cancelAction) {
-        this.gamePlayer = gamePlayer;
+    public ConfirmInventory(PlayerIdentity PlayerIdentity, ItemStack item, Map<Resource, Integer> cost, Consumer<PlayerIdentity> confirmAction, Consumer<PlayerIdentity> cancelAction) {
+        this.PlayerIdentity = PlayerIdentity;
         this.item = item;
         this.cost = cost;
         this.confirmAction = confirmAction;
@@ -79,7 +78,7 @@ public class ConfirmInventory {
                     info.setLore(ModuleManager.getModule(MessageModule.class).get(player, "inventory.info_item.confirm_inventory.lore").getTranslated());
 
                     gui.appendElement(0, Component.element(back.toItemStack()).addClick(i -> {
-                        cancelAction.accept(gamePlayer);
+                        cancelAction.accept(PlayerIdentity);
                         player.playSound(player, Sound.UI_BUTTON_CLICK, 1F, 1F);
                     }).build());
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
@@ -98,7 +97,7 @@ public class ConfirmInventory {
                         confirm.addLoreLine("");
                     }else{
                         if (cost.size() > 1) {
-                            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.confirm_inventory.price")
+                            ModuleManager.getModule(MessageModule.class).get(PlayerIdentity, "inventory.confirm_inventory.price")
                                     .replace("%economy_name%", "")
                                     .replace("%price%", "")
                                     .replace("%balance%", "")
@@ -108,7 +107,7 @@ public class ConfirmInventory {
                             for (Map.Entry<Resource, Integer> entry : getCost().entrySet()) {
                                 Resource resource = entry.getKey();
                                 int cost = entry.getValue();
-                                int balance = ModuleManager.getModule(ResourcesModule.class).getPlayerBalanceCached(gamePlayer, resource);
+                                int balance = ModuleManager.getModule(ResourcesModule.class).getPlayerBalanceCached(PlayerIdentity, resource);
 
                                 confirm.addLoreLine(" §f- " + (balance >= cost ? "§a" : "§c") + StringUtils.betterNumberFormat(balance) + "§8/§7" + StringUtils.betterNumberFormat(cost) + " " + resource.getColor() + resource.getDisplayName());
                             }
@@ -116,9 +115,9 @@ public class ConfirmInventory {
                             Map.Entry<Resource, Integer> entry = cost.entrySet().iterator().next();
                             Resource resource = entry.getKey();
                             int price = entry.getValue();
-                            int balance = ModuleManager.getModule(ResourcesModule.class).getPlayerBalanceCached(gamePlayer, resource);
+                            int balance = ModuleManager.getModule(ResourcesModule.class).getPlayerBalanceCached(PlayerIdentity, resource);
 
-                            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.confirm_inventory.price")
+                            ModuleManager.getModule(MessageModule.class).get(PlayerIdentity, "inventory.confirm_inventory.price")
                                     .replace("%balance%", "§a" + StringUtils.betterNumberFormat(balance))
                                     .replace("%price%", StringUtils.betterNumberFormat(price))
                                     .replace("%economy_name%", resource.getDisplayName())
@@ -152,7 +151,7 @@ public class ConfirmInventory {
                             .size(3, 1)
                             .init(container -> {
                                 Element element = Component.element(confirm.toItemStack()).addClick(i -> {
-                                    confirmAction.accept(gamePlayer);
+                                    confirmAction.accept(PlayerIdentity);
                                 }).build();
                                 container.fillElement(element);
                             }).build());
@@ -161,13 +160,13 @@ public class ConfirmInventory {
                             .size(3, 1)
                             .init(container -> {
                                 Element element = Component.element(cancel.toItemStack()).addClick(i -> {
-                                    cancelAction.accept(gamePlayer);
+                                    cancelAction.accept(PlayerIdentity);
                                 }).build();
                                 container.fillElement(element);
                             }).build());
 
                 }).build();
-        inventory.open(gamePlayer.getOnlinePlayer());
+        inventory.open(PlayerIdentity.getOnlinePlayer());
 
     }
 }

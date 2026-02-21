@@ -116,7 +116,9 @@ public class JoinQuitListener implements Listener {
 
         LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
         if (levelModule != null) {
-            if (!gamePlayer.getGame().getState().equals(GameState.INGAME)) {
+            if (gamePlayer.isInGame() && !gamePlayer.getGame().getState().equals(GameState.INGAME)) {
+                levelModule.getCache().remove(gamePlayer);
+            }else{
                 levelModule.getCache().remove(gamePlayer);
             }
         }

@@ -30,6 +30,11 @@ import java.util.regex.Pattern;
 
 public class StringUtils {
 
+    public static char getLetter(int index) {
+        index = index % 26;
+        return (char) ('a' + index);
+    }
+
     public static String getTimeLeftUntil(LocalDateTime targetDateTime) {
         LocalDateTime now = LocalDateTime.now();
 

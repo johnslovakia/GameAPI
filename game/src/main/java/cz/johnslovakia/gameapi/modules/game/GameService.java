@@ -103,10 +103,8 @@ public class GameService implements Module {
         if (getGames().isEmpty()) return null;
 
         for(GameInstance game : getGames().values()) {
-            if (game.getState() != GameState.WAITING && game.getState() != GameState.STARTING) {
-                if (!game.getSettings().isEnabledJoiningAfterStart()){
-                    continue;
-                }
+            if (game.getState().equals(GameState.INGAME) && !game.getSettings().isEnabledJoiningAfterStart()){
+                continue;
             }
             if (game.getPlayers().size() >= game.getSettings().getMaxPlayers()) continue;
 
@@ -129,7 +127,8 @@ public class GameService implements Module {
                     if (!Bukkit.getOnlinePlayers().isEmpty()){
                         Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage("§cRestarting server..."));
                     }
-                    Bukkit.shutdown();
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "restart");
+                    //Bukkit.shutdown();
                 }
             }.runTaskLater(Minigame.getInstance().getPlugin(), 80L);
             return;
@@ -139,10 +138,11 @@ public class GameService implements Module {
 
 
 
-        GameInstance newGame = Minigame.getInstance().setupGame(toResetGame.getName());
+        String gameName = toResetGame.getName();
+        games.remove(toResetGame.getID());
 
-        //TODO: udělat lépe
-        toResetGame.setName("ToRemove-" + toResetGame.getID());
+        GameInstance newGame = Minigame.getInstance().setupGame(gameName);
+
 
         List<Player> players = new ArrayList<>();
         if (!toResetGame.getParticipants().isEmpty()) {
@@ -169,7 +169,7 @@ public class GameService implements Module {
                 Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
                     //PlayerManager.removeGamePlayer(player);
                     newArena(player, true);
-                }, 20L);
+                }, 25L);
             }
         }
 
@@ -181,7 +181,7 @@ public class GameService implements Module {
                 e.printStackTrace();
             }
             toResetGame.destroyAllModules();
-            games.remove(toResetGame.getID());
+            //games.remove(toResetGame.getID());
         }, 70L);
     }
 

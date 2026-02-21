@@ -47,7 +47,6 @@ public class GamePlayer extends Winner implements PlayerIdentity {
 
     private PlayerData playerData;
     private String gameID;
-    private HashMap<String, Object> metadata = new HashMap<>();
 
     private PlayerLifecycleState lifecycleState = PlayerLifecycleState.FULL;
 
@@ -64,7 +63,7 @@ public class GamePlayer extends Winner implements PlayerIdentity {
 
         playerData = null;
         //gameID = null;
-        metadata.clear();
+        getMetadata().remove((PlayerIdentity) this);
     }
 
     public PlayerData getPlayerData() {

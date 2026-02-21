@@ -88,10 +88,12 @@ public class StatsModule implements Module, Listener {
                         statsHolograms.createPlayerStatisticsHologram(e.getGamePlayer(), statsHologram.getLocation());
                     });
                 }
-                /*LobbyLocation topStatsHologram = config.getLobbyLocation(game, "topStatsHologram");
-                if (topStatsHologram != null){
-                    statsHolograms.createTOPStatisticsHologram(topStatsHologram.getLocation(), player);
-                }*/
+                LobbyLocation topStatsHologram = config.getLobbyLocation(game, "topStatsHologram");
+                if (topStatsHologram != null) {
+                    Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task -> {
+                        statsHolograms.getTopStatsHologram().createTopStatisticsHologram(e.getGamePlayer(), topStatsHologram.getLocation());
+                    });
+                }
             });
         }
     }

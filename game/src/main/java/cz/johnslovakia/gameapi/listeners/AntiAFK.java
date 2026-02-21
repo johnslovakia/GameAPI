@@ -58,21 +58,21 @@ public class AntiAFK implements Listener {
             }
         } else {
             if (game.getState().equals(GameState.INGAME)){
-            if (!afkTasks.containsKey(gamePlayer)) {
-                BukkitRunnable task = new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (PlayerManager.getGamePlayer(player) != gamePlayer) {
-                            this.cancel();
-                            return;
+                if (!afkTasks.containsKey(gamePlayer)) {
+                    BukkitRunnable task = new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            if (PlayerManager.getGamePlayer(player) != gamePlayer) {
+                                this.cancel();
+                                return;
+                            }
+                            isAfk.put(gamePlayer, true);
+                            kickPlayerIfAfk(player);
                         }
-                        isAfk.put(gamePlayer, true);
-                        kickPlayerIfAfk(player);
-                    }
-                };
-                afkTasks.put(gamePlayer, task);
-                task.runTaskLaterAsynchronously(Minigame.getInstance().getPlugin(), afkCheckDelay);
-            }
+                    };
+                    afkTasks.put(gamePlayer, task);
+                    task.runTaskLaterAsynchronously(Minigame.getInstance().getPlugin(), afkCheckDelay);
+                }
             }
         }
     }

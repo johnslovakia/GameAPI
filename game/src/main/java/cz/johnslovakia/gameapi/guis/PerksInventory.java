@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.guis;
 
+import com.comphenix.protocol.PacketType;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.perks.Perk;
@@ -11,6 +12,7 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerData;
 
 import cz.johnslovakia.gameapi.modules.ModuleManager;
+import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 
 import cz.johnslovakia.gameapi.utils.StringUtils;
@@ -129,16 +131,16 @@ public class PerksInventory {
                                                         .replace("%economy_name%", resource.getDisplayName())
                                                         .send();
                                             } else {
-                                                new ConfirmInventory(gamePlayer, getEditedItem(gamePlayer, perk), resource, nextLevel.price(), new Consumer<GamePlayer>() {
+                                                new ConfirmInventory(gamePlayer, getEditedItem(gamePlayer, perk), resource, nextLevel.price(), new Consumer<PlayerIdentity>() {
                                                     @Override
-                                                    public void accept(GamePlayer gamePlayer) {
-                                                        perk.purchase(gamePlayer);
+                                                    public void accept(PlayerIdentity gamePlayer) {
+                                                        perk.purchase((GamePlayer) gamePlayer);
                                                         player.closeInventory();
                                                     }
-                                                }, new Consumer<GamePlayer>() {
+                                                }, new Consumer<PlayerIdentity>() {
                                                     @Override
-                                                    public void accept(GamePlayer gamePlayer) {
-                                                        openGUI(gamePlayer);
+                                                    public void accept(PlayerIdentity gamePlayer) {
+                                                        openGUI((GamePlayer) gamePlayer);
                                                     }
                                                 }).openGUI();
                                             }

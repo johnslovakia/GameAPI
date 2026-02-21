@@ -1,8 +1,9 @@
 {
-  "latest_version": "2.0.1",
-  "update_message": "Support for 1.21.9+ & small bug fixes",
+  "latest_version": "2.1",
+  "update_message": "Lobby System, Leaderboard Hologram, and more...",
   "update_messages": {
     "2.0": "MAJOR UPDATE: custom resourcepack, 1.21 support and more!",
-    "2.0.1": "Support for 1.21.9+ & small bug fixes"
+    "2.0.1": "Support for 1.21.9+ & small bug fixes",
+    "2.1": "Lobby System, Leaderboard Hologram, and more..."
   }
 }

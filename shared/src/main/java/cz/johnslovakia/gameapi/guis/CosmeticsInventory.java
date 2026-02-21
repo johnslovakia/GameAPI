@@ -7,8 +7,8 @@ import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsCategory;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
-import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.users.PlayerManager;
+import cz.johnslovakia.gameapi.users.PlayerIdentity;
+import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.utils.StringUtils;
@@ -36,7 +36,7 @@ import java.util.function.Consumer;
 
 public class CosmeticsInventory implements Listener {
 
-    private static ItemStack getEditedItem(GamePlayer gamePlayer, Cosmetic cosmetic) {
+    private static ItemStack getEditedItem(PlayerIdentity playerIdentity, Cosmetic cosmetic) {
         CosmeticsModule cosmeticsModule = ModuleManager.getModule(CosmeticsModule.class);
         MessageModule messageModule = ModuleManager.getModule(MessageModule.class);
         ResourcesModule resourcesModule = ModuleManager.getModule(ResourcesModule.class);
@@ -48,7 +48,7 @@ public class CosmeticsInventory implements Listener {
             Resource resource = entry.getKey();
             int cost = entry.getValue();
 
-            int balance = resourcesModule.getPlayerBalanceCached(gamePlayer, resource);
+            int balance = resourcesModule.getPlayerBalanceCached(playerIdentity, resource);
 
             balances.put(resource, balance);
             if (balance < cost) {
@@ -57,7 +57,7 @@ public class CosmeticsInventory implements Listener {
         }
 
         ItemBuilder item = new ItemBuilder(cosmetic.getIcon());
-        if (!cosmetic.hasPlayer(gamePlayer)) {
+        if (!cosmetic.hasPlayer(playerIdentity)) {
             item.setName((hasEnough ? "§a" + cosmetic.getName() : "§c" + cosmetic.getName()));
         } else {
             item.setName("§a§l" + cosmetic.getName());
@@ -65,8 +65,8 @@ public class CosmeticsInventory implements Listener {
 
         item.removeLore();
 
-        if (PlainTextComponentSerializer.plainText().serialize(messageModule.get(gamePlayer, cosmetic.getRarity().getTranslateKey()).getTranslated()).length() == 1) {
-            item.addLoreLine(net.kyori.adventure.text.Component.text("§7").append(messageModule.get(gamePlayer, cosmetic.getRarity().getTranslateKey()).getTranslated()));
+        if (PlainTextComponentSerializer.plainText().serialize(messageModule.get(playerIdentity, cosmetic.getRarity().getTranslateKey()).getTranslated()).length() == 1) {
+            item.addLoreLine(net.kyori.adventure.text.Component.text("§7").append(messageModule.get(playerIdentity, cosmetic.getRarity().getTranslateKey()).getTranslated()));
         }
 
         item.addLoreLine("§8" + cosmetic.getCategory().getName());
@@ -74,14 +74,14 @@ public class CosmeticsInventory implements Listener {
 
         item.addLoreLine("");
 
-        if (PlainTextComponentSerializer.plainText().serialize(messageModule.get(gamePlayer, cosmetic.getRarity().getTranslateKey()).getTranslated()).length() > 1) {
-            messageModule.get(gamePlayer, "inventory.cosmetics.rarity")
-                    .replace("%rarity%", messageModule.get(gamePlayer, cosmetic.getRarity().getTranslateKey()).getTranslated())
+        if (PlainTextComponentSerializer.plainText().serialize(messageModule.get(playerIdentity, cosmetic.getRarity().getTranslateKey()).getTranslated()).length() > 1) {
+            messageModule.get(playerIdentity, "inventory.cosmetics.rarity")
+                    .replace("%rarity%", messageModule.get(playerIdentity, cosmetic.getRarity().getTranslateKey()).getTranslated())
                     .addToItemLore(item);
         }
 
-        if (!cosmetic.hasPlayer(gamePlayer)) {
-            messageModule.get(gamePlayer, "inventory.cosmetics.cost").addToItemLore(item);
+        if (!cosmetic.hasPlayer(playerIdentity)) {
+            messageModule.get(playerIdentity, "inventory.cosmetics.cost").addToItemLore(item);
 
             for (Map.Entry<Resource, Integer> entry : cosmetic.getCost().entrySet()) {
                 Resource resource = entry.getKey();
@@ -91,8 +91,8 @@ public class CosmeticsInventory implements Listener {
                 item.addLoreLine(" §f- " + (balance >= cost ? "§a" : "§c") + StringUtils.betterNumberFormat(balance) + "§8/§7" + StringUtils.betterNumberFormat(cost) + " " + resource.getColor() + resource.getDisplayName());
             }
         } else {
-            if (gamePlayer.getOnlinePlayer().hasPermission("cosmetics.free")) {
-                messageModule.get(gamePlayer, "inventory.cosmetics.saved")
+            if (playerIdentity.getOnlinePlayer().hasPermission("cosmetics.free")) {
+                messageModule.get(playerIdentity, "inventory.cosmetics.saved")
                         .replace("%economy_name%", "")
                         .replace("%price%", "")
                         .replace("_", "")
@@ -104,7 +104,7 @@ public class CosmeticsInventory implements Listener {
                     item.addLoreLine(resource.getColor() + " - " + StringUtils.betterNumberFormat(cost) + " " + resource.getDisplayName());
                 }
             } else {
-                messageModule.get(gamePlayer, "inventory.kit.purchased_for")
+                messageModule.get(playerIdentity, "inventory.kit.purchased_for")
                         .replace("%economy_name%", "")
                         .replace("%price%", "")
                         .addToItemLore(item);
@@ -119,32 +119,32 @@ public class CosmeticsInventory implements Listener {
 
         item.addLoreLine("");
 
-        if (cosmeticsModule.getPlayerSelectedCosmetic(gamePlayer, cosmetic.getCategory()) != null &&
-                cosmeticsModule.getPlayerSelectedCosmetic(gamePlayer, cosmetic.getCategory()).equals(cosmetic)) {
+        if (cosmeticsModule.getPlayerSelectedCosmetic(playerIdentity, cosmetic.getCategory()) != null &&
+                cosmeticsModule.getPlayerSelectedCosmetic(playerIdentity, cosmetic.getCategory()).equals(cosmetic)) {
             item.addEnchant(Enchantment.SHARPNESS, 1);
-            messageModule.get(gamePlayer, "inventory.cosmetics.selected").addToItemLore(item);
-        } else if (cosmetic.hasPlayer(gamePlayer)) {
-            messageModule.get(gamePlayer, "inventory.cosmetics.select").addToItemLore(item);
+            messageModule.get(playerIdentity, "inventory.cosmetics.selected").addToItemLore(item);
+        } else if (cosmetic.hasPlayer(playerIdentity)) {
+            messageModule.get(playerIdentity, "inventory.cosmetics.select").addToItemLore(item);
         } else if (!hasEnough) {
-            messageModule.get(gamePlayer, "inventory.cosmetics.dont_have_enough_resources").addToItemLore(item);
+            messageModule.get(playerIdentity, "inventory.cosmetics.dont_have_enough_resources").addToItemLore(item);
         } else {
-            messageModule.get(gamePlayer, "inventory.cosmetics.purchase").addToItemLore(item);
+            messageModule.get(playerIdentity, "inventory.cosmetics.purchase").addToItemLore(item);
         }
 
         item.hideAllFlags();
 
         if (cosmetic.getPreviewConsumer() != null) {
-            messageModule.get(gamePlayer, "inventory.cosmetics.preview").addToItemLore(item);
+            messageModule.get(playerIdentity, "inventory.cosmetics.preview").addToItemLore(item);
         }
 
         return item.toItemStack();
     }
 
-    public static void openGUI(GamePlayer gamePlayer) {
-        openCategory(gamePlayer, (gamePlayer.getMetadata().containsKey("last_opened_cosmetic_category") ? (CosmeticsCategory) gamePlayer.getMetadata().get("last_opened_cosmetic_category") : ModuleManager.getModule(CosmeticsModule.class).getCategories().get(0)));
+    public static void openGUI(PlayerIdentity playerIdentity) {
+        openCategory(playerIdentity, (playerIdentity.getMetadata().containsKey("last_opened_cosmetic_category") ? (CosmeticsCategory) playerIdentity.getMetadata().get("last_opened_cosmetic_category") : ModuleManager.getModule(CosmeticsModule.class).getCategories().get(0)));
     }
 
-    public static void openCategory(GamePlayer gamePlayer, CosmeticsCategory category) {
+    public static void openCategory(PlayerIdentity playerIdentity, CosmeticsCategory category) {
         char ch = switch (category.getName()) {
             case "Kill Messages" -> 'Ẑ';
             case "Kill Sounds" -> 'Ẏ';
@@ -161,7 +161,7 @@ public class CosmeticsInventory implements Listener {
 
         List<CompletableFuture<Void>> preloadFutures = new ArrayList<>();
         for (Resource resource : allResources) {
-            preloadFutures.add(resource.getResourceInterface().preload(List.of(gamePlayer)));
+            preloadFutures.add(resource.getResourceInterface().preload(List.of(playerIdentity)));
         }
 
         CompletableFuture.allOf(preloadFutures.toArray(new CompletableFuture[0])).thenRun(() -> {
@@ -184,7 +184,7 @@ public class CosmeticsInventory implements Listener {
                         info.setLore(messageModule.get(player, "inventory.info_item.cosmetics_inventory.lore").getTranslated());
 
                         gui.appendElement(0, Component.element(back.toItemStack()).addClick(i -> {
-                            ProfileInventory.openGUI(gamePlayer);
+                            ProfileInventory.openGUI(playerIdentity);
                             player.playSound(player, Sound.UI_BUTTON_CLICK, 1F, 1F);
                         }).build());
 
@@ -193,23 +193,23 @@ public class CosmeticsInventory implements Listener {
                         List<Cosmetic> cosmetics = category.getCosmetics();
                         if (cosmetics == null || cosmetics.isEmpty()) return;
 
-                        cosmetics.sort(Comparator.comparing((Cosmetic c) -> c.hasPlayer(gamePlayer), Comparator.reverseOrder())
+                        cosmetics.sort(Comparator.comparing((Cosmetic c) -> c.hasPlayer(playerIdentity), Comparator.reverseOrder())
                                 .thenComparing(new CosmeticRarityComparator()));
 
                         gui.setContainer(9, Component.staticContainer()
                                 .size(9, 5)
                                 .init(container -> {
                                     for (Cosmetic cosmetic : cosmetics) {
-                                        Element element = Component.element(getEditedItem(gamePlayer, cosmetic)).addClick(i -> {
+                                        Element element = Component.element(getEditedItem(playerIdentity, cosmetic)).addClick(i -> {
                                             if (i.getClickType().isLeftClick()) {
-                                                if (cosmetic.hasSelected(gamePlayer)) {
+                                                if (cosmetic.hasSelected(playerIdentity)) {
                                                     player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
                                                     messageModule.get(player, "chat.cosmetics.already_selected")
                                                             .replace("%cosmetic", cosmetic.getName())
                                                             .send();
-                                                } else if (cosmetic.hasPlayer(gamePlayer)) {
+                                                } else if (cosmetic.hasPlayer(playerIdentity)) {
                                                     player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 10.0F, 10.0F);
-                                                    cosmetic.select(gamePlayer);
+                                                    cosmetic.select(playerIdentity);
                                                 } else {
                                                     boolean hasEnough = true;
                                                     List<String> missing = new ArrayList<>();
@@ -218,7 +218,7 @@ public class CosmeticsInventory implements Listener {
                                                         Resource resource = entry.getKey();
                                                         int cost = entry.getValue();
 
-                                                        Integer playerAmount = resourcesModule.getPlayerBalanceCached(gamePlayer, resource);
+                                                        Integer playerAmount = resourcesModule.getPlayerBalanceCached(playerIdentity, resource);
 
                                                         if (playerAmount < cost) {
                                                             hasEnough = false;
@@ -237,25 +237,25 @@ public class CosmeticsInventory implements Listener {
                                                         }
                                                         player.closeInventory();
                                                     } else {
-                                                        new ConfirmInventory(gamePlayer, getEditedItem(gamePlayer, cosmetic), cosmetic.getCost(), new Consumer<GamePlayer>() {
+                                                        new ConfirmInventory(playerIdentity, getEditedItem(playerIdentity, cosmetic), cosmetic.getCost(), new Consumer<PlayerIdentity>() {
                                                             @Override
-                                                            public void accept(GamePlayer gamePlayer) {
-                                                                cosmetic.purchase(gamePlayer);
-                                                                gamePlayer.getOnlinePlayer().closeInventory();
+                                                            public void accept(PlayerIdentity playerIdentity) {
+                                                                cosmetic.purchase(playerIdentity);
+                                                                playerIdentity.getOnlinePlayer().closeInventory();
                                                             }
-                                                        }, new Consumer<GamePlayer>() {
+                                                        }, new Consumer<PlayerIdentity>() {
                                                             @Override
-                                                            public void accept(GamePlayer gamePlayer) {
-                                                                openCategory(gamePlayer, category);
+                                                            public void accept(PlayerIdentity playerIdentity) {
+                                                                openCategory(playerIdentity, category);
                                                             }
                                                         }).openGUI();
                                                     }
                                                     return;
                                                 }
-                                                openCategory(gamePlayer, category);
+                                                openCategory(playerIdentity, category);
                                             } else if (i.getClickType().isRightClick() && cosmetic.getPreviewConsumer() != null) {
-                                                cosmetic.getPreviewConsumer().accept(gamePlayer);
-                                                if (!cosmetic.hasPlayer(gamePlayer)) {
+                                                cosmetic.getPreviewConsumer().accept(playerIdentity);
+                                                if (!cosmetic.hasPlayer(playerIdentity)) {
                                                     Objects.requireNonNull(i.getElement().item(player)).setType(cosmetic.getIcon().getType());
                                                 }
                                             }
@@ -267,15 +267,15 @@ public class CosmeticsInventory implements Listener {
 
                     }).build();
 
-            inventory.open(gamePlayer.getOnlinePlayer());
-            gamePlayer.getMetadata().put("last_opened_cosmetic_category", category);
+            inventory.open(playerIdentity.getOnlinePlayer());
+            playerIdentity.getMetadata().put("last_opened_cosmetic_category", category);
         });
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        PlayerIdentity playerIdentity = PlayerIdentityRegistry.get(player);
         ItemStack item = event.getCurrentItem();
 
         if (event.getClickedInventory() == null || !player.getOpenInventory().getTitle().contains("†¹")) {
@@ -288,7 +288,7 @@ public class CosmeticsInventory implements Listener {
 
         if (event.getSlot() == 45) {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1F, 1F);
-            TeleporterInventory.openGUI(gamePlayer);
+            //TeleporterInventory.openGUI(playerIdentity);
         }
     }
 }

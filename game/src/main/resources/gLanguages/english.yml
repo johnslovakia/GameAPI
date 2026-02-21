@@ -343,9 +343,9 @@ bossbar.elimination: "ELIMINATION!"
 
 hologram.lifetime_stats: "§a%minigame_name% §7- §fYour Statistics"
 hologram.lifetime_stats.score_line: "§f%stat_name%%space_pad%§a%value%"
-hologram.top_stats.score_line: "§f%position%. §a%player% §8- §a%value% %stat_name%"
-hologram.top_stats: "§2§lTOP Statics in %stat%"
-hologram.next_page: "§aClick to go to next page"
+hologram.leaderboard.score_line: "§f%position%. §a%player% §8- §a%value% %stat_name%"
+hologram.leaderboard.title: "§eLeaderboard §7- §f%stat_name% §7- §bLifetime"
+hologram.leaderboard.click_to_cycle: "§a%currentIndex%§8/§7%totalStats% §7[click to cycle]"
 
 word.team_chat: "Team"
 word.all_chat: "All"

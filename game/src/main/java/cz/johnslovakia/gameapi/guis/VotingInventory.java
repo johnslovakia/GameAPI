@@ -92,7 +92,6 @@ public class VotingInventory {
                             .init(container -> {
 
                                 List<GameMap> maps = gamePlayer.getGame().getModule(MapModule.class).getMaps();
-                                Collections.shuffle(maps);
 
                                 for (GameMap map : maps.subList(0, Math.min(7, maps.size()))){
                                     if (!map.isIngame()){

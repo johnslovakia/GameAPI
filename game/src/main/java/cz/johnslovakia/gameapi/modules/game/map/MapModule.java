@@ -43,6 +43,7 @@ public class MapModule extends GameModule implements Listener {
             return;
         }
         maps.add(map);
+        if (maps.size() > 9) Collections.shuffle(maps);
     }
 
 

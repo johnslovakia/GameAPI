@@ -30,7 +30,7 @@ public class PlayerGameSession {
 
     private Kit selectedKit;
     private GameTeam team;
-    private GamePlayerState state;
+    private GamePlayerState state = GamePlayerState.UNKNOWN;
 
     private boolean enabledPVP = true;
     private boolean enabledMovement = true;

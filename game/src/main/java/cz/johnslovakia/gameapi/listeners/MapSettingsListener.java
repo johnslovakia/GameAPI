@@ -12,6 +12,7 @@ import cz.johnslovakia.gameapi.modules.game.map.AreaSettings;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 
+import cz.johnslovakia.gameapi.utils.GameUtils;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -205,7 +206,7 @@ public class MapSettingsListener implements Listener {
                 if (e.getEntity() instanceof Player) {
                     if (e.getCause() == EntityDamageEvent.DamageCause.VOID) {
                         if (game.getState() == GameState.ENDING && !game.getSettings().isTeleportPlayersAfterEnd()) {
-                            player.teleport(RespawnListener.getNonRespawnLocation(game));
+                            player.teleport(GameUtils.getNonRespawnLocation(game));
                         }else{
                             e.getEntity().teleport(game.getModule(LobbyModule.class).getLobbyLocation().getLocation());
                         }
@@ -571,7 +572,7 @@ public class MapSettingsListener implements Listener {
                             player.damage(player.getHealth());
                         }, 1L);
                     }else{
-                        player.teleport(RespawnListener.getNonRespawnLocation(game));
+                        player.teleport(GameUtils.getNonRespawnLocation(game));
                     }
                 }
             }

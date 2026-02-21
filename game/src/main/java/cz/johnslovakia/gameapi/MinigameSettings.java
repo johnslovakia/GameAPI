@@ -30,6 +30,7 @@ public class MinigameSettings {
     @lombok.Builder.Default private boolean useLevelSystem = true;
     @lombok.Builder.Default private boolean useDailyRewardTrack = true;
 
+    @lombok.Builder.Default private String serverName = "";
     @lombok.Builder.Default private String defaultLanguage = "english";
 
     @lombok.Builder.Default private int gamesPerServer = 1;

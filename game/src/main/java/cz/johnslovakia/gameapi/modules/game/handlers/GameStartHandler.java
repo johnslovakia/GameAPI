@@ -77,34 +77,18 @@ public class GameStartHandler {
             }
         }
 
-        if (gameInstance.getSettings().isUseTeams()){
-            for (GamePlayer gamePlayer : gameInstance.getParticipants()){
-                PlayerGameSession session = gamePlayer.getGameSession();
-                if (session.getTeam() == null){
-                    GameTeam lowestTeam = gameInstance.getModule(TeamModule.class).getSmallestTeam();
-                    lowestTeam.joinPlayer(gamePlayer, TeamJoinCause.AUTO);
-                }
-            }
-        }
-
-
-
-        if (gameInstance.getSettings().isEnabledRespawning() && gameInstance.getSettings().isUseTeams()){
-            gameInstance.getModule(TeamModule.class).getTeams().values().forEach(team -> team.setDead(false));
-        }
 
         gameInstance.getCurrentMap().getWorld().setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
         gameInstance.getCurrentMap().getWorld().setGameRule(GameRule.LOCATOR_BAR, false);
 
-        gameInstance.getCurrentMap().teleport();
         for (GamePlayer gamePlayer : gameInstance.getPlayers()) {
-            Player player = gamePlayer.getOnlinePlayer();
-
             preparePlayer(gamePlayer);
-            player.setLevel(0);
-            player.setExp(0);
-
             ModuleManager.getModule(StatsModule.class).getStatsHolograms().remove(gamePlayer);
+        }
+        gameInstance.getCurrentMap().teleport();
+
+        if (gameInstance.getSettings().isEnabledRespawning() && gameInstance.getSettings().isUseTeams()){
+            gameInstance.getModule(TeamModule.class).getTeams().values().forEach(team -> team.setDead(false));
         }
     }
 
@@ -113,14 +97,14 @@ public class GameStartHandler {
         boolean rejoin = session.getState().equals(GamePlayerState.DISCONNECTED);
         Player player = gamePlayer.getOnlinePlayer();
 
-        gamePlayer.resetAttributes();
-
         InventoryBuilder inventoryManager = InventoryBuilder.getPlayerCurrentInventory(gamePlayer);
         if (inventoryManager != null) {
             inventoryManager.unloadInventory(gamePlayer);
         }
 
         if (!rejoin) {
+            gamePlayer.resetAttributes();
+
             player.sendMessage("");
             if (gameInstance.getSettings().isSendMinigameDescription()) {
                 ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.description")
@@ -138,11 +122,19 @@ public class GameStartHandler {
                 player.sendMessage(ModuleManager.getModule(MessageModule.class).get(player, "chat.team_chat").getTranslated());
             }
 
-            if (session.getSelectedKit() != null) {
-                session.getSelectedKit().activate(gamePlayer);
+            if (gameInstance.getSettings().isUseTeams()){
+                if (session.getTeam() == null){
+                    GameTeam lowestTeam = gameInstance.getModule(TeamModule.class).getSmallestTeam();
+                    lowestTeam.joinPlayer(gamePlayer, TeamJoinCause.AUTO);
+                }
             }
             if (gameInstance.getState().equals(GameState.INGAME) && gameInstance.getSettings().isEnabledJoiningAfterStart()) {
                 player.teleport(session.getTeam().getSpawn());
+                session.getGameInstance().getCurrentMap().getPlayerToLocation().put(gamePlayer, session.getTeam().getSpawn());
+            }
+
+            if (session.getSelectedKit() != null) {
+                session.getSelectedKit().activate(gamePlayer);
             }
         }
     }

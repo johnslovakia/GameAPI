@@ -165,6 +165,9 @@ public class CachedBatchStorage<K, V> {
     }
 
     public void invalidate(@NotNull K key) {
+        if (key == null) {
+            throw new IllegalArgumentException("Key cannot be null");
+        }
         cache.remove(key);
     }
 

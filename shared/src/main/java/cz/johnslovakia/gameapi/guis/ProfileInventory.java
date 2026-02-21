@@ -16,11 +16,10 @@ import cz.johnslovakia.gameapi.rewards.unclaimed.DailyMeterUnclaimedReward;
 import cz.johnslovakia.gameapi.rewards.unclaimed.LevelUpUnclaimedReward;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardType;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardsModule;
-import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.users.PlayerData;
 
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
+import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.StringUtils;
 import cz.johnslovakia.gameapi.utils.Utils;
@@ -42,7 +41,7 @@ import java.util.*;
 
 public class ProfileInventory {
 
-    private static int getBonus(GamePlayer gamePlayer){
+    private static int getBonus(PlayerIdentity gamePlayer){
         int bonus;
         if (gamePlayer.getMetadata().get("quest_reward_bonus") == null) {
             List<Integer> percentages = Arrays.asList(5, 7, 10, 12, 15, 17, 20, 25, 30, 35, 40, 45, 50, 75, 100);
@@ -58,7 +57,7 @@ public class ProfileInventory {
         return 0;
     }
 
-    public static void openGUI(GamePlayer gamePlayer){
+    public static void openGUI(PlayerIdentity gamePlayer){
         String verChar;
         if (ModuleManager.getInstance().hasModule(LevelModule.class) && ModuleManager.getInstance().hasModule(DailyRewardTrackModule.class)){
             verChar = "\uE000";
@@ -357,9 +356,9 @@ public class ProfileInventory {
                     if (!unclaimedRewardsModule.getPlayerUnclaimedRewardsByType(gamePlayer, UnclaimedRewardType.QUEST).isEmpty()){
                         quests.setCustomModelData(1010);
                     }
-                    gui.appendElement(33, Component.element(quests.toItemStack()).addClick(i -> {
+                    /*gui.appendElement(33, Component.element(quests.toItemStack()).addClick(i -> {
                         QuestInventory.openGUI(gamePlayer);
-                    }).build());
+                    }).build());*/
 
                     /*ItemBuilder achievements = new ItemBuilder(Material.ECHO_SHARD);
                     achievements.setCustomModelData(1049);
@@ -419,7 +418,7 @@ public class ProfileInventory {
     }
 
 
-    private static ItemStack getCosmeticEditedItem(GamePlayer gamePlayer, Cosmetic cosmetic){
+    private static ItemStack getCosmeticEditedItem(PlayerIdentity gamePlayer, Cosmetic cosmetic){
         MessageModule messageModule = ModuleManager.getModule(MessageModule.class);
 
         ItemBuilder item = new ItemBuilder(cosmetic.getIcon()/*cosmetic.hasPlayer(gamePlayer) ? cosmetic.getIcon() : new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1021).toItemStack()*/);

@@ -24,12 +24,17 @@ import java.util.Map;
 public class StatsHolograms {
 
     private final StatsModule statsModule;
+    private final TopStatsHologram topStatsHologram;
 
-    //TODO: zkontrolovat k ram x....
     private final Map<PlayerIdentity, TextDisplay> textDisplayMap = new HashMap<>();
 
     public StatsHolograms(StatsModule statsModule) {
-        this.statsModule = statsModule;
+        this.statsModule     = statsModule;
+        this.topStatsHologram = new TopStatsHologram(statsModule);
+    }
+
+    public TopStatsHologram getTopStatsHologram() {
+        return topStatsHologram;
     }
 
     public void createPlayerStatisticsHologram(PlayerIdentity playerIdentity, Location location){
@@ -182,16 +187,13 @@ public class StatsHolograms {
     }
 
 
-    public void remove(PlayerIdentity playerIdentity){
-        if (textDisplayMap.containsKey(playerIdentity)){
-            TextDisplay textDisplay = (TextDisplay) textDisplayMap.get(playerIdentity);
+    public void remove(PlayerIdentity playerIdentity) {
+        if (textDisplayMap.containsKey(playerIdentity)) {
+            TextDisplay textDisplay = textDisplayMap.get(playerIdentity);
             textDisplay.remove();
             textDisplayMap.remove(playerIdentity);
         }
-        /*if (config.getLocation("topStatsHologram") != null) {
-            if (DHAPI.getHologram("topStats_" + player.getName()) != null) {
-                DHAPI.removeHologram("topStats_" + player.getName());
-            }
-        }*/
+
+        topStatsHologram.remove(playerIdentity);
     }
 }

@@ -113,21 +113,23 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
                     }
 
 
-                    ItemStack[] contents = player.getInventory().getContents();
-                    for (ItemStack item : contents) {
-                        if (item == null) {
-                            continue;
-                        }
-                        if (item.getType().toString().toLowerCase().contains("banner")) {
-                            BannerMeta bannerMeta = (BannerMeta) item.getItemMeta();
-                            bannerMeta.addPattern(new Pattern(getDyeColor(), PatternType.BASE));
-                            item.setItemMeta(bannerMeta);
-                            break;
-                        }else if (item.getType().toString().toLowerCase().contains("wool")) {
-                            Material colorfulWool = Material.valueOf(getDyeColor().name() + "_WOOL");
-                            if (colorfulWool != null){
-                                item.setType(colorfulWool);
+                    if (game.getState() == GameState.WAITING
+                            || game.getState() == GameState.STARTING){
+                        ItemStack[] contents = player.getInventory().getContents();
+                        for (ItemStack item : contents) {
+                            if (item == null) continue;
+
+                            if (item.getType().toString().toLowerCase().contains("banner")) {
+                                BannerMeta bannerMeta = (BannerMeta) item.getItemMeta();
+                                bannerMeta.addPattern(new Pattern(getDyeColor(), PatternType.BASE));
+                                item.setItemMeta(bannerMeta);
                                 break;
+                            }else if (item.getType().toString().toLowerCase().contains("wool")) {
+                                Material colorfulWool = Material.valueOf(getDyeColor().name() + "_WOOL");
+                                if (colorfulWool != null){
+                                    item.setType(colorfulWool);
+                                    break;
+                                }
                             }
                         }
                     }

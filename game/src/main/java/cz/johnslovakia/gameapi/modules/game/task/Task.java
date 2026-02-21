@@ -124,8 +124,8 @@ public class Task {
 
                 if (taskInterface != null) {
                     if (counter == 0) {
-                        taskInterface.onEnd(getThisTask());
                         taskModule.cancel(task, true);
+                        taskInterface.onEnd(getThisTask());
                     } else {
                         taskInterface.onCount(getThisTask());
                     }

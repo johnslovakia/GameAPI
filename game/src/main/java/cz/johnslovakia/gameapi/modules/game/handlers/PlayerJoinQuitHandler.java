@@ -179,6 +179,7 @@ public class PlayerJoinQuitHandler {
                 }
 
                 if (rejoinLocation != null) {
+                    Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> gamePlayer.getPlayerData().loadKits());
                     gamePlayer.setSpectator(false);
                     gameInstance.getGameStartHandler().preparePlayer(gamePlayer);
                     session.setState(GamePlayerState.PLAYER);
@@ -204,8 +205,22 @@ public class PlayerJoinQuitHandler {
 
                 participants.add(gamePlayer);
                 gamePlayer.setGameID(gameInstance.getID());
+                player.teleport(GameUtils.getNonRespawnLocation(gameInstance));
 
-                gameInstance.getGameStartHandler().preparePlayer(gamePlayer);
+                gamePlayer.getGameSession().setState(GamePlayerState.PLAYER);
+                Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> {
+                    gamePlayer.getPlayerData().loadKits();
+
+                    Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task2 -> {
+                        if (levelModule != null){
+                            levelModule.loadPlayerData(gamePlayer).thenAccept(data -> {
+                                gameInstance.getGameStartHandler().preparePlayer(gamePlayer);
+                            });
+                        }else{
+                            gameInstance.getGameStartHandler().preparePlayer(gamePlayer);
+                        }
+                    });
+                });
 
                 GameJoinEvent ev = new GameJoinEvent(gameInstance, gamePlayer, GameJoinEvent.JoinType.JOIN_AFTER_START);
                 Bukkit.getPluginManager().callEvent(ev);
@@ -224,7 +239,9 @@ public class PlayerJoinQuitHandler {
             Bukkit.getPluginManager().callEvent(ev);
             return;
         }
-        ModuleManager.getModule(GameService.class).newArena(player, true);
+        player.sendMessage("§cAn error occurred, you are being sent to the lobby");
+        //ModuleManager.getModule(GameService.class).newArena(player, true);
+        GameUtils.sendToLobby(player);
     }
 
     public void sendPlayerJoinMessage(GamePlayer gamePlayer){

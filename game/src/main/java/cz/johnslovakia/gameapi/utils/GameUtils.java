@@ -12,9 +12,7 @@ import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.scores.ScoreModule;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Color;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -30,6 +28,28 @@ import org.bukkit.scoreboard.Team;
 import java.util.*;
 
 public class GameUtils {
+
+    public static Location getNonRespawnLocation(GameInstance game){
+        GameMap playingMap = game.getCurrentMap();
+        MapLocation spectatorSpawn = playingMap.getSpectatorSpawn();
+
+        if (spectatorSpawn == null){
+            if (game.getCurrentMap().getMainArea() != null) {
+                Location center = playingMap.getMainArea().getCenter().add(0, 15, 0);
+                while (center.getBlock().getType().equals(Material.AIR)) {
+                    center.add(0, 1, 0);
+                }
+                return center;
+            }else{
+                if (game.getPlayers().get(0) != null){
+                    return game.getPlayers().get(0).getOnlinePlayer().getLocation();
+                }else{
+                    return new Location(game.getCurrentMap().getWorld(), 0, 90, 0);
+                }
+            }
+        }
+        return spectatorSpawn.getLocation();
+    }
 
     public static void hideAndShowPlayers(GameInstance game, Player player){
         for (Player serverPlayer : Bukkit.getOnlinePlayers()){

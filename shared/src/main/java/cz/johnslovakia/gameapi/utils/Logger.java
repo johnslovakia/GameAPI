@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Logger {
 
     public enum LogType {
-        INFO, WARNING, ERROR
+        INFO, WARNING, ERROR, DEBUG
     }
 
     private static final Map<String, BufferedWriter> writers = new ConcurrentHashMap<>();

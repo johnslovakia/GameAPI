@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.modules.game.task;
 
 import cz.johnslovakia.gameapi.modules.game.GameModule;
+import cz.johnslovakia.gameapi.utils.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +23,9 @@ public class TaskModule extends GameModule {
     }
 
     public Task addTask(Task task){
+        if (tasks.containsKey(task.getId())){
+            tasks.get(task.getId()).cancel();
+        }
         tasks.put(task.getId(), task);
         task.setTaskModule(this);
         return task;
@@ -45,6 +49,5 @@ public class TaskModule extends GameModule {
     public void cancelAll() {
         tasks.values().forEach(Task::cancel);
         tasks.clear();
-
     }
 }

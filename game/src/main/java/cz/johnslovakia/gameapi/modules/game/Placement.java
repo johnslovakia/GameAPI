@@ -1,7 +1,9 @@
 package cz.johnslovakia.gameapi.modules.game;
 
-import me.clip.placeholderapi.libs.kyori.adventure.text.Component;
+import lombok.Getter;
+import net.kyori.adventure.text.Component;
 
+@Getter
 public class Placement<T> {
 
     private final T entity;
@@ -10,14 +12,6 @@ public class Placement<T> {
     public Placement(T entity, int place) {
         this.entity = entity;
         this.place = place;
-    }
-
-    public T getEntity() {
-        return entity;
-    }
-
-    public int getPlace() {
-        return place;
     }
 
     public String getPlaceName() {

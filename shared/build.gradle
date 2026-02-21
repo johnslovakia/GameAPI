@@ -13,6 +13,8 @@ dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.36'
     annotationProcessor 'org.projectlombok:lombok:1.18.36'
 
+    implementation files('C:/Users/filik/IdeaProjects/ContainrGUI/build/libs/ContainrGUI-1.0-SNAPSHOT.jar')
+
     implementation files('C:\\Users\\filik\\.m2\\repository\\com\\github\\ZorTik\\AdvancedSQLClient\\shared\\0.7-pre5\\shared-0.7-pre5.jar')
     implementation files('C:\\Users\\filik\\.m2\\repository\\com\\github\\ZorTik\\AdvancedSQLClient\\core\\0.7-pre5\\core-0.7-pre5.jar')
     implementation files('C:\\Users\\filik\\.m2\\repository\\com\\github\\ZorTik\\AdvancedSQLClient\\api\\0.7-pre5\\api-0.7-pre5.jar')

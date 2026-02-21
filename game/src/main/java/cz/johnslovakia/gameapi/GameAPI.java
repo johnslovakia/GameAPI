@@ -434,12 +434,19 @@ public class GameAPI{
 
         try{
             //TODO: vyřešit název
-            for (int i = 1; i <= minigame.getSettings().getGamesPerServer(); i++){
-                minigame.setupGame(minigame.getName() + "-" + i);
+            boolean bungeecord = DataManager.getInstance().getServerDataMySQL() != null || DataManager.getInstance().getServerDataRedis() != null;
+            int gamesPerServer = minigame.getSettings().getGamesPerServer();
+            for (int i = 0; i < gamesPerServer; i++) {
+                if (bungeecord) {
+                    minigame.setupGame((minigame.getSettings().getServerName() != "" ? minigame.getSettings().getServerName() : minigame.getName() + "-1")
+                            + (gamesPerServer > 1 ? StringUtils.getLetter(i) : ""));
+                } else {
+                    minigame.setupGame(minigame.getName() + "-" + (i + 1));
+                }
             }
             Logger.log("Games successfully loaded!", Logger.LogType.INFO);
         }catch (Exception e){
-            Logger.log("Something went wrong when loading the maps! The following message is for Developers: ", Logger.LogType.ERROR);
+            Logger.log("Something went wrong when loading games! The following message is for Developers: ", Logger.LogType.ERROR);
             e.printStackTrace();
             somethingwrong = true;
         }

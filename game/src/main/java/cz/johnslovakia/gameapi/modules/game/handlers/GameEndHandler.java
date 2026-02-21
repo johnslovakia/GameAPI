@@ -65,7 +65,6 @@ public class GameEndHandler {
         GameService gameService = ModuleManager.getModule(GameService.class);
 
         gameInstance.setState(GameState.ENDING);
-        //Task.cancelAll(gameInstance);
         gameInstance.getModule(TaskModule.class).cancelAll();
 
         String rankingScore = "kills";
