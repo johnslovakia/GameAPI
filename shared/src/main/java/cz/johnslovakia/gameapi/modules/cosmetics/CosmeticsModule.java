@@ -126,12 +126,7 @@ public class CosmeticsModule implements Listener, Module {
                     .from(PlayerTable.TABLE_NAME)
                     .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
                     .obtainOne();
-
-            if (result.isEmpty()) {
-                Logger.log("I can't get cosmetics data for player " + playerIdentity.getOnlinePlayer().getName() + ". (1)", Logger.LogType.ERROR);
-                playerIdentity.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (1)");
-                return;
-            }
+            if (result.isEmpty()) return;
 
             try {
                 String jsonString = result.get().getString("Cosmetics");

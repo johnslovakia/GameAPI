@@ -116,8 +116,15 @@ public class LevelModule implements Module, Listener {
         }).thenCompose(row -> {
             if (row == null) {
                 PlayerLevelData defaultData = new PlayerLevelData(playerIdentity, 1, 0);
-                cache.put(playerIdentity, defaultData);
-                return CompletableFuture.completedFuture(defaultData);
+                return defaultData.calculate().thenApply(v -> {
+                    Player player = playerIdentity.getOnlinePlayer();
+                    if (player != null) {
+                        player.setExp(0f);
+                        player.setLevel(1);
+                    }
+                    cache.put(playerIdentity, defaultData);
+                    return defaultData;
+                });
             }
 
             int dailyXP = row.getInt("DailyXP");

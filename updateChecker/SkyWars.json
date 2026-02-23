@@ -1,9 +1,10 @@
 {
-  "latest_version": "2.3",
-  "update_message": "Lobby System, Leaderboard Hologram, and more...",
+  "latest_version": "2.3.1",
+  "update_message": "Bug Fixes",
   "update_messages": {
     "2.2": "LevelSystem, Changes and Bug Fixes",
     "2.2.1": "Bug Fixes",
-    "2.3": "Lobby System, Leaderboard Hologram, and more..."
+    "2.3": "Lobby System, Leaderboard Hologram, and more...",
+    "2.3.1": "Bug Fixes"
   }
 }

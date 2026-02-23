@@ -50,7 +50,7 @@ public class ChatListener implements Listener {
                             .replace("%prefix%", StringUtils.colorizer(prefix))
                             .replace("%name%", player.getName())
                             .replace("%message%", e.getMessage())
-                            .replace("%level_evolution_icon%", (levelModule != null ? levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")))
+                            .replace("%level_evolution_icon%", (levelModule != null && levelModule.getPlayerData(gamePlayer) != null ? levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")))
                             .send();
                 }
             }else if (game.getState() == GameState.INGAME) {
@@ -69,7 +69,7 @@ public class ChatListener implements Listener {
                                         .replace("%team_color%", "" + team.getTeamColor().getChatColor())
                                         .replace("%team%", Component.text(team.getName()).color(team.getTeamColor().getTextColor()))
                                         .replace("%message%", e.getMessage())
-                                        .replace("%level_evolution_icon%", (levelModule != null ? levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")))
+                                        .replace("%level_evolution_icon%", (levelModule != null && levelModule.getPlayerData(gamePlayer) != null ? levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")))
                                         .send();
                             }
                         } else {
@@ -84,7 +84,7 @@ public class ChatListener implements Listener {
                                         .replace("%team_color%", "" + team.getTeamColor().getChatColor())
                                         .replace("%team%", Component.text(team.getName()).color(team.getTeamColor().getTextColor()))
                                         .replace("%message%", e.getMessage())
-                                        .replace("%level_evolution_icon%", (levelModule != null ? levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")))
+                                        .replace("%level_evolution_icon%", (levelModule != null && levelModule.getPlayerData(gamePlayer) != null ? levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")))
                                         .send();
                             }
                         }
@@ -106,7 +106,7 @@ public class ChatListener implements Listener {
                                 .replace("%message%", e.getMessage())
                                 //.replace("%team_color%", "" + team.getTeamColor().getChatColor())
                                 .replace("%team%", "")
-                                .replace("%level_evolution_icon%", (levelModule != null ? levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")))
+                                .replace("%level_evolution_icon%", (levelModule != null && levelModule.getPlayerData(gamePlayer) != null ? levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")))
                                 .send();
                     }
                 }
@@ -120,7 +120,7 @@ public class ChatListener implements Listener {
                             .replace("%prefix%", StringUtils.colorizer(prefix))
                             .replace("%name%", player.getName())
                             .replace("%message%", e.getMessage())
-                            .replace("%level_evolution_icon%", (levelModule != null ? levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")))
+                            .replace("%level_evolution_icon%", (levelModule != null && levelModule.getPlayerData(gamePlayer) != null ? levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")))
                             .send();
                 }
             }

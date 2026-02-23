@@ -160,6 +160,7 @@ item.settings: "§aSettings"
 item.teleporter: "§aTeleporter"
 item.hat.q_to_remove: "§7Press Q to unequip"
 item.player_menu: "Player menu"
+item.back_to_lobby: "Back to Lobby"
 
 chat.kill: "§7[§rẃ§7] %dead_color%%dead%§r §7was killed by %killer_color%%killer%§r"
 chat.first_blood: "§7[§rẁ§7] %killer_color%%killer%§r §fdrew §4§lFIRST BLOOD §r§fin the game!"

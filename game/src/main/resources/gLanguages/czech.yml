@@ -159,6 +159,7 @@ item.settings: "§aNastavení"
 item.teleporter: "§aTeleportér"
 item.hat.q_to_remove: "§7Stiskni Q pro sundání"
 item.player_menu: "Hračské menu"
+item.back_to_lobby: "Zpátky na lobby"
 
 chat.kill: "§7[§rẃ§7] §a%dead%§r §7byl zabit hráčem §a%killer%§r"
 chat.first_blood: "§7[§rẁ§7] %killer_color%%killer%§r §fzískal §4§lPRVNÍ KREV §r§fve hře!"

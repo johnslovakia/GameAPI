@@ -192,6 +192,8 @@ public class GameEndHandler {
                 itemManager.registerItem(playAgain);
             }
 
+            Item backToLobby = new Item(new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1017).hideAllFlags().toItemStack(), 2, "item.back_to_lobby", e -> GameUtils.sendToLobby(e.getPlayer()));
+
             Item playerMenu = new Item(new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1025).hideAllFlags().toItemStack(), 7, "item.player_menu", e -> ProfileInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
             playerMenu.setBlinking(gamePlayer2 -> !unclaimedRewardsModule.getPlayerUnclaimedRewardsByType(gamePlayer2, UnclaimedRewardType.DAILYMETER).isEmpty()
                     || !unclaimedRewardsModule.getPlayerUnclaimedRewardsByType(gamePlayer, UnclaimedRewardType.LEVELUP).isEmpty()
@@ -202,7 +204,7 @@ public class GameEndHandler {
             quests.setBlinking(gamePlayer2 -> !unclaimedRewardsModule.getPlayerUnclaimedRewardsByType(gamePlayer2, UnclaimedRewardType.QUEST).isEmpty());
             quests.setBlinkingItemCustomModelData(1010);
 
-            itemManager.registerItem(playerMenu, quests);
+            itemManager.registerItem(playerMenu, quests, backToLobby);
 
             itemManager.give(gamePlayer);
 
