@@ -67,6 +67,6 @@ public class PreparationCountdown implements TaskInterface {
 
             gamePlayer.getMetadata().remove("last_opened_cosmetic_category");
         }
-        game.getGameStartHandler().startGame();
+        game.getGameStartHandler().startActiveGame();
     }
 }

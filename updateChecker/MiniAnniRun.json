@@ -1,10 +1,11 @@
 {
-  "latest_version": "2.1.1",
-  "update_message": "Bug Fixes",
+  "latest_version": "2.1.2",
+  "update_message": "Improvements & Bug Fixes",
   "update_messages": {
     "2.0": "MAJOR UPDATE: custom resourcepack, 1.21 support and more!",
     "2.0.1": "Support for 1.21.9+ & small bug fixes",
     "2.1": "Lobby System, Leaderboard Hologram, and more...",
-    "2.1.1": "Bug Fixes"
+    "2.1.1": "Bug Fixes",
+    "2.1.2": "Improvements & Bug Fixes"
   }
 }

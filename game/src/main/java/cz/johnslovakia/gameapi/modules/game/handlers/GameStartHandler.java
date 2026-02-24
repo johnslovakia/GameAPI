@@ -36,7 +36,7 @@ public class GameStartHandler {
         this.gameInstance = gameInstance;
     }
 
-    public void startPreparation(){
+    private void startPreparation(){
         Task task = gameInstance.getModule(TaskModule.class).addTask(new Task(gameInstance, "PreparationTask", gameInstance.getSettings().getPreparationTime(), new PreparationCountdown(), Minigame.getInstance().getPlugin()));
         task.setAsMainTask();
 
@@ -55,7 +55,7 @@ public class GameStartHandler {
         }
     };
 
-    public void prepareGame(){
+    private void prepareGame(){
         if (!gameInstance.getSettings().isChooseRandomMap()) {
             if (gameInstance.nextArena() == null) {
                 return;
@@ -139,8 +139,14 @@ public class GameStartHandler {
         }
     }
 
-    public void startGame(){
-        gameInstance.setState(GameState.INGAME);
+    public void startActiveGame(){
+        if (!gameInstance.getSettings().isUsePreperationTask()){
+            gameInstance.getModule(TaskModule.class).cancel("StartCountdown", true);
+            prepareGame();
+            gameInstance.setState(GameState.INGAME);
+        }else{
+            gameInstance.getModule(TaskModule.class).cancel("PreparationTask", true);
+        }
         gameInstance.getMetadata().put("players_at_start", gameInstance.getPlayers().size());
 
         if (gameInstance.getSettings().isDefaultGameCountdown()) {
@@ -154,18 +160,12 @@ public class GameStartHandler {
             }, 2L);
         }
 
-        if (!gameInstance.getSettings().isUsePreperationTask()){
-            gameInstance.getModule(TaskModule.class).cancel("StartCountdown", true);
-            prepareGame();
-        }else{
-            gameInstance.getModule(TaskModule.class).cancel("PreparationTask", true);
-        }
-
         for (GamePlayer gamePlayer : gameInstance.getParticipants()){
             PlayerGameSession session = gamePlayer.getGameSession();
             session.setEnabledMovement(true);
             session.setLimited(false);
 
+            gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "jsplugins:gamestart", 20.0F, 20.0F);
         }
 
 
@@ -174,5 +174,14 @@ public class GameStartHandler {
 
         GameStartEvent ev = new GameStartEvent(gameInstance);
         Bukkit.getPluginManager().callEvent(ev);
+    }
+
+    public void handleGameStart(){
+        //gameInstance.setState(GameState.INGAME);
+        if (gameInstance.getSettings().isUsePreperationTask()) {
+            startPreparation();
+        }else{
+            startActiveGame();
+        }
     }
 }

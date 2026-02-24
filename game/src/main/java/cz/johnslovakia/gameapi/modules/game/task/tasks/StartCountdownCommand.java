@@ -65,13 +65,6 @@ public class StartCountdownCommand implements TaskInterface {
     public void onEnd(Task task) {
         GameInstance game = task.getGame();
 
-        if (game.getSettings().isUsePreperationTask()) {
-            game.getGameStartHandler().startPreparation();
-        }else{
-            for (GamePlayer gamePlayer : game.getParticipants()) {
-                gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "jsplugins:gamestart", 20.0F, 20.0F);
-            }
-            game.getGameStartHandler().startGame();
-        }
+        game.getGameStartHandler().handleGameStart();
     }
 }

@@ -11,4 +11,7 @@ public abstract class GameModule {
 
     protected abstract void initialize();
     protected abstract void terminate();
+    protected  boolean lazyInitialize(){
+        return false;
+    }
 }

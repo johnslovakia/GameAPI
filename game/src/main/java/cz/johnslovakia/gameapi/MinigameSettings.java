@@ -29,6 +29,7 @@ public class MinigameSettings {
     @lombok.Builder.Default private boolean canDropCosmeticHat = false;
     @lombok.Builder.Default private boolean useLevelSystem = true;
     @lombok.Builder.Default private boolean useDailyRewardTrack = true;
+    @lombok.Builder.Default private boolean isEnabledAntiAFKSystem = true;
 
     @lombok.Builder.Default private String serverName = "";
     @lombok.Builder.Default private String defaultLanguage = "english";

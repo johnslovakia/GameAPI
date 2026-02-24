@@ -24,9 +24,9 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 @Getter
-public class AbilityItem implements Listener{
+public class AbilityItem implements Listener {
 
-    private static NamespacedKey ABILITY_ITEM_ID;// = new NamespacedKey(Minigame.getInstance().getPlugin(), "ability_id");
+    private static NamespacedKey ABILITY_ITEM_ID;
 
     public static boolean isAbilityItem(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return false;
@@ -38,33 +38,20 @@ public class AbilityItem implements Listener{
         ABILITY_ITEM_ID = new NamespacedKey(javaPlugin, "ability_id");
     }
 
-
     @Getter
     public static Map<String, AbilityItem> abilityItems = new ConcurrentHashMap<>();
 
-    public static AbilityItem getAbilityItem(String name){
+    public static AbilityItem getAbilityItem(String name) {
         return abilityItems.get(name);
     }
 
     public static Optional<AbilityItem> getAbilityItem(ItemStack item) {
-        if (item == null || !item.hasItemMeta()) {
-            return Optional.empty();
-        }
-
+        if (item == null || !item.hasItemMeta()) return Optional.empty();
         ItemMeta meta = item.getItemMeta();
         String id = meta.getPersistentDataContainer().get(ABILITY_ITEM_ID, PersistentDataType.STRING);
-
-        if (id == null) {
-            return Optional.empty();
-        }
-
+        if (id == null) return Optional.empty();
         return Optional.ofNullable(abilityItems.get(id));
     }
-
-    /*public static Optional<AbilityItem> getAbilityItem(ItemStack item){
-        return abilityItems.stream().filter(abilityItem -> abilityItem.getFinalItemStack().getItemMeta().getDisplayName().equals(item.getItemMeta().getDisplayName())).findAny();
-    }*/
-
 
     private final String name;
     private final ItemStack itemStack;
@@ -72,28 +59,38 @@ public class AbilityItem implements Listener{
     private final List<Validator<?>> validators;
     private final Map<Action, Consumer<ActionContext>> actions;
     private final Map<Action, Cooldown> cooldowns;
+
+    private final Map<Action, StagedCooldown> stagedCooldowns;
+
     private final String loreTranslationKey;
     private final boolean consumable;
 
-
-    private AbilityItem(Builder builder){
+    private AbilityItem(Builder builder) {
         this.name = builder.name;
         this.itemStack = builder.itemStack;
-
         this.validators = builder.validators;
         this.actions = builder.actions;
         this.cooldowns = builder.cooldowns;
+        this.stagedCooldowns = builder.stagedCooldowns;
         this.loreTranslationKey = builder.loreTranslationKey;
         this.consumable = builder.consumable;
 
         abilityItems.put(builder.name, this);
     }
 
-    public Cooldown getCooldown(Action action){
+    public Cooldown getCooldown(Action action) {
         return cooldowns.get(action);
     }
 
-    public void consume(Player player, ItemStack itemStack){
+    public StagedCooldown getStagedCooldown(Action action) {
+        return stagedCooldowns.get(action);
+    }
+
+    public void clearStagedCooldowns(Player player) {
+        stagedCooldowns.values().forEach(sc -> sc.clearPlayer(player));
+    }
+
+    public void consume(Player player, ItemStack itemStack) {
         if (itemStack.getAmount() > 1) {
             itemStack.setAmount(itemStack.getAmount() - 1);
         } else {
@@ -101,49 +98,52 @@ public class AbilityItem implements Listener{
         }
     }
 
-    public ItemStack getFinalItemStack(){
+    public ItemStack getFinalItemStack() {
         return getFinalItemStack(1);
     }
 
-    public ItemStack getFinalItemStack(int amount){
+    public ItemStack getFinalItemStack(int amount) {
         ItemBuilder finalItem = new ItemBuilder(itemStack, amount);
         finalItem.setName("§a" + name);
         if (loreTranslationKey != null) {
             finalItem.setLore(ModuleManager.getModule(MessageModule.class).get(Language.getDefaultLanguage(), loreTranslationKey));
         }
-
-        ItemStack itemStack = finalItem.toItemStack();
-        ItemMeta meta = itemStack.getItemMeta();
+        ItemStack result = finalItem.toItemStack();
+        ItemMeta meta = result.getItemMeta();
         meta.getPersistentDataContainer().set(ABILITY_ITEM_ID, PersistentDataType.STRING, getName());
-        itemStack.setItemMeta(meta);
-
-        return itemStack;
+        result.setItemMeta(meta);
+        return result;
     }
 
-    public ItemStack getFinalItemStack(GamePlayer gamePlayer){
+    public ItemStack getFinalItemStack(GamePlayer gamePlayer) {
         return getFinalItemStack(gamePlayer, 1);
     }
 
-    public ItemStack getFinalItemStack(GamePlayer gamePlayer, int amount){
+    public ItemStack getFinalItemStack(GamePlayer gamePlayer, int amount) {
         ItemBuilder finalItem = new ItemBuilder(itemStack, amount);
         finalItem.setName("§a" + name);
         if (loreTranslationKey != null) {
             finalItem.setLore(ModuleManager.getModule(MessageModule.class).get(gamePlayer, loreTranslationKey).getTranslated());
         }
-
-        ItemStack itemStack = finalItem.toItemStack();
-        ItemMeta meta = itemStack.getItemMeta();
+        ItemStack result = finalItem.toItemStack();
+        ItemMeta meta = result.getItemMeta();
         meta.getPersistentDataContainer().set(ABILITY_ITEM_ID, PersistentDataType.STRING, getName());
-        itemStack.setItemMeta(meta);
-
-        return itemStack;
+        result.setItemMeta(meta);
+        return result;
     }
 
-    public enum Action{
+    public enum Action {
         LEFT_CLICK, RIGHT_CLICK, RIGHT_CLICK_ENTITY, ENTITY_DAMAGE, DEFAULT;
     }
 
-    public record ActionContext(GamePlayer gamePlayer, AbilityItem abilityItem, PlayerInteractEvent playerInteractEvent, PlayerInteractEntityEvent playerInteractEntityEvent, EntityDamageByEntityEvent entityDamageByEntityEvent){}
+    public record ActionContext(
+            GamePlayer gamePlayer,
+            AbilityItem abilityItem,
+            PlayerInteractEvent playerInteractEvent,
+            PlayerInteractEntityEvent playerInteractEntityEvent,
+            EntityDamageByEntityEvent entityDamageByEntityEvent
+    ) {}
+
     public record Validator<T>(Class<T> type, Predicate<T> validator, Consumer<T> consumer) {}
 
     public static class Builder {
@@ -154,6 +154,7 @@ public class AbilityItem implements Listener{
         private final List<Validator<?>> validators = new ArrayList<>();
         private final Map<Action, Consumer<ActionContext>> actions = new HashMap<>();
         private final Map<Action, Cooldown> cooldowns = new HashMap<>();
+        private final Map<Action, StagedCooldown> stagedCooldowns = new HashMap<>();
         private String loreTranslationKey;
         private boolean consumable = false;
 
@@ -177,6 +178,11 @@ public class AbilityItem implements Listener{
             return this;
         }
 
+        public Builder addStagedCooldown(Action action, int usesPerCycle, double shortSeconds, double longSeconds) {
+            stagedCooldowns.put(action, new StagedCooldown(usesPerCycle, shortSeconds, longSeconds));
+            return this;
+        }
+
         public Builder setLoreTranslationKey(String loreTranslationKey) {
             this.loreTranslationKey = loreTranslationKey;
             return this;
@@ -188,11 +194,8 @@ public class AbilityItem implements Listener{
         }
 
         public AbilityItem build() {
-            AbilityItem abilityItem = getAbilityItem(name);
-            if (abilityItem != null){
-                return abilityItem;
-            }
-
+            AbilityItem existing = getAbilityItem(name);
+            if (existing != null) return existing;
             return new AbilityItem(this);
         }
     }

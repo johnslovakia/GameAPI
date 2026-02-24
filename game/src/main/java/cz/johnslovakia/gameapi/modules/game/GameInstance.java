@@ -109,10 +109,12 @@ public class GameInstance {
         module.setGame(this);
 
         modules.put(clazz, module);
-        module.initialize();
+        if (!module.lazyInitialize()) {
+            module.initialize();
 
-        if (module instanceof Listener listener)
-            Bukkit.getPluginManager().registerEvents(listener, Shared.getInstance().getPlugin());
+            if (module instanceof Listener listener)
+                Bukkit.getPluginManager().registerEvents(listener, Shared.getInstance().getPlugin());
+        }
         return module;
     }
 
@@ -350,19 +352,28 @@ public class GameInstance {
             serverDataManager.updateGame();
         }
 
+        if (state == GameState.INGAME){
+            for (GameModule module : modules.values().stream().filter(GameModule::lazyInitialize).toList()){
+                module.initialize();
+
+                if (module instanceof Listener listener)
+                    Bukkit.getPluginManager().registerEvents(listener, Shared.getInstance().getPlugin());
+            }
+        }
+
         GameStateChangeEvent ev = new GameStateChangeEvent(getGame(), state);
         Bukkit.getPluginManager().callEvent(ev);
     }
 
     public List<GamePlayer> getPlayers(){
         return participants.stream()
-                .filter(gp -> gp.getGameSession().getState().equals(GamePlayerState.PLAYER))
+                .filter(gp -> gp.getGameSession() != null && gp.getGameSession().getState().equals(GamePlayerState.PLAYER))
                 .toList();
     }
 
     public List<GamePlayer> getSpectators(){
         return participants.stream()
-                .filter(gamePlayer -> gamePlayer.getGameSession().getState().equals(GamePlayerState.SPECTATOR))
+                .filter(gamePlayer -> gamePlayer.getGameSession() != null && gamePlayer.getGameSession().getState().equals(GamePlayerState.SPECTATOR))
                 .toList();
     }
 
