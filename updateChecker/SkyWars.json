@@ -1,10 +1,11 @@
 {
-  "latest_version": "2.3.1",
-  "update_message": "Bug Fixes",
+  "latest_version": "2.4",
+  "update_message": "Customizable Chest Loot, Improvements & Bug Fixes",
   "update_messages": {
     "2.2": "LevelSystem, Changes and Bug Fixes",
     "2.2.1": "Bug Fixes",
     "2.3": "Lobby System, Leaderboard Hologram, and more...",
-    "2.3.1": "Bug Fixes"
+    "2.3.1": "Bug Fixes",
+    "2.4": "Customizable Chest Loot, Improvements & Bug Fixes"
   }
 }
