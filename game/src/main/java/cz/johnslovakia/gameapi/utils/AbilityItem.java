@@ -29,6 +29,7 @@ public class AbilityItem implements Listener {
     private static NamespacedKey ABILITY_ITEM_ID;
 
     public static boolean isAbilityItem(ItemStack item) {
+        if (ABILITY_ITEM_ID == null) return false;
         if (item == null || !item.hasItemMeta()) return false;
         ItemMeta meta = item.getItemMeta();
         return meta.getPersistentDataContainer().has(ABILITY_ITEM_ID, PersistentDataType.STRING);

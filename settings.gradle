@@ -1,3 +1,5 @@
 rootProject.name = "GameAPI"
 include("shared", "game")
 
+
+include 'npcapi'

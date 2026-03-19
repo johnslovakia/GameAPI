@@ -87,19 +87,14 @@ public class GameInstance implements Terminate{
         this.gameEndHandler = new GameEndHandler(this);
         this.gameStartHandler = new GameStartHandler(this);
         this.playerJoinQuitHandler = new PlayerJoinQuitHandler(this);
-
-        updateTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!isValid()) this.cancel();
-                serverDataManager.updateGame();
-            }
-        }.runTaskTimerAsynchronously(Minigame.getInstance().getPlugin(), 30L, 30 * 20L);
     }
 
     @Override
     public void terminate() {
-        updateTask.cancel();
+        if (updateTask != null) {
+            updateTask.cancel();
+            updateTask = null;
+        }
         spectatorManager = null;
         serverDataManager = null;
         participants = null;
@@ -200,6 +195,14 @@ public class GameInstance implements Terminate{
             }
 
             serverDataManager.updateGame();
+
+            updateTask = new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (!isValid()) this.cancel();
+                    serverDataManager.updateGame();
+                }
+            }.runTaskTimerAsynchronously(Minigame.getInstance().getPlugin(), 30L, 30 * 20L);
         }
 
         if (getSettings().isChooseRandomMap()){

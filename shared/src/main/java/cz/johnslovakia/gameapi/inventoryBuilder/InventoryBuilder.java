@@ -43,7 +43,7 @@ public class InventoryBuilder implements Listener, Initialize, Terminate {
     private final String name;
     @Setter
     private boolean closeInventoryListener = true;
-    private int holdItemSlot;
+    private int holdItemSlot = -1;
 
     private List<Item> items = new ArrayList<>();
     private List<Player> players = new ArrayList<>();
@@ -175,7 +175,9 @@ public class InventoryBuilder implements Listener, Initialize, Terminate {
 
         PlayerInventory inventory = player.getInventory();
         if (!players.contains(player)) {
-            inventory.setHeldItemSlot(holdItemSlot);
+            if (holdItemSlot != -1) {
+                inventory.setHeldItemSlot(holdItemSlot);
+            }
             players.add(player);
         }
 

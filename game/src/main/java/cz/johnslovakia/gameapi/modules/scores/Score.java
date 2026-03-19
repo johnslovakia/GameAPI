@@ -21,9 +21,12 @@ import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 
+import javax.xml.validation.Validator;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 
 @Getter
@@ -201,11 +204,28 @@ public class Score {
             }
             return this;
         }
-        public Builder addReward(String forWhat, RewardItem... rewardItems){
-            if (reward == null) reward = new Reward();
-            reward.setSource(forWhat);
-            for (RewardItem item : rewardItems){
-                reward.addRewardItem(item);
+
+
+        public Builder addReward(Resource resource, int amount){
+            addReward(RewardItem.builder(resource).setAmount(amount).build());
+            return this;
+        }
+
+        public Builder addReward(BooleanSupplier condition, Resource resource, int amount) {
+            if (condition == null || condition.getAsBoolean()) {
+                addReward(resource, amount);
+            }
+            return this;
+        }
+
+        public Builder addReward(String resourceName, int amount){
+            addReward(ModuleManager.getModule(ResourcesModule.class).getResourceByName(resourceName), amount);
+            return this;
+        }
+
+        public Builder addReward(BooleanSupplier condition, String resourceName, int amount){
+            if (condition == null || condition.getAsBoolean()) {
+                addReward(resourceName, amount);
             }
             return this;
         }
@@ -220,26 +240,6 @@ public class Score {
 
         public Builder setLinkRewardMessageKey(String linkRewardMessageKey) {
             this.linkRewardMessageKey = linkRewardMessageKey;
-            return this;
-        }
-
-        public Builder addReward(Resource resource, int amount){
-            addReward(RewardItem.builder(resource).setAmount(amount).build());
-            return this;
-        }
-
-        public Builder addReward(String source, Resource resource, int amount){
-            addReward(source, RewardItem.builder(resource).setAmount(amount).build());
-            return this;
-        }
-
-        public Builder addReward(String resourceName, int amount){
-            addReward(ModuleManager.getModule(ResourcesModule.class).getResourceByName(resourceName), amount);
-            return this;
-        }
-
-        public Builder addReward(String forWhat, String resourceName, int amount){
-            addReward(forWhat, ModuleManager.getModule(ResourcesModule.class).getResourceByName(resourceName), amount);
             return this;
         }
 
