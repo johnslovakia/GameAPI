@@ -25,7 +25,7 @@ public class UnclaimedRewardsTable {
             QueryResult result = connection.insert()
                     .into(TABLE_NAME, "Nickname", "type", "reward_json", "data_json", "created_at")
                     .values(
-                            unclaimedReward.getPlayerIdentity().getOnlinePlayer().getName(),
+                            unclaimedReward.getOfflinePlayer().getName(),
                             unclaimedReward.getType().name(),
                             unclaimedReward.getRewardJson(),
                             dataJSON,
@@ -44,8 +44,6 @@ public class UnclaimedRewardsTable {
     }
 
     public static void removeUnclaimedReward(UnclaimedReward unclaimedReward) {
-        PlayerIdentity gamePlayer = unclaimedReward.getPlayerIdentity();
-
         if (Shared.getInstance().getDatabase() == null) {
             Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
             return;
@@ -59,7 +57,7 @@ public class UnclaimedRewardsTable {
 
             QueryResult result = connection.delete()
                     .from(TABLE_NAME)
-                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .where().isEqual("Nickname", unclaimedReward.getOfflinePlayer().getName())
                     .and().isEqual("type", unclaimedReward.getType().name())
                     .and().isEqual("created_at", formattedCreatedAt)
                     .and().isEqual("data_json", unclaimedReward.getData().toString())

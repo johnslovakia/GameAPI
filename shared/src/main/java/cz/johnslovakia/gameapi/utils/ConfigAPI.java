@@ -1,9 +1,5 @@
 package cz.johnslovakia.gameapi.utils;
 
-import cz.johnslovakia.gameapi.modules.game.GameInstance;
-import cz.johnslovakia.gameapi.modules.game.lobby.LobbyLocation;
-import cz.johnslovakia.gameapi.modules.game.map.GameMap;
-import cz.johnslovakia.gameapi.modules.game.map.MapLocation;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -97,34 +93,5 @@ public class ConfigAPI {
         }
 
         return Utils.getLocationString(fileConfig.getString(path));
-    }
-
-    public MapLocation getMapLocation(GameMap gameMap, String id, String path){
-        return getMapLocation(gameMap, id, path, false);
-    }
-
-    public MapLocation getMapLocation(GameMap gameMap, String id, String path, boolean yaw_and_pitch){
-        if (fileConfig.get(path) == null) {
-            Logger.log("getMapLocation: Path '" + path + "' is null!", Logger.LogType.ERROR);
-            return null;
-        }
-        return GameUtils.getMapLocationFromString(gameMap, id, fileConfig.getString(path), yaw_and_pitch);
-    }
-
-    public LobbyLocation getLobbyLocation(GameInstance game, String path){
-        if (fileConfig.get(path) == null) {
-            Logger.log("getLobbyLocation: Path '" + path + "' is null!", Logger.LogType.ERROR);
-            return null;
-        }
-
-        final String[] parts = fileConfig.getString(path).split(";");
-        final String world = parts[0];
-        final double x = Double.parseDouble(parts[1]);
-        final double y = Double.parseDouble(parts[2]);
-        final double z = Double.parseDouble(parts[3]);
-        final float yaw =  Float.parseFloat(parts[4]);
-        final float pitch =  Float.parseFloat(parts[5]);
-
-        return new LobbyLocation(game, world, x, y, z, yaw, pitch);
     }
 }

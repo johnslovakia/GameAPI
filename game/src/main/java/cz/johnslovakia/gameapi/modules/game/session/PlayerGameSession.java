@@ -5,6 +5,7 @@ import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.kits.Kit;
 import cz.johnslovakia.gameapi.modules.game.team.GameTeam;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
+import cz.johnslovakia.gameapi.modules.resources.ResourceComparator;
 import cz.johnslovakia.gameapi.modules.scores.ScoreModule;
 import cz.johnslovakia.gameapi.rewards.PlayerRewardRecord;
 import cz.johnslovakia.gameapi.users.GamePlayerState;
@@ -16,6 +17,7 @@ import lombok.Setter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 @Getter @Setter
 public class PlayerGameSession {
@@ -54,7 +56,7 @@ public class PlayerGameSession {
     }
 
     public Map<Resource, Integer> getTotalEarned() {
-        Map<Resource, Integer> total = new HashMap<>();
+        Map<Resource, Integer> total = new TreeMap<>(new ResourceComparator());
 
         earnedScoreRewards.values().stream()
                 .flatMap(List::stream)

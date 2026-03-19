@@ -2,10 +2,7 @@ package cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics;
 
 import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
-import cz.johnslovakia.gameapi.modules.cosmetics.Cosmetic;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticRarity;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsCategory;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
+import cz.johnslovakia.gameapi.modules.cosmetics.*;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.Utils;
@@ -20,13 +17,12 @@ public class HatsCategory extends CosmeticsCategory implements Listener {
         super("Hats", new ItemBuilder(Material.CARVED_PUMPKIN)
                 .setCustomModelData(1).toItemStack());
 
-        FileConfiguration config = Shared.getInstance().getPlugin().getConfig();
-        
-        int LEGENDARY_COINS_PRICE = Utils.getPrice(config, "hats.legendary", 18000);
-        int EPIC_COINS_PRICE = Utils.getPrice(config, "hats.epic", 14000);
-        int RARE_COINS_PRICE = Utils.getPrice(config, "hats.rare", 10000);
-        int UNCOMMON_COINS_PRICE = Utils.getPrice(config, "hats.uncommon", 8000);
-        int COMMON_COINS_PRICE = Utils.getPrice(config, "hats.common", 6000);
+        CosmeticPrices.PriceSet p = manager.getPrices().getHats();
+        int LEGENDARY_COINS_PRICE = p.getLegendary();
+        int EPIC_COINS_PRICE = p.getEpic();
+        int RARE_COINS_PRICE = p.getRare();
+        int UNCOMMON_COINS_PRICE = p.getUncommon();
+        int COMMON_COINS_PRICE = p.getCommon();
 
         int LEGENDARY_TOKEN_PRICE = 7;
         int EPIC_TOKEN_PRICE = 5;

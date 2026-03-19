@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.users;
 
 import cz.johnslovakia.gameapi.GameAPI;
+import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.game.GameService;
@@ -27,12 +28,12 @@ import lombok.Getter;
 import lombok.Setter;
 
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
@@ -63,7 +64,7 @@ public class GamePlayer extends Winner implements PlayerIdentity {
 
         playerData = null;
         //gameID = null;
-        getMetadata().remove((PlayerIdentity) this);
+        getMetadata().clear();
     }
 
     public PlayerData getPlayerData() {
@@ -146,8 +147,10 @@ public class GamePlayer extends Winner implements PlayerIdentity {
             getGameSession().setState(GamePlayerState.SPECTATOR);
 
             getOnlinePlayer().setGameMode(GameMode.ADVENTURE);
-            getOnlinePlayer().setAllowFlight(true);
-            getOnlinePlayer().setFlying(true);
+            Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
+                getOnlinePlayer().setAllowFlight(true);
+                getOnlinePlayer().setFlying(true);
+            }, 3L);
             getOnlinePlayer().addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
 
             for (GamePlayer alivePlayer : game.getPlayers()) {
@@ -162,6 +165,11 @@ public class GamePlayer extends Winner implements PlayerIdentity {
                 currentMap.getPlayerToLocation().remove(this);
             }
 
+            PlayerInventory inventory = getOnlinePlayer().getInventory();
+            inventory.setChestplate(new ItemStack(Material.AIR));
+            inventory.setLeggings(new ItemStack(Material.AIR));
+            inventory.setBoots(new ItemStack(Material.AIR));
+
             if (game.getState().equals(GameState.INGAME)) {
                 if (teamSelector) {
                     getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().give(this);
@@ -169,9 +177,6 @@ public class GamePlayer extends Winner implements PlayerIdentity {
                     getGame().getSpectatorManager().getInventoryManager().give(this);
                 }
             }
-
-            ModuleManager.getModule(MessageModule.class).get(this, "title.spectator")
-                    .send();
         }else{
             getGameSession().setState(GamePlayerState.PLAYER);
 
@@ -254,10 +259,6 @@ public class GamePlayer extends Winner implements PlayerIdentity {
 
     public boolean isInGame(){
         return getGame() != null;
-    }
-
-    public OfflinePlayer getOfflinePlayer() {
-        return offlinePlayer;
     }
 
     public List<Area> getAreas(){

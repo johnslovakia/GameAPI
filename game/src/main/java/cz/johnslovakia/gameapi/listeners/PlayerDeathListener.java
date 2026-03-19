@@ -9,6 +9,7 @@ import cz.johnslovakia.gameapi.events.GamePlayerDeathEvent;
 import cz.johnslovakia.gameapi.events.TeamEliminationEvent;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.modules.game.Placement;
+import cz.johnslovakia.gameapi.modules.game.lobby.LobbyModule;
 import cz.johnslovakia.gameapi.modules.game.session.PlayerGameSession;
 import cz.johnslovakia.gameapi.modules.game.team.GameTeam;
 import cz.johnslovakia.gameapi.modules.game.team.TeamModule;
@@ -19,7 +20,9 @@ import cz.johnslovakia.gameapi.modules.killMessage.KillMessageModule;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.scores.Score;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.CharRepo;
+import cz.johnslovakia.gameapi.utils.GameUtils;
 import cz.johnslovakia.gameapi.utils.StringUtils;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import lombok.Getter;
@@ -37,7 +40,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.damage.DamageType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
@@ -47,6 +52,8 @@ import java.util.stream.Collectors;
 
 @Getter
 public class PlayerDeathListener implements Listener {
+
+
 
     //private static final Map<GamePlayer, Integer> spawnKillProtection = new HashMap<>();
     private static final Cache<UUID, Integer> killCounter = CacheBuilder.newBuilder()
@@ -60,10 +67,10 @@ public class PlayerDeathListener implements Listener {
 
     public String getxKillMessageKey(int count){
         return switch (count){
-            case 2 -> "word.double_kill";
-            case 3 -> "word.tripple_kill";
-            case 4 -> "word.quadra_kill";
-            case 5 -> "word.penta_kill";
+            case 2 -> "multikill.double_kill";
+            case 3 -> "multikill.tripple_kill";
+            case 4 -> "multikill.quadra_kill";
+            case 5 -> "multikill.penta_kill";
             default -> "";
         };
     }
@@ -132,16 +139,26 @@ public class PlayerDeathListener implements Listener {
         // /title @a actionbar {"text":"󏿝\u1E8D","color":"#4e5c24","font":"minecraft:actionbar_offset","extra":[{"text":"󏾜󏿘\u1E8C󏿎󏿲󏿸DAMIANHRAJEEEE","color":"white"}]}
     }
 
-    @EventHandler
+    @EventHandler (priority = EventPriority.LOW)
     public void onGamePlayerDeath(GamePlayerDeathEvent e) {
         GamePlayer gamePlayer = e.getGamePlayer();
+        GameInstance game = e.getGame();
         Player player = gamePlayer.getOnlinePlayer();
         PlayerGameSession session = gamePlayer.getGameSession();
-        GameInstance game = e.getGame();
         boolean useTeams = game.getSettings().isUseTeams();
 
-        CosmeticsModule cosmeticsModule = ModuleManager.getModule(CosmeticsModule.class);
-        CosmeticsCategory killMessagesCategory = cosmeticsModule.getCategoryByName("Kill messages");
+        if (!game.getState().equals(GameState.INGAME)) {
+            e.setCancelled(true);
+            if (game.getState().equals(GameState.WAITING) || game.getState().equals(GameState.STARTING)) {
+                LobbyModule lobbyModule = game.getModule(LobbyModule.class);
+                if (lobbyModule != null && lobbyModule.getLobbyLocation() != null) {
+                    player.teleport(lobbyModule.getLobbyLocation().getLocation());
+                }
+            } else{
+                player.teleport(GameUtils.getNonRespawnLocation(game));
+            }
+            return;
+        }
 
         if (e.getKiller() != null && e.getKiller() != gamePlayer) {
             GamePlayer killer = e.getKiller();
@@ -150,13 +167,10 @@ public class PlayerDeathListener implements Listener {
             int currentCount = killCounter.getIfPresent(killerId) != null ? killCounter.getIfPresent(killerId) + 1 : 1;
             killCounter.put(killerId, currentCount);
 
-            if (currentCount > 1) {
-                blockedXKill.put(killerId + ":" + currentCount, true);
-            }
-
-            String killKey = "";
+            String multiKillKey = "";
             if (currentCount > 1 && blockedXKill.getIfPresent(killerId + ":" + currentCount) == null) {
-                killKey = getxKillMessageKey(currentCount);
+                multiKillKey = getxKillMessageKey(currentCount);
+                blockedXKill.put(killerId + ":" + currentCount, true);
             }
 
             ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), ModuleManager.getModule(KillMessageModule.class).getForPlayer(killer).getTranslationKey(e.getDmgType()))
@@ -165,7 +179,7 @@ public class PlayerDeathListener implements Listener {
                     .replace("%dead_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
                     .replace("%player_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
                     .replace("%killer_color%", useTeams ? "" + killer.getGameSession().getTeam().getChatColor() : "§a")
-                    .addAndTranslate(killKey)
+                    .addAndTranslate(multiKillKey)
                     .send();
 
             if (e.getAssists() != null && !e.getAssists().isEmpty()) {
@@ -196,7 +210,7 @@ public class PlayerDeathListener implements Listener {
                 ModuleManager.getModule(MessageModule.class).get(killer, "chat.kill_fast").send();
             }*/
 
-            killer.getOnlinePlayer().playSound(killer.getOnlinePlayer().getLocation(), "jsplugins:good", 1F, 1F);
+            //killer.getOnlinePlayer().playSound(killer.getOnlinePlayer().getLocation(), "jsplugins:good", 1F, 1F);
             //eliminationBanner(killer, gamePlayer);
         } else {
             String key;
@@ -215,15 +229,22 @@ public class PlayerDeathListener implements Listener {
                     .send();
         }
 
-        if (!gamePlayer.isRespawning()) {
-            gamePlayer.setSpectator(true);
-
-            int totalPlayers = game.getPlayers().size() + game.getPlacements().size();
-            int placement = totalPlayers - game.getPlacements().size();
+        if (gamePlayer.isOnline() && !gamePlayer.isRespawning()) {
+            int placement = game.getPlayers().size();
             game.getPlacements().add(new Placement<>(gamePlayer, placement));
 
-            PlayerEliminationEvent ev = new PlayerEliminationEvent(gamePlayer, e.getKiller(), e.getAssists(),placement);
+            // It sometimes caused spectator items to drop in certain cases,
+            // for example when a player was killed by a fireball explosion that landed nearby.
+            Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
+
+            }, 1L);
+            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "title.spectator")
+                    .send();
+            gamePlayer.setSpectator(true);
+
+            PlayerEliminationEvent ev = new PlayerEliminationEvent(gamePlayer, e.getKiller(), e.getAssists(), placement);
             Bukkit.getPluginManager().callEvent(ev);
+
 
             new BukkitRunnable() {
                 @Override
@@ -290,6 +311,7 @@ public class PlayerDeathListener implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
+                    if (!game.getState().equals(GameState.INGAME)) return;
                     endGame.response().accept(game);
                 }
             }.runTaskLater(Minigame.getInstance().getPlugin(), 2L);

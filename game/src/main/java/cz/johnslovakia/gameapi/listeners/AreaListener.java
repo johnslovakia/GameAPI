@@ -91,12 +91,16 @@ public class AreaListener implements Listener {
 
             if (game.getCurrentMap().getMainArea() != null) {
                 Area borderArea = game.getCurrentMap().getMainArea();
-                if (borderArea.isBorder() && !borderArea.isInArea(to, 12) && from.getY() <= to.getY()) {
-                    Vector direction = borderArea.getCenter().clone().subtract(from).toVector();
-                    direction.normalize().multiply(0.5);
+                Location center = borderArea.getCenter();
 
-                    gamePlayer.getOnlinePlayer().teleport(to.clone().add(direction));
-                    ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.move_border").send();
+                if (center.getWorld() != null && center.getWorld().equals(from.getWorld())) {
+                    if (borderArea.isBorder() && !borderArea.isInArea(to, 12) && from.getY() <= to.getY()) {
+                        Vector direction = borderArea.getCenter().clone().subtract(from).toVector();
+                        direction.normalize().multiply(0.5);
+
+                        gamePlayer.getOnlinePlayer().teleport(to.clone().add(direction));
+                        ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.move_border").send();
+                    }
                 }
             }
 

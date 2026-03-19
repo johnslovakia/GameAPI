@@ -3,6 +3,7 @@ package cz.johnslovakia.gameapi.events;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
@@ -12,7 +13,7 @@ public class DailyXPGainEvent extends Event {
 
     private static final HandlerList handlers = new HandlerList();
 
-    private final PlayerIdentity playerIdentity;
+    private final OfflinePlayer offlinePlayer;
     private final int oldXP;
     private final int newXP;
     private final int gainedXP;

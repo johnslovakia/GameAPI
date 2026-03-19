@@ -11,6 +11,7 @@ public class ItemUtils {
 
     @Getter
     public static ItemUtils instance;
+
     private final NamespacedKey noPickupKey;
 
     public ItemUtils(Plugin plugin) {

@@ -1,18 +1,18 @@
 package cz.johnslovakia.gameapi.modules.resources.storage;
 
-import cz.johnslovakia.gameapi.users.PlayerIdentity;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public interface ResourceStorage {
 
-    void deposit(PlayerIdentity playerIdentity, int amount);
-    void withdraw(PlayerIdentity playerIdentity, int amount);
-    CompletableFuture<Integer> getBalance(PlayerIdentity playerIdentity);
-    int getBalanceCached(PlayerIdentity playerIdentity);
+    void deposit(OfflinePlayer player, int amount);
+    void withdraw(OfflinePlayer player, int amount);
+    CompletableFuture<Integer> getBalance(OfflinePlayer player);
+    int getBalanceCached(OfflinePlayer player);
     default void onEnable(){};
-    default CompletableFuture<Void> preload(Iterable<PlayerIdentity> players) {
+    default CompletableFuture<Void> preload(Iterable<? extends OfflinePlayer> players) {
         return CompletableFuture.completedFuture(null);
     }
     void shutdown();

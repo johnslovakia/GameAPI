@@ -8,7 +8,7 @@ import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.listeners.TestServerListener;
 import cz.johnslovakia.gameapi.modules.perks.PerkManager;
 import cz.johnslovakia.gameapi.modules.quests.QuestManager;
-import cz.johnslovakia.gameapi.modules.serverManagement.DataManager;
+import cz.johnslovakia.gameapi.modules.serverManagement.ServerRegistry;
 import cz.johnslovakia.gameapi.modules.serverManagement.gameData.JSONProperty;
 import cz.johnslovakia.gameapi.utils.InputStreamWithName;
 import cz.johnslovakia.gameapi.utils.Logger;
@@ -23,6 +23,7 @@ import me.zort.sqllib.api.data.QueryResult;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -74,6 +75,11 @@ public abstract class Minigame {
         }
     }
 
+    public boolean hasSpectatePermission(Player player){
+        String permission = getName().toLowerCase() + ".spectate";
+        return player.hasPermission(permission);
+    }
+
     public void updateSettings(Consumer<MinigameSettings.Builder> updater) {
         MinigameSettings.Builder builder = this.settings.toBuilder();
         updater.accept(builder);
@@ -122,13 +128,13 @@ public abstract class Minigame {
 
     //TODO: rewrite
     public Minigame setServerDataMySQL(Database serverDataMySQL) {
-        new DataManager(serverDataMySQL);
+        moduleManager.registerModule(new ServerRegistry(serverDataMySQL));
         return this;
     }
 
     //TODO: rewrite
     public Minigame setServerDataRedis(RedisManager serverDataRedis) {
-        new DataManager(serverDataRedis);
+        moduleManager.registerModule(new ServerRegistry(serverDataRedis));
         return this;
     }
 

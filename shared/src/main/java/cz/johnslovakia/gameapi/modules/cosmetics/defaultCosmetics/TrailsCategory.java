@@ -26,13 +26,12 @@ public class TrailsCategory extends CosmeticsCategory {
     public TrailsCategory(CosmeticsModule manager) {
         super("Projectile Trails", new ItemStack(Material.ARROW));
 
-        FileConfiguration config = Shared.getInstance().getPlugin().getConfig();
-
-        int LEGENDARY_COINS_PRICE = Utils.getPrice(config, "projectile_trails.legendary", 15000);
-        int EPIC_COINS_PRICE = Utils.getPrice(config, "projectile_trails.epic", 12000);
-        int RARE_COINS_PRICE = Utils.getPrice(config, "projectile_trails.rare", 10000);
-        int UNCOMMON_COINS_PRICE = Utils.getPrice(config, "projectile_trails.uncommon", 8000);
-        int COMMON_COINS_PRICE = Utils.getPrice(config, "projectile_trails.common", 5000);
+        CosmeticPrices.PriceSet p = manager.getPrices().getProjectileTrails();
+        int LEGENDARY_COINS_PRICE = p.getLegendary();
+        int EPIC_COINS_PRICE = p.getEpic();
+        int RARE_COINS_PRICE = p.getRare();
+        int UNCOMMON_COINS_PRICE = p.getUncommon();
+        int COMMON_COINS_PRICE = p.getCommon();
 
         int LEGENDARY_TOKEN_PRICE = 7;
         int EPIC_TOKEN_PRICE = 5;
@@ -76,7 +75,7 @@ public class TrailsCategory extends CosmeticsCategory {
                     ItemStack itemStack =  new ItemBuilder(Material.SKELETON_SKULL).setName(UUID.randomUUID().toString()).toItemStack();
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
 
-                    Item item = location.getWorld().dropItem(location, new ItemStack(Material.SKELETON_SKULL));
+                    Item item = location.getWorld().dropItem(location, itemStack);
                     Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
         Cosmetic pumpkins = new Cosmetic("Pumpkins", new ItemStack(Material.PUMPKIN), CosmeticRarity.RARE)
@@ -86,7 +85,7 @@ public class TrailsCategory extends CosmeticsCategory {
                     ItemStack itemStack =  new ItemBuilder(Material.PUMPKIN).setName(UUID.randomUUID().toString()).toItemStack();
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
 
-                    Item item = location.getWorld().dropItem(location, new ItemStack(Material.PUMPKIN));
+                    Item item = location.getWorld().dropItem(location, itemStack);
                     Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
         Cosmetic presents = new Cosmetic("Presents", Utils.getCustomHead("12919c67317c7678438ff520c98dde0e3b4d68769c8938a5a3de2968edfc7314"), CosmeticRarity.EPIC)
@@ -137,7 +136,7 @@ public class TrailsCategory extends CosmeticsCategory {
                     ItemStack itemStack =  new ItemBuilder(Material.POPPY).setName(UUID.randomUUID().toString()).toItemStack();
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
 
-                    Item item = location.getWorld().dropItem(location, new ItemStack(Material.POPPY));
+                    Item item = location.getWorld().dropItem(location, itemStack);
                     Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
 

@@ -24,52 +24,67 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AntiAFK implements Listener {
 
-    private static final long AFK_DELAY_INGAME = 150 * 20L;
+    private static final long AFK_DELAY_TICKS = 150 * 20L;
     private static final int KICK_COUNTDOWN_SECONDS = 15;
+    private static final long RESCHEDULE_DEBOUNCE_MS = 1_000L;
 
     private final Map<GamePlayer, BukkitTask> afkTasks = new ConcurrentHashMap<>();
+    private final Map<GamePlayer, BukkitTask> countdownTasks = new ConcurrentHashMap<>();
     private final Map<GamePlayer, Boolean> isAfk = new ConcurrentHashMap<>();
-    private final Map<GamePlayer, Boolean> afkByJoin = new ConcurrentHashMap<>();
+    private final Map<GamePlayer, Long> lastReschedule = new ConcurrentHashMap<>();
+
 
     private boolean isExempt(Player player) {
-        return player.hasPermission("*") || player.isOp();
+        return player.isOp() || player.hasPermission("*");
     }
 
     private boolean hasPlayerMoved(PlayerMoveEvent event) {
         Location from = event.getFrom();
         Location to = event.getTo();
+        if (to == null) return false;
 
         return from.distanceSquared(to) > 0.0025
-                || Math.abs(from.getYaw()   - to.getYaw())   > 0.5f
+                || Math.abs(from.getYaw() - to.getYaw())   > 0.5f
                 || Math.abs(from.getPitch() - to.getPitch()) > 0.5f;
     }
 
     private void cancelAfkTask(GamePlayer gamePlayer) {
-        BukkitTask task = afkTasks.remove(gamePlayer);
-        if (task != null) task.cancel();
+        BukkitTask afk = afkTasks.remove(gamePlayer);
+        if (afk != null) afk.cancel();
+
+        BukkitTask countdown = countdownTasks.remove(gamePlayer);
+        if (countdown != null) countdown.cancel();
     }
 
     private void scheduleAfkTask(Player player, GamePlayer gamePlayer) {
+        long now  = System.currentTimeMillis();
+        Long last = lastReschedule.get(gamePlayer);
+
+        if (last != null && afkTasks.containsKey(gamePlayer) && (now - last) < RESCHEDULE_DEBOUNCE_MS) {
+            return;
+        }
+
         cancelAfkTask(gamePlayer);
+        lastReschedule.put(gamePlayer, now);
 
         BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
-                if (PlayerManager.getGamePlayer(player) != gamePlayer) return;
-
                 isAfk.put(gamePlayer, true);
                 kickPlayerIfAfk(player, gamePlayer);
             }
-        }.runTaskLaterAsynchronously(Minigame.getInstance().getPlugin(), AFK_DELAY_INGAME);
+        }.runTaskLater(Minigame.getInstance().getPlugin(), AFK_DELAY_TICKS);
 
         afkTasks.put(gamePlayer, task);
     }
 
+
     private void cleanupPlayer(GamePlayer gamePlayer) {
         cancelAfkTask(gamePlayer);
         isAfk.remove(gamePlayer);
-        afkByJoin.remove(gamePlayer);
+        lastReschedule.remove(gamePlayer);
     }
+
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
@@ -77,24 +92,20 @@ public class AntiAFK implements Listener {
         if (isExempt(player)) return;
 
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        if (gamePlayer.getPlayerData() == null) return;
+        if (gamePlayer == null || gamePlayer.getPlayerData() == null) return;
 
         GameInstance game = gamePlayer.getGame();
         if (game == null) return;
         if (!game.getSettings().isEnabledAntiAFKSystem()) return;
         if (game.getState() != GameState.INGAME) return;
 
-        if (hasPlayerMoved(event)) {
-            cancelAfkTask(gamePlayer);
-            if (isAfk.getOrDefault(gamePlayer, false)) {
-                afkByJoin.remove(gamePlayer);
-                isAfk.put(gamePlayer, false);
-            }
-        } else {
-            if (!afkTasks.containsKey(gamePlayer)) {
-                scheduleAfkTask(player, gamePlayer);
-            }
+        if (!hasPlayerMoved(event)) return;
+
+        if (isAfk.getOrDefault(gamePlayer, false)) {
+            isAfk.put(gamePlayer, false);
         }
+
+        scheduleAfkTask(player, gamePlayer);
     }
 
     @EventHandler
@@ -108,7 +119,6 @@ public class AntiAFK implements Listener {
             if (game == null) continue;
             if (!game.getSettings().isEnabledAntiAFKSystem()) continue;
 
-            afkByJoin.put(gamePlayer, true);
             scheduleAfkTask(player, gamePlayer);
         }
     }
@@ -118,19 +128,23 @@ public class AntiAFK implements Listener {
         cleanupPlayer(event.getGamePlayer());
     }
 
+
     private void kickPlayerIfAfk(Player player, GamePlayer gamePlayer) {
+        if (!player.isOnline()) return;
         if (isExempt(player)) return;
         if (gamePlayer.getPlayerData() == null || gamePlayer.getGame() == null) return;
+        if (!isAfk.getOrDefault(gamePlayer, false)) return;
 
         player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 1.0f, 1.0f);
 
-        new BukkitRunnable() {
+        BukkitTask task = new BukkitRunnable() {
             int countdown = KICK_COUNTDOWN_SECONDS;
 
             @Override
             public void run() {
-                if (PlayerManager.getGamePlayer(player) != gamePlayer
-                        || !isAfk.getOrDefault(gamePlayer, false)) {
+                if (!isAfk.getOrDefault(gamePlayer, false)
+                        || PlayerManager.getGamePlayer(player) != gamePlayer) {
+                    countdownTasks.remove(gamePlayer);
                     this.cancel();
                     return;
                 }
@@ -155,5 +169,7 @@ public class AntiAFK implements Listener {
                 countdown--;
             }
         }.runTaskTimer(Minigame.getInstance().getPlugin(), 0L, 20L);
+
+        countdownTasks.put(gamePlayer, task);
     }
 }

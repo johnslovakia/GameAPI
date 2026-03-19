@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.modules.resources;
 
 import cz.johnslovakia.gameapi.modules.resources.storage.ResourceStorage;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
+import org.bukkit.OfflinePlayer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,32 +21,32 @@ public class ObservableResource implements ResourceStorage {
         listeners.add(listener);
     }
 
-    private void notify(PlayerIdentity playerIdentity, int amount, ResourceChangeType type) {
+    private void notify(OfflinePlayer offlinePlayer, int amount, ResourceChangeType type) {
         for (ResourceChangeListener listener : listeners) {
-            listener.onChange(playerIdentity, amount, type);
+            listener.onChange(offlinePlayer, amount, type);
         }
     }
 
     @Override
-    public void deposit(PlayerIdentity playerIdentity, int amount) {
-        delegate.deposit(playerIdentity, amount);
-        notify(playerIdentity, amount, ResourceChangeType.DEPOSIT);
+    public void deposit(OfflinePlayer offlinePlayer, int amount) {
+        delegate.deposit(offlinePlayer, amount);
+        notify(offlinePlayer, amount, ResourceChangeType.DEPOSIT);
     }
 
     @Override
-    public void withdraw(PlayerIdentity playerIdentity, int amount) {
-        delegate.withdraw(playerIdentity, amount);
-        notify(playerIdentity, amount, ResourceChangeType.WITHDRAW);
+    public void withdraw(OfflinePlayer offlinePlayer, int amount) {
+        delegate.withdraw(offlinePlayer, amount);
+        notify(offlinePlayer, amount, ResourceChangeType.WITHDRAW);
     }
 
     @Override
-    public CompletableFuture<Integer> getBalance(PlayerIdentity playerIdentity) {
-        return delegate.getBalance(playerIdentity);
+    public CompletableFuture<Integer> getBalance(OfflinePlayer offlinePlayer) {
+        return delegate.getBalance(offlinePlayer);
     }
 
     @Override
-    public int getBalanceCached(PlayerIdentity playerIdentity) {
-        return delegate.getBalanceCached(playerIdentity);
+    public int getBalanceCached(OfflinePlayer offlinePlayer) {
+        return delegate.getBalanceCached(offlinePlayer);
     }
 
     @Override

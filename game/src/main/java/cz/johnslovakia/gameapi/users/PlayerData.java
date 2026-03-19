@@ -31,6 +31,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -118,9 +119,11 @@ public class PlayerData {
                 try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
                     if (connection == null) return;
 
+                    String kitName = defaultKit != null ? defaultKit.getName() : null;
+
                     connection.update()
                             .table(Minigame.getInstance().getMinigameTable().getTableName())
-                            .set("DefaultKit", defaultKit.getName())
+                            .set("DefaultKit", kitName)
                             .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
                             .execute();
                 } catch (Exception e) {
@@ -240,6 +243,8 @@ public class PlayerData {
                     + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
             e.printStackTrace();
         }
+
+        Minigame.getInstance().getQuestManager().check(gamePlayer);
     }
 
     public void setPerkLevel(Perk perk, int level){
@@ -374,7 +379,11 @@ public class PlayerData {
                             String inventory = kitObject.getString("inventory");
                             Kit k = kitManager.getKit(name);
                             if (k != null) {
-                                kitInventories.put(k, BukkitSerialization.playerInventoryFromBase64(inventory));
+                                try {
+                                    kitInventories.put(k, BukkitSerialization.playerInventoryFromBase64(inventory));
+                                } catch (IllegalStateException | IOException exception){
+
+                                }
                             }
                         }
                     } else {
@@ -393,8 +402,12 @@ public class PlayerData {
                             String base64Inventory = kitInventoriesJson.getString(kitName);
                             Kit kit = kitManager.getKit(kitName);
                             if (kit != null) {
-                                Inventory inventory = BukkitSerialization.playerInventoryFromBase64(base64Inventory);
-                                kitInventories.put(kit, inventory);
+                                try {
+                                    Inventory inventory = BukkitSerialization.playerInventoryFromBase64(base64Inventory);
+                                    kitInventories.put(kit, inventory);
+                                }catch (IllegalStateException | IOException exception){
+
+                                }
                             }
                         }
                     }

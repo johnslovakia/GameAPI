@@ -5,6 +5,7 @@ import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.StringUtils;
 
 import lombok.Getter;
@@ -66,7 +67,7 @@ public class TopStatsHologram implements Listener {
     public void onInteract(PlayerInteractEntityEvent e) {
         if (!(e.getRightClicked() instanceof Interaction clickedEntity)) return;
 
-        Player player           = e.getPlayer();
+        Player player = e.getPlayer();
         PlayerIdentity identity = PlayerIdentityRegistry.get(player);
 
         Interaction clickZone = clickZoneMap.get(identity);
@@ -98,7 +99,7 @@ public class TopStatsHologram implements Listener {
         CompletableFuture.supplyAsync(() -> {
             Map<String, Integer> topPlayers = statsModule.getStatsTable()
                     .topStats(currentStat.getName().replace(" ", "_"), TOP_SIZE);
-            int playerRank      = getPlayerRank(playerIdentity.getName(), currentStat.getName(), topPlayers);
+            int playerRank = getPlayerRank(playerIdentity.getName(), currentStat.getName(), topPlayers);
             int playerStatValue = statsModule.getPlayerStat(playerIdentity, currentStat.getName());
             return new Object[]{ topPlayers, playerRank, playerStatValue };
 

@@ -5,9 +5,7 @@ import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class GameSessionModule extends GameModule {
 
@@ -21,6 +19,10 @@ public class GameSessionModule extends GameModule {
     @Override
     public void terminate() {
         playerSessions = null;
+    }
+
+    public List<PlayerGameSession> getPlayerSessions(){
+        return playerSessions.values().stream().toList();
     }
 
     public PlayerGameSession createPlayerSession(PlayerIdentity playerIdentity){

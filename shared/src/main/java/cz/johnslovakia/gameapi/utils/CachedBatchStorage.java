@@ -65,6 +65,7 @@ public class CachedBatchStorage<K, V> {
     public CompletableFuture<V> get(@NotNull K key) {
         V cached = cache.get(key);
         if (cached != null) {
+            lastAccessTime.put(key, System.currentTimeMillis());
             return CompletableFuture.completedFuture(cached);
         }
 
@@ -75,6 +76,7 @@ public class CachedBatchStorage<K, V> {
 
                 if (value != null) {
                     cache.put(key, value);
+                    lastAccessTime.put(key, System.currentTimeMillis());
 
                     if (config.isDebugEnabled()) {
                         LOGGER.info(String.format("[%s] Loaded %s from DB", name, key));
@@ -99,10 +101,15 @@ public class CachedBatchStorage<K, V> {
         }
 
         cache.merge(key, delta, valueMerger::merge);
+        lastAccessTime.put(key, System.currentTimeMillis());
 
         pendingChanges.merge(key,
                 new PendingChange<>(key, delta, System.currentTimeMillis()),
                 (existing, newChange) -> {
+                    if (existing.isSet()) {
+                        V merged = valueMerger.merge(existing.delta, newChange.delta);
+                        return new PendingChange<>(key, merged, newChange.timestamp, true);
+                    }
                     V merged = valueMerger.merge(existing.delta, newChange.delta);
                     return new PendingChange<>(key, merged, newChange.timestamp);
                 }
@@ -123,6 +130,7 @@ public class CachedBatchStorage<K, V> {
         }
 
         cache.put(key, value);
+        lastAccessTime.put(key, System.currentTimeMillis());
 
         pendingChanges.put(key, new PendingChange<>(key, value, System.currentTimeMillis(), true));
 
@@ -165,10 +173,31 @@ public class CachedBatchStorage<K, V> {
     }
 
     public void invalidate(@NotNull K key) {
-        if (key == null) {
-            throw new IllegalArgumentException("Key cannot be null");
-        }
         cache.remove(key);
+        lastAccessTime.remove(key);
+    }
+
+    public void flushAndInvalidate(@NotNull K key) {
+        PendingChange<K, V> change = pendingChanges.remove(key);
+
+        if (change != null) {
+            Map<K, PendingChange<K, V>> single = new HashMap<>();
+            single.put(key, change);
+
+            try {
+                dataSaver.save(single);
+
+                if (config.isDebugEnabled()) {
+                    LOGGER.info(String.format("[%s] Flushed key %s immediately before invalidate", name, key));
+                }
+            } catch (Exception e) {
+                LOGGER.severe(String.format("[%s] flushAndInvalidate failed for %s: %s — data returned to pending", name, key, e.getMessage()));
+                pendingChanges.putIfAbsent(key, change);
+            }
+        }
+
+        cache.remove(key);
+        lastAccessTime.remove(key);
     }
 
     public void clearCache() {
@@ -309,7 +338,7 @@ public class CachedBatchStorage<K, V> {
         private final K key;
         private final V delta;
         private final long timestamp;
-        private final boolean isSet; // true = SET, false = MERGE/DELTA
+        private final boolean isSet;
 
         public PendingChange(K key, V delta, long timestamp) {
             this(key, delta, timestamp, false);

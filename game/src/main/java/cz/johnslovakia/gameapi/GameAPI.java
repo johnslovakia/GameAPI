@@ -33,7 +33,7 @@ import cz.johnslovakia.gameapi.modules.perks.PerkManager;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.resources.ResourceChangeType;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
-import cz.johnslovakia.gameapi.modules.serverManagement.DataManager;
+import cz.johnslovakia.gameapi.modules.serverManagement.ServerRegistry;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardsModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.utils.*;
@@ -99,6 +99,7 @@ public class GameAPI{
     public void onEnable(Minigame minigame) {
         JavaPlugin plugin = minigame.getPlugin();
         Containr.init(plugin);
+        new ItemUtils(plugin);
         plugin.getServer().getMessenger().registerOutgoingPluginChannel(plugin, "BungeeCord");
 
         plugin.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
@@ -290,8 +291,6 @@ public class GameAPI{
         pm.registerEvents(new KillSoundsCategoryListener(), plugin);
         pm.registerEvents(new AbilityItemListener(), plugin);
 
-        new ItemUtils(plugin);
-
         Bukkit.getPluginManager().registerEvents(new KitInventoryEditor(), plugin);
 
 
@@ -378,7 +377,7 @@ public class GameAPI{
     }
 
     public void onDisable(Plugin plugin) {
-        if (DataManager.getInstance() != null && DataManager.getInstance().getServerDataRedis() != null) DataManager.getInstance().getServerDataRedis().close();
+        if (ModuleManager.getModule(ServerRegistry.class) != null && ModuleManager.getModule(ServerRegistry.class).getServerDataRedis() != null) ModuleManager.getModule(ServerRegistry.class).getServerDataRedis().close();
         if (getMinigame().getDatabase() != null) getMinigame().getDatabase().getConnection().disconnect();
 
         if (protocolManager != null) {
@@ -416,7 +415,7 @@ public class GameAPI{
         moduleManager.registerModule(new KillMessageModule());
         moduleManager.registerModule(new UnclaimedRewardsModule());
         ResourcesModule resourcesModule = moduleManager.registerModule(new ResourcesModule());
-        
+
 
         List<FileGroup> fileGroups = new ArrayList<>();
         for (Map.Entry<String, InputStreamWithName> entry : minigame.getLanguageFiles().entrySet()) {
@@ -434,7 +433,9 @@ public class GameAPI{
 
         try{
             //TODO: vyřešit název
-            boolean bungeecord = DataManager.getInstance().getServerDataMySQL() != null || DataManager.getInstance().getServerDataRedis() != null;
+            boolean bungeecord = ModuleManager.getModule(ServerRegistry.class) != null &&
+                            (ModuleManager.getModule(ServerRegistry.class).getServerDataMySQL() != null
+                                    || ModuleManager.getModule(ServerRegistry.class).getServerDataRedis() != null);
             int gamesPerServer = minigame.getSettings().getGamesPerServer();
             for (int i = 0; i < gamesPerServer; i++) {
                 if (bungeecord) {
@@ -457,16 +458,20 @@ public class GameAPI{
             return;
         }
 
-
-        Resource experiencePoints = Resource.builder("ExperiencePoints")
-                .displayName("Experience Points")
-                .color(ChatColor.YELLOW)
-                .rank(1)
-                .batched("gameapi_playertable")
-                .build();
+        Resource experiencePoints = null;
+        if (minigame.getSettings().isUseLevelSystem()) {
+            experiencePoints = Resource.builder("ExperiencePoints")
+                    .displayName("Experience Points")
+                    .color(ChatColor.YELLOW)
+                    .rank(1)
+                    .batched("gameapi_playertable")
+                    .build();
+            resourcesModule.registerResource(experiencePoints);
+        }
         Resource cosmeticTokens = Resource.builder("CosmeticTokens")
                 .displayName("Cosmetic Tokens")
                 .color(ChatColor.DARK_GREEN)
+                .rank(4)
                 .batched("gameapi_playertable")
                 .build();
 
@@ -489,7 +494,7 @@ public class GameAPI{
             coins.batched("gameapi_playertable");
         }
 
-        resourcesModule.registerResource(coins.build(), experiencePoints, cosmeticTokens);
+        resourcesModule.registerResource(coins.build(), cosmeticTokens);
 
 
         minigame.setupPlayerScores();
@@ -556,20 +561,20 @@ public class GameAPI{
             if (resource.getResourceInterface() != null) resource.getResourceInterface().onEnable();
         }
 
-        if (levelModule != null || dailyRewardTrackModule != null){
-            experiencePoints.observe((gamePlayer, amount, type) -> {
+        if (experiencePoints != null && (levelModule != null || dailyRewardTrackModule != null)){
+            experiencePoints.observe((offlinePlayer, amount, type) -> {
                 if (type == ResourceChangeType.DEPOSIT) {
                     if (levelModule != null) {
-                        Bukkit.getScheduler().runTaskAsynchronously(plugin, task -> levelModule.checkLevelUp(gamePlayer));
+                        Bukkit.getScheduler().runTaskAsynchronously(plugin, task -> levelModule.checkLevelUp(offlinePlayer));
 
-                        if (gamePlayer.getOfflinePlayer().isOnline()) {
-                            Player player = gamePlayer.getOnlinePlayer();
-                            PlayerLevelData levelProgress = levelModule.getPlayerData(gamePlayer);
+                        if (offlinePlayer.isOnline()) {
+                            Player player = offlinePlayer.getPlayer();
+                            PlayerLevelData levelProgress = levelModule.getPlayerData(offlinePlayer);
                             if (levelProgress != null) {
                                 levelProgress.calculate().thenRun(() -> {
                                     float xpProgress = (float) levelProgress.getXpOnCurrentLevel() / levelProgress.getXpToNextLevel();
 
-                                    if (!((GamePlayer) gamePlayer).getGame().getState().equals(GameState.INGAME)) {
+                                    if (!((GamePlayer) PlayerIdentityRegistry.get(offlinePlayer)).getGame().getState().equals(GameState.INGAME)) {
                                         Bukkit.getScheduler().runTask(minigame.getPlugin(), task -> {
                                             player.setExp(Math.min(xpProgress, 1.0f));
                                             player.setLevel(levelProgress.getLevel());
@@ -582,9 +587,9 @@ public class GameAPI{
 
 
                     if (dailyRewardTrackModule != null && levelModule != null) {
-                        if (dailyRewardTrackModule.getPlayerCurrentTier(gamePlayer) != null) {
-                            if (dailyRewardTrackModule.getPlayerCurrentTier(gamePlayer).tier() <= dailyRewardTrackModule.getMaxTier()) {
-                                levelModule.addDailyXP(gamePlayer, amount);
+                        if (dailyRewardTrackModule.getPlayerCurrentTier(offlinePlayer) != null) {
+                            if (dailyRewardTrackModule.getPlayerCurrentTier(offlinePlayer).tier() <= dailyRewardTrackModule.getMaxTier()) {
+                                levelModule.addDailyXP(offlinePlayer, amount);
                             }
                         }
                     }

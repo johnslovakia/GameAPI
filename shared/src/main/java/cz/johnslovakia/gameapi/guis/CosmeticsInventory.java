@@ -123,6 +123,7 @@ public class CosmeticsInventory implements Listener {
                 cosmeticsModule.getPlayerSelectedCosmetic(playerIdentity, cosmetic.getCategory()).equals(cosmetic)) {
             item.addEnchant(Enchantment.SHARPNESS, 1);
             messageModule.get(playerIdentity, "inventory.cosmetics.selected").addToItemLore(item);
+            messageModule.get(playerIdentity, "inventory.cosmetics.unselect").addToItemLore(item);
         } else if (cosmetic.hasPlayer(playerIdentity)) {
             messageModule.get(playerIdentity, "inventory.cosmetics.select").addToItemLore(item);
         } else if (!hasEnough) {
@@ -154,122 +155,117 @@ public class CosmeticsInventory implements Listener {
             default -> '-';
         };
 
-        Set<Resource> allResources = new HashSet<>();
-        for (Cosmetic cosmetic : category.getCosmetics()) {
-            allResources.addAll(cosmetic.getCost().keySet());
-        }
 
-        List<CompletableFuture<Void>> preloadFutures = new ArrayList<>();
-        for (Resource resource : allResources) {
-            preloadFutures.add(resource.getResourceInterface().preload(List.of(playerIdentity)));
-        }
+        MessageModule messageModule = ModuleManager.getModule(MessageModule.class);
+        ResourcesModule resourcesModule = ModuleManager.getModule(ResourcesModule.class);
 
-        CompletableFuture.allOf(preloadFutures.toArray(new CompletableFuture[0])).thenRun(() -> {
-            MessageModule messageModule = ModuleManager.getModule(MessageModule.class);
-            ResourcesModule resourcesModule = ModuleManager.getModule(ResourcesModule.class);
+        GUI inventory = Component.gui()
+                .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七" + ch).font(Key.key("jsplugins", "guis")))
+                .rows(6)
+                .prepare((gui, player) -> {
+                    ItemBuilder back = new ItemBuilder(Material.ECHO_SHARD);
+                    back.setCustomModelData(1016);
+                    back.hideAllFlags();
+                    back.setName(messageModule.get(player, "inventory.item.go_back").getTranslated());
 
-            GUI inventory = Component.gui()
-                    .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七" + ch).font(Key.key("jsplugins", "guis")))
-                    .rows(6)
-                    .prepare((gui, player) -> {
-                        ItemBuilder back = new ItemBuilder(Material.ECHO_SHARD);
-                        back.setCustomModelData(1016);
-                        back.hideAllFlags();
-                        back.setName(messageModule.get(player, "inventory.item.go_back").getTranslated());
+                    ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
+                    info.setCustomModelData(1018);
+                    info.hideAllFlags();
+                    info.setName(messageModule.get(player, "inventory.info_item.cosmetics_inventory.name").getTranslated());
+                    info.setLore(messageModule.get(player, "inventory.info_item.cosmetics_inventory.lore").getTranslated());
 
-                        ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
-                        info.setCustomModelData(1018);
-                        info.hideAllFlags();
-                        info.setName(messageModule.get(player, "inventory.info_item.cosmetics_inventory.name").getTranslated());
-                        info.setLore(messageModule.get(player, "inventory.info_item.cosmetics_inventory.lore").getTranslated());
+                    gui.appendElement(0, Component.element(back.toItemStack()).addClick(i -> {
+                        ProfileInventory.openGUI(playerIdentity);
+                        player.playSound(player, Sound.UI_BUTTON_CLICK, 1F, 1F);
+                    }).build());
 
-                        gui.appendElement(0, Component.element(back.toItemStack()).addClick(i -> {
-                            ProfileInventory.openGUI(playerIdentity);
-                            player.playSound(player, Sound.UI_BUTTON_CLICK, 1F, 1F);
-                        }).build());
+                    gui.appendElement(8, Component.element(info.toItemStack()).build());
 
-                        gui.appendElement(8, Component.element(info.toItemStack()).build());
+                    List<Cosmetic> cosmetics = category.getCosmetics();
+                    if (cosmetics == null || cosmetics.isEmpty()) return;
 
-                        List<Cosmetic> cosmetics = category.getCosmetics();
-                        if (cosmetics == null || cosmetics.isEmpty()) return;
+                    cosmetics.sort(Comparator.comparing((Cosmetic c) -> c.hasPlayer(playerIdentity), Comparator.reverseOrder())
+                            .thenComparing(new CosmeticRarityComparator()));
 
-                        cosmetics.sort(Comparator.comparing((Cosmetic c) -> c.hasPlayer(playerIdentity), Comparator.reverseOrder())
-                                .thenComparing(new CosmeticRarityComparator()));
-
-                        gui.setContainer(9, Component.staticContainer()
-                                .size(9, 5)
-                                .init(container -> {
-                                    for (Cosmetic cosmetic : cosmetics) {
-                                        Element element = Component.element(getEditedItem(playerIdentity, cosmetic)).addClick(i -> {
-                                            if (i.getClickType().isLeftClick()) {
-                                                if (cosmetic.hasSelected(playerIdentity)) {
-                                                    player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
-                                                    messageModule.get(player, "chat.cosmetics.already_selected")
-                                                            .replace("%cosmetic", cosmetic.getName())
-                                                            .send();
-                                                } else if (cosmetic.hasPlayer(playerIdentity)) {
-                                                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 10.0F, 10.0F);
-                                                    cosmetic.select(playerIdentity);
-                                                } else {
-                                                    boolean hasEnough = true;
-                                                    List<String> missing = new ArrayList<>();
-
-                                                    for (Map.Entry<Resource, Integer> entry : cosmetic.getCost().entrySet()) {
-                                                        Resource resource = entry.getKey();
-                                                        int cost = entry.getValue();
-
-                                                        Integer playerAmount = resourcesModule.getPlayerBalanceCached(playerIdentity, resource);
-
-                                                        if (playerAmount < cost) {
-                                                            hasEnough = false;
-                                                            int needMore = cost - playerAmount;
-                                                            missing.add(StringUtils.betterNumberFormat(needMore) + " " + resource.getDisplayName());
-                                                        }
-                                                    }
-
-                                                    if (!hasEnough) {
-                                                        if (!missing.isEmpty()) {
-                                                            player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
-                                                            messageModule.get(player, "chat.cosmetic.dont_have_enough")
-                                                                    .replace("%resources%", String.join(", ", missing))
-                                                                    .send();
-                                                            return;
-                                                        }
-                                                        player.closeInventory();
-                                                    } else {
-                                                        new ConfirmInventory(playerIdentity, getEditedItem(playerIdentity, cosmetic), cosmetic.getCost(), new Consumer<PlayerIdentity>() {
-                                                            @Override
-                                                            public void accept(PlayerIdentity playerIdentity) {
-                                                                cosmetic.purchase(playerIdentity);
-                                                                playerIdentity.getOnlinePlayer().closeInventory();
-                                                            }
-                                                        }, new Consumer<PlayerIdentity>() {
-                                                            @Override
-                                                            public void accept(PlayerIdentity playerIdentity) {
-                                                                openCategory(playerIdentity, category);
-                                                            }
-                                                        }).openGUI();
-                                                    }
-                                                    return;
-                                                }
+                    gui.setContainer(9, Component.staticContainer()
+                            .size(9, 5)
+                            .init(container -> {
+                                for (Cosmetic cosmetic : cosmetics) {
+                                    Element element = Component.element(getEditedItem(playerIdentity, cosmetic)).addClick(i -> {
+                                        if (i.getClickType().isLeftClick()) {
+                                            if (cosmetic.hasSelected(playerIdentity)) {
+                                                player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
+                                                /*messageModule.get(player, "chat.cosmetics.already_selected")
+                                                        .replace("%cosmetic%", cosmetic.getName())
+                                                        .send();*/
+                                                ModuleManager.getModule(CosmeticsModule.class).removePlayerSelectedCosmetic(playerIdentity, category);
+                                                messageModule.get(player, "chat.cosmetics.unselected")
+                                                        .replace("%cosmetic%", cosmetic.getName())
+                                                        .send();
                                                 openCategory(playerIdentity, category);
-                                            } else if (i.getClickType().isRightClick() && cosmetic.getPreviewConsumer() != null) {
-                                                cosmetic.getPreviewConsumer().accept(playerIdentity);
-                                                if (!cosmetic.hasPlayer(playerIdentity)) {
-                                                    Objects.requireNonNull(i.getElement().item(player)).setType(cosmetic.getIcon().getType());
+                                            } else if (cosmetic.hasPlayer(playerIdentity)) {
+                                                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 10.0F, 10.0F);
+                                                cosmetic.select(playerIdentity);
+                                                openCategory(playerIdentity, category);
+                                            } else {
+                                                boolean hasEnough = true;
+                                                List<String> missing = new ArrayList<>();
+
+                                                for (Map.Entry<Resource, Integer> entry : cosmetic.getCost().entrySet()) {
+                                                    Resource resource = entry.getKey();
+                                                    int cost = entry.getValue();
+
+                                                    int playerAmount = resourcesModule.getPlayerBalanceCached(playerIdentity, resource);
+
+                                                    if (playerAmount < cost) {
+                                                        hasEnough = false;
+                                                        int needMore = cost - playerAmount;
+                                                        missing.add(StringUtils.betterNumberFormat(needMore) + " " + resource.getDisplayName());
+                                                    }
                                                 }
+
+                                                if (!hasEnough) {
+                                                    if (!missing.isEmpty()) {
+                                                        player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
+                                                        messageModule.get(player, "chat.cosmetic.dont_have_enough")
+                                                                .replace("%resources%", String.join(", ", missing))
+                                                                .send();
+                                                        return;
+                                                    }
+                                                    player.closeInventory();
+                                                } else {
+                                                    new ConfirmInventory(playerIdentity, getEditedItem(playerIdentity, cosmetic), cosmetic.getCost(), new Consumer<PlayerIdentity>() {
+                                                        @Override
+                                                        public void accept(PlayerIdentity playerIdentity) {
+                                                            cosmetic.purchase(playerIdentity);
+                                                            playerIdentity.getOnlinePlayer().closeInventory();
+                                                        }
+                                                    }, new Consumer<PlayerIdentity>() {
+                                                        @Override
+                                                        public void accept(PlayerIdentity playerIdentity) {
+                                                            openCategory(playerIdentity, category);
+                                                        }
+                                                    }).openGUI();
+                                                }
+                                                return;
                                             }
-                                        }).build();
+                                            openCategory(playerIdentity, category);
+                                        } else if (i.getClickType().isRightClick() && cosmetic.getPreviewConsumer() != null) {
+                                            cosmetic.getPreviewConsumer().accept(playerIdentity);
+                                            if (!cosmetic.hasPlayer(playerIdentity)) {
+                                                Objects.requireNonNull(i.getElement().item(player)).setType(cosmetic.getIcon().getType());
+                                            }
+                                        }
+                                    }).build();
 
-                                        container.appendElement(element);
-                                    }
-                                }).build());
+                                    container.appendElement(element);
+                                }
+                            }).build());
 
-                    }).build();
+                }).build();
 
-            inventory.open(playerIdentity.getOnlinePlayer());
-            playerIdentity.getMetadata().put("last_opened_cosmetic_category", category);
-        });
+        inventory.open(playerIdentity.getOnlinePlayer());
+        playerIdentity.getMetadata().put("last_opened_cosmetic_category", category);
     }
 
     @EventHandler

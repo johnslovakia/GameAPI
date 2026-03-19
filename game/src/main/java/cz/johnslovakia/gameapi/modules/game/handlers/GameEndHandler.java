@@ -7,6 +7,7 @@ import cz.johnslovakia.gameapi.guis.QuestInventory;
 import cz.johnslovakia.gameapi.inventoryBuilder.InventoryBuilder;
 import cz.johnslovakia.gameapi.inventoryBuilder.Item;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
+import cz.johnslovakia.gameapi.modules.dailyRewardTrack.DailyRewardTrackModule;
 import cz.johnslovakia.gameapi.modules.game.*;
 import cz.johnslovakia.gameapi.modules.game.lobby.LobbyModule;
 import cz.johnslovakia.gameapi.modules.game.session.GameSessionModule;
@@ -20,7 +21,6 @@ import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.scores.Score;
 import cz.johnslovakia.gameapi.modules.scores.ScoreModule;
-import cz.johnslovakia.gameapi.modules.serverManagement.DataManager;
 import cz.johnslovakia.gameapi.modules.stats.StatsModule;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardType;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardsModule;
@@ -36,6 +36,7 @@ import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -54,6 +55,9 @@ public class GameEndHandler {
     }
 
     public void endGame(Winner winner){
+        if (gameInstance.getState() == GameState.ENDING) return;
+        gameInstance.setState(GameState.ENDING);
+
         if (winner instanceof GameTeam gameTeam){
             gameInstance.getPlacements().add(new Placement<>(gameTeam, 1));
         }else{
@@ -64,7 +68,6 @@ public class GameEndHandler {
         UnclaimedRewardsModule unclaimedRewardsModule = ModuleManager.getModule(UnclaimedRewardsModule.class);
         GameService gameService = ModuleManager.getModule(GameService.class);
 
-        gameInstance.setState(GameState.ENDING);
         gameInstance.getModule(TaskModule.class).cancelAll();
 
         String rankingScore = "kills";
@@ -74,7 +77,7 @@ public class GameEndHandler {
                 break;
             }
         }
-        Map<GamePlayer, Integer> ranking =  GameUtils.getTopPlayers(gameInstance, rankingScore, 3);
+        Map<GamePlayer, Integer> ranking =  GameUtils.getTopPlayers(gameInstance, rankingScore, 3, 5);
 
         GameEndEvent ev = new GameEndEvent(gameInstance, winner, ranking);
         Bukkit.getPluginManager().callEvent(ev);
@@ -123,31 +126,6 @@ public class GameEndHandler {
             }
 
 
-            player.sendMessage("");
-
-            Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> { //kvůli Questům
-                if (winner != null) {
-                    if ((winner.getWinnerType().equals(Winner.WinnerType.PLAYER) && (winner.equals(gamePlayer)) || (winner.getWinnerType().equals(Winner.WinnerType.TEAM) && gamePlayer.getGameSession().getTeam().equals(winner)))) {
-                        ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.you_won")
-                                .send();
-                    } else {
-                        ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.winner")
-                                .replace("%winner%", gp -> (winner.getWinnerType().equals(Winner.WinnerType.PLAYER)
-                                        ? ((GamePlayer) winner).getOnlinePlayer().getName()
-                                        : ((GameTeam) winner).getChatColor() + ((GameTeam) winner).getName()))
-                                .replaceWithComponent("%type%", gp -> winner.getWinnerType().getTranslatedName(gp))
-                                .send();
-                    }
-                } else {
-                    ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.nobody_won")
-                            .send();
-                }
-
-                player.sendMessage("");
-            }, 3L);
-
-
-
             if (winner != null) {
                 if ((winner.getWinnerType().equals(Winner.WinnerType.PLAYER) && (winner.equals(gamePlayer)) || (winner.getWinnerType().equals(Winner.WinnerType.TEAM) && gamePlayer.getGameSession().getTeam().equals(winner)))) {
                     ModuleManager.getModule(MessageModule.class).get(gamePlayer, "title.victory")
@@ -155,16 +133,19 @@ public class GameEndHandler {
                     gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "jsplugins:victory1", 0.35F, 1F);
                 } else {
                     if (winner.getWinnerType().equals(Winner.WinnerType.PLAYER)){
+                        Component component = Component.text("")
+                                .append(winner.getWinnerType().getTranslatedName(gamePlayer))
+                                .appendSpace()
+                                .append(Component.text(((GamePlayer)winner).getName()));
+
                         ModuleManager.getModule(MessageModule.class).get(gamePlayer, "title.winner")
-                                .replace("%winner%",winner.getWinnerType().getTranslatedName(gamePlayer)
-                                        + " " + ((GamePlayer) winner).getName())
+                                .replace("%winner%", component)
                                 .send();
                     }else if (winner.getWinnerType().equals(Winner.WinnerType.TEAM)){
                         Component component = Component.text(((GameTeam) winner).getChatColor() + "")
                                 .append(winner.getWinnerType().getTranslatedName(gamePlayer))
                                 .appendSpace()
                                 .append(Component.text(((GameTeam)winner).getName()));
-
 
                         ModuleManager.getModule(MessageModule.class).get(gamePlayer, "title.winner")
                                 .replace("%winner%", component)
@@ -179,20 +160,18 @@ public class GameEndHandler {
             }
 
             InventoryBuilder itemManager = new InventoryBuilder("Ending");
-            if (gameService.getGames().size() > 1 || (DataManager.getInstance() != null && (DataManager.getInstance().getMinigame(Minigame.getInstance().getName()).isPresent() && DataManager.getInstance().getMinigame(Minigame.getInstance().getName()).get().isThereFreeGame()))) {
-                Item playAgain = new Item(new ItemBuilder(Material.PAPER).hideAllFlags().toItemStack(),
-                        1, "item.play_again",
-                        new Consumer<PlayerInteractEvent>() {
-                            @Override
-                            public void accept(PlayerInteractEvent e) {
-                                gameService.newArena(e.getPlayer(), false);
-                            }
-                        });
-                itemManager.setHoldItemSlot(1);
-                itemManager.registerItem(playAgain);
-            }
+            Item playAgain = new Item(new ItemBuilder(Material.PAPER).hideAllFlags().toItemStack(),
+                    1, "item.play_again",
+                    new Consumer<PlayerInteractEvent>() {
+                        @Override
+                        public void accept(PlayerInteractEvent e) {
+                            gameService.newArena(e.getPlayer(), false, true);
+                        }
+                    });
+            itemManager.setHoldItemSlot(1);
+            itemManager.registerItem(playAgain);
 
-            Item backToLobby = new Item(new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1017).hideAllFlags().toItemStack(), 2, "item.back_to_lobby", e -> GameUtils.sendToLobby(e.getPlayer()));
+            Item backToLobby = new Item(new ItemBuilder(Material.ENDER_PEARL).hideAllFlags().toItemStack(), 2, "item.back_to_lobby", e -> GameUtils.sendToLobby(e.getPlayer()));
 
             Item playerMenu = new Item(new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1025).hideAllFlags().toItemStack(), 7, "item.player_menu", e -> ProfileInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
             playerMenu.setBlinking(gamePlayer2 -> !unclaimedRewardsModule.getPlayerUnclaimedRewardsByType(gamePlayer2, UnclaimedRewardType.DAILYMETER).isEmpty()
@@ -211,6 +190,32 @@ public class GameEndHandler {
             oldWinstreaks.put(gamePlayer, statsModule.getPlayerStat(gamePlayer, "Winstreak"));
             gamePlayer.getOnlinePlayer().sendMessage("");
         }
+
+        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> { //bcs of quests
+            for (GamePlayer gamePlayer : gameInstance.getParticipants()) {
+                Player player = gamePlayer.getOnlinePlayer();
+                player.sendMessage("");
+                if (winner != null) {
+                    if ((winner.getWinnerType().equals(Winner.WinnerType.PLAYER) && (winner.equals(gamePlayer)) || (winner.getWinnerType().equals(Winner.WinnerType.TEAM) && gamePlayer.getGameSession().getTeam().equals(winner)))) {
+                        ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.you_won")
+                                .send();
+                    } else {
+                        ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.winner")
+                                .replace("%winner%", gp -> (winner.getWinnerType().equals(Winner.WinnerType.PLAYER)
+                                        ? ((GamePlayer) winner).getOnlinePlayer().getName()
+                                        : ((GameTeam) winner).getChatColor() + ((GameTeam) winner).getName()))
+                                .replaceWithComponent("%type%", gp -> winner.getWinnerType().getTranslatedName(gp))
+                                .send();
+                    }
+                } else {
+                    ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.nobody_won")
+                            .send();
+                }
+
+                player.sendMessage("");
+            }
+        }, 3L);
+
 
         Location location;
         if (gameInstance.getSettings().isTeleportPlayersAfterEnd()){
@@ -286,7 +291,10 @@ public class GameEndHandler {
                 sendRewardSummary();
 
                 for (GamePlayer gamePlayer : oldWinstreaks.keySet()) {
+                    if (gamePlayer.getGame() == null) continue;
+                    if(!gamePlayer.getGame().equals(gameInstance)) continue;
                     PlayerGameSession session = gamePlayer.getGameSession();
+                    if (session == null) continue;
                     Player player = gamePlayer.getOnlinePlayer();
 
                     if (winner != null) {
@@ -324,10 +332,10 @@ public class GameEndHandler {
     }
 
     public void sendTopPlayers(String rankingScore){
-        Map<GamePlayer, Integer> fullRanking =  GameUtils.getTopPlayers(gameInstance, rankingScore, gameInstance.getSettings().getMaxPlayers());
-        if (fullRanking.isEmpty()){
-            return;
-        }
+        Map<GamePlayer, Integer> fullRanking =  GameUtils.getTopPlayers(gameInstance, rankingScore, 3, 5);
+        if (fullRanking.isEmpty()) return;
+
+        Score score = ModuleManager.getModule(ScoreModule.class).getScore(rankingScore).get();
 
         for (GamePlayer gamePlayer : gameInstance.getParticipants()) {
             Player player = gamePlayer.getOnlinePlayer();
@@ -336,17 +344,21 @@ public class GameEndHandler {
             ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.top3players.title").send();
 
             int i = 1;
+            int highestPosition;
             for (GamePlayer pos : fullRanking.keySet()) {
                 PlayerGameSession posSession = gameInstance.getModule(GameSessionModule.class).getPlayerSession(pos);
 
                 int position = fullRanking.get(pos);
+                int pScore = posSession.getScore(rankingScore);
                 ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.top3players.position")
                         .replace("%position%", "" + position)
                         .replace("%player_head%", ChatHeadAPI.getInstance().getHeadAsString(pos.getOfflinePlayer()))
                         .replace("%player%", (pos.equals(gamePlayer) ? "§a" : "") + pos.getOnlinePlayer().getName() + "§r")
-                        .replace("%score%", "" + posSession.getScore(rankingScore))
-                        .replace("%ranking_score_name%", rankingScore)
+                        .replace("%score%", "" + pScore)
+                        .replace("%ranking_score_name%", score.getDisplayName(pScore))
                         .send();
+
+                highestPosition = position;
                 i++;
                 if (i > 3)
                     break;
@@ -355,10 +367,11 @@ public class GameEndHandler {
             player.sendMessage("");
 
 
+            int pScore = gamePlayerSession.getScore(rankingScore);
             ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.top3players.your_position")
                     .replace("%position%", "" + (fullRanking.get(gamePlayer) == null ? "§c-" : fullRanking.get(gamePlayer)))
-                    .replace("%score%", "" + gamePlayerSession.getScore(rankingScore))
-                    .replace("%ranking_score_name%", rankingScore)
+                    .replace("%score%", "" + pScore)
+                    .replace("%ranking_score_name%", score.getDisplayName(pScore))
                     .send();
 
 
@@ -376,7 +389,7 @@ public class GameEndHandler {
                                     .replace("%player_head%", ChatHeadAPI.getInstance().getHeadAsString(partyMember.getOfflinePlayer()))
                                     .replace("%player%", partyMember.getOnlinePlayer().getName())
                                     .replace("%score%", "" + partyMemberSession.getScore(rankingScore))
-                                    .replace("%ranking_score_name%", rankingScore)
+                                    .replace("%ranking_score_name%", score.getDisplayName(partyMemberSession.getScore(rankingScore)))
                                     .getTranslated())
                             .appendNewline();
                 }
@@ -400,7 +413,7 @@ public class GameEndHandler {
                                         .replace("%player_head%", ChatHeadAPI.getInstance().getHeadAsString(friend.getOfflinePlayer()))
                                         .replace("%player%", friend.getOnlinePlayer().getName())
                                         .replace("%score%", "" + friendSession.getScore(rankingScore))
-                                        .replace("%ranking_score_name%", rankingScore)
+                                        .replace("%ranking_score_name%", score.getDisplayName(friendSession.getScore(rankingScore)))
                                         .getTranslated())
                                 .appendNewline();
                     }
@@ -430,23 +443,40 @@ public class GameEndHandler {
                 for (Map.Entry<Resource, Integer> totalEarnedEntry : session.getTotalEarned().entrySet()){
                     Resource resource = totalEarnedEntry.getKey();
 
-                    Component component = Component.text("  §7• " + (resource.getImgChar() != null ? resource.getImgChar() : "") + " " + resource.getColor() + totalEarnedEntry.getValue() + " §7" + resource.getDisplayName());
+                    Component component = Component.text(" §7• " + (resource.getImgChar() != null ? resource.getImgChar() + " " : "") + resource.getColor() + totalEarnedEntry.getValue() + " §7" + resource.getDisplayName());
 
 
+                    //↳ └ ∟ ‣
+                    boolean dailyRewardTrackEnabled = ModuleManager.getInstance().hasModule(DailyRewardTrackModule.class);
                     Collection<Component> lines = session.getEarnedBySource(resource).entrySet().stream()
                             .sorted(Map.Entry.<Score, Integer>comparingByValue(Comparator.reverseOrder())
                                     .thenComparing(entry -> entry.getKey().getDisplayName(gamePlayer))
                             )
-                            .map(entry -> Component.text()
-                                    .append(Component.text("§f" + (entry.getKey().hasPluralName() ? + session.getScore(entry.getKey().getName()) + "x " : "") + entry.getKey().getDisplayName(gamePlayer)))
-                                    .append(Component.text(" §7→ "))
-                                    .append(Component.text(resource.getColor() + "+" + entry.getValue()))
-                                    .asComponent()
+                            .map(entry -> {
+                                int score = session.getScore(entry.getKey().getName());
+
+                                return Component.text()
+                                                .append(Component.text(dailyRewardTrackEnabled ? "    §7∟ " : ""))
+                                                .append(Component.text((dailyRewardTrackEnabled ? resource.getColor() : "") + "+" + entry.getValue()))
+                                                .append(Component.text(" §7- " + (score > 1 && entry.getKey().hasPluralName() ? score + " " : "") + entry.getKey().getDisplayName(gamePlayer)))
+                                                .asComponent();
+
+                                    }
                             )
                             .toList();
-                    Component hoverComponent = Component.join(JoinConfiguration.newlines(), lines);
 
-                    player.sendMessage(component.hoverEvent(hoverComponent));
+                    if (!dailyRewardTrackEnabled) {
+                        Component hoverComponent = Component.join(JoinConfiguration.newlines(), lines);
+                        player.sendMessage(component.hoverEvent(hoverComponent));
+                    } else {
+                        Component full = Component.text()
+                                .append(component)
+                                .append(Component.newline())
+                                .append(Component.join(JoinConfiguration.newlines(), lines))
+                                .build();
+
+                        player.sendMessage(full);
+                    }
 
 
                     if (resource.isApplicableBonus()) {
@@ -456,7 +486,7 @@ public class GameEndHandler {
                             if (gamePlayer.getOnlinePlayer().hasPermission("vip.bonus" + percent)){
                                 int coins = (int) (((double) totalEarnedEntry.getValue() * (double) percent) / (double) 100);
                                 if (coins != 0) {
-                                    resource.getResourceInterface().deposit(gamePlayer, coins);
+                                    resource.getResourceInterface().deposit(gamePlayer.getOfflinePlayer(), coins);
                                     ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.rewardsummary.bonus")
                                             .replace("%economy_color%", "" + resource.getColor())
                                             .replace("%reward%", "" + coins)

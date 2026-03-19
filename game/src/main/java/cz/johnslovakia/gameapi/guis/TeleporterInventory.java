@@ -54,6 +54,7 @@ public class TeleporterInventory {
                                     Element element = Component.element(getAlivePlayerItemStack(gamePlayer, aliveGamePlayer)).addClick(i -> {
                                         if (i.getClickType().isLeftClick()) {
                                             player.teleport((!(aliveGamePlayer.isSpectator()) ? aliveGamePlayer.getOnlinePlayer().getLocation() : gamePlayer.getGame().getCurrentMap().getSpectatorSpawn().getLocation()));
+                                            player.closeInventory();
                                         } else if (i.getClickType().isRightClick()){
                                             ViewPlayerInventory.openGUI(gamePlayer, aliveGamePlayer);
                                         }

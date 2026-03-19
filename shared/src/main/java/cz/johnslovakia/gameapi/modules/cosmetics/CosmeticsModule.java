@@ -1,7 +1,10 @@
 package cz.johnslovakia.gameapi.modules.cosmetics;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.database.CosmeticsStorage;
+import cz.johnslovakia.gameapi.database.JSConfigs;
 import cz.johnslovakia.gameapi.database.PlayerTable;
 import cz.johnslovakia.gameapi.database.Type;
 import cz.johnslovakia.gameapi.modules.Module;
@@ -36,9 +39,13 @@ public class CosmeticsModule implements Listener, Module {
     private Map<PlayerIdentity, Map<CosmeticsCategory, Cosmetic>> selectedCosmetics = new HashMap<>();
     private Map<PlayerIdentity, List<Cosmetic>> purchasedCosmetics = new HashMap<>();
 
+    private CosmeticPrices prices;
+
     @Override
     public void initialize() {
         new PlayerTable().createNewColumn(Type.JSON, "Cosmetics");
+
+        prices = loadPrices();
 
         addCategory(new KillMessagesCategory(this));
         addCategory(new KillSoundsCategory(this));
@@ -54,10 +61,45 @@ public class CosmeticsModule implements Listener, Module {
         categories = null;
         selectedCosmetics = null;
         purchasedCosmetics = null;
+        prices = null;
 
         HandlerList.unregisterAll(this);
     }
 
+    private CosmeticPrices loadPrices() {
+        try {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            String json = new JSConfigs().loadConfig("CosmeticPrices");
+            if (json != null) {
+                CosmeticPrices loaded = gson.fromJson(json, CosmeticPrices.class);
+                if (loaded != null) return loaded;
+            }
+        } catch (Exception e) {
+            Logger.log("Failed to load CosmeticPrices: " + e.getMessage(), Logger.LogType.WARNING);
+        }
+        CosmeticPrices defaults = new CosmeticPrices();
+        savePrices(defaults);
+        return defaults;
+    }
+
+    public void savePrices() {
+        savePrices(prices);
+    }
+
+    public void savePrices(CosmeticPrices p) {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        new JSConfigs().saveConfig("CosmeticPrices", gson.toJson(p));
+        prices = p;
+    }
+
+
+    public void removePlayerSelectedCosmetic(PlayerIdentity playerIdentity, CosmeticsCategory category){
+        if (category == null) return;
+
+        Map<CosmeticsCategory, Cosmetic> map = selectedCosmetics.get(playerIdentity);
+        if (map != null) map.remove(category);
+        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> savePlayerCosmetics(playerIdentity));
+    }
 
     public void setPlayerSelectedCosmetic(PlayerIdentity playerIdentity, Cosmetic cosmetic){
         CosmeticsCategory category = getCategory(cosmetic);
@@ -66,7 +108,7 @@ public class CosmeticsModule implements Listener, Module {
         selectedCosmetics
                 .computeIfAbsent(playerIdentity, k -> new HashMap<>())
                 .put(category, cosmetic);
-        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {savePlayerCosmetics(playerIdentity);});
+        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> savePlayerCosmetics(playerIdentity));
     }
 
     public Cosmetic getPlayerSelectedCosmetic(PlayerIdentity playerIdentity, CosmeticsCategory category){
@@ -79,7 +121,7 @@ public class CosmeticsModule implements Listener, Module {
         purchasedCosmetics
                 .computeIfAbsent(playerIdentity, k -> new ArrayList<>())
                 .add(cosmetic);
-        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {savePlayerCosmetics(playerIdentity);});
+        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> savePlayerCosmetics(playerIdentity));
     }
 
     public void savePlayerCosmetics(PlayerIdentity playerIdentity) {

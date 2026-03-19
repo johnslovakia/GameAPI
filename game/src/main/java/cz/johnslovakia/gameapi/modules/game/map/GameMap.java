@@ -39,8 +39,6 @@ public class GameMap {
 
     @Setter
     private World world;
-    @Setter
-    private int votes = 0;
 
     @Getter
     private boolean winned = false;
@@ -109,12 +107,15 @@ public class GameMap {
 
         game.getModule(MapModule.class).addPlayerVote(gamePlayer, this);
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 20.0F, 20.0F);
-        addVote();
 
         ModuleManager.getModule(MessageModule.class).get(player, "chat.map.vote")
                 .replace("%map%", getName())
                 .replace("%votes%", "" + getVotes())
                 .send();
+    }
+
+    public int getVotes(){
+        return game.getModule(MapModule.class).getTotalVotesForMap(this);
     }
 
     public Location getPlayerToLocation(GamePlayer gamePlayer){
@@ -220,13 +221,5 @@ public class GameMap {
 
     public boolean isPlaying(){
         return game.getState().equals(GameState.INGAME) && isWinned() && !isPlayed();
-    }
-
-    public void addVote(){
-        votes++;
-    }
-
-    public void removeVote(){
-        votes--;
     }
 }

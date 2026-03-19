@@ -8,6 +8,8 @@ import org.bukkit.damage.DamageType;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 import java.util.List;
 
@@ -16,6 +18,7 @@ public class GamePlayerDeathEvent extends Event implements Cancellable {
 
     private static final HandlerList handlers = new HandlerList();
 
+    @Setter
     private boolean isCancelled;
 
     private final GameInstance game;
@@ -26,6 +29,8 @@ public class GamePlayerDeathEvent extends Event implements Cancellable {
     @Setter
     private boolean firstGameKill = false;
 
+    private List<ItemStack> deathInventory;
+
     public GamePlayerDeathEvent(GameInstance game, GamePlayer killer, GamePlayer gamePlayer, List<GamePlayer> assists, DamageType dmgType){
         this.game = game;
         this.gamePlayer = gamePlayer;
@@ -34,19 +39,22 @@ public class GamePlayerDeathEvent extends Event implements Cancellable {
         this.assists = assists;
     }
 
+    public GamePlayerDeathEvent(GameInstance game, GamePlayer killer, GamePlayer gamePlayer, List<GamePlayer> assists, DamageType dmgType, List<ItemStack> deathInventoryContent){
+        this.game = game;
+        this.gamePlayer = gamePlayer;
+        this.killer = killer;
+        this.dmgType = dmgType;
+        this.assists = assists;
+
+        this.deathInventory = deathInventoryContent;
+    }
+
     public boolean isFinalKill(){
         if (gamePlayer.getGame().getSettings().isUseTeams()){
             return gamePlayer.getGameSession().getTeam().isDead();
         }else{
             return true;
         }
-    }
-
-    public boolean isCancelled() {
-        return isCancelled;
-    }
-    public void setCancelled(boolean cancelled) {
-        this.isCancelled = cancelled;
     }
 
     public HandlerList getHandlers() {

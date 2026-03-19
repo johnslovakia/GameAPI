@@ -45,7 +45,7 @@ public class PerksInventory {
         item.hideAllFlags();
 
         item.removeEnchantment(Enchantment.INFINITY);
-        item.setName((canUpgrade && balance <= nextLevel.price() ? "§c§l" : "§a§l") + perk.getName() + " §8(" + Objects.requireNonNullElse(currentLevel, 0) + "/" + perk.getLevels().size() + ")");
+        item.setName((canUpgrade && balance <= nextLevel.price() ? "§c§l" : "§a§l") + perk.getName() + " §8(" + (currentLevel != null ? currentLevel.level()  : "0") + "/" + perk.getLevels().size() + ")");
         item.removeLore();
 
         if (messageModule.existMessage(perk.getTranslationKey())) {
@@ -55,7 +55,7 @@ public class PerksInventory {
             item.addLoreLine("");
         }
         for(PerkLevel level : perk.getLevels()){
-            item.addLoreLine("§7" + level.level() + ". §8- " + (currentLevel != null && currentLevel.level() == level.level() ? "#71c900" : "§7") + level.improvement() + perk.getType().getString() + (currentLevel != null && currentLevel.level() == level.level() ? " §a(" + messageModule.get(gamePlayer, "word.active").getTranslated() + ")" : ""));
+            item.addLoreLine("§7" + level.level() + ". §8- " + (currentLevel != null && currentLevel.level() == level.level() ? "#71c900" : "§7") + level.improvement() + perk.getType().getString() + (currentLevel != null && currentLevel.level() == level.level() ? " §a(" + messageModule.get(gamePlayer, "word.active").getRawTranslated() + ")" : ""));
         }
         item.addLoreLine("");
         if (canUpgrade) {
@@ -92,67 +92,67 @@ public class PerksInventory {
         MessageModule messageModule = ModuleManager.getModule(MessageModule.class);
 
         Resource resource = perkManager.getResource();
-        ModuleManager.getModule(ResourcesModule.class).getPlayerBalance(gamePlayer, resource).thenAccept(balance -> {
-            GUI inventory = Component.gui()
-                    .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七ㆻ").font(Key.key("jsplugins", "guis")))
-                    .rows(2)
-                    .prepare((gui, player) -> {
-                        ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
-                        close.setCustomModelData(1017);
-                        close.hideAllFlags();
-                        close.setName(messageModule.get(player, "inventory.item.close")
-                                .getTranslated());
+        int balance = ModuleManager.getModule(ResourcesModule.class).getPlayerBalanceCached(gamePlayer, resource);
 
-                        ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
-                        info.setCustomModelData(1018);
-                        info.hideAllFlags();
-                        info.setName(messageModule.get(player, "inventory.info_item.perks_inventory.name")
-                                .getTranslated());
-                        info.setLore(messageModule.get(player, "inventory.info_item.perks_inventory.lore").getTranslated());
+        GUI inventory = Component.gui()
+                .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七ㆻ").font(Key.key("jsplugins", "guis")))
+                .rows(2)
+                .prepare((gui, player) -> {
+                    ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
+                    close.setCustomModelData(1017);
+                    close.hideAllFlags();
+                    close.setName(messageModule.get(player, "inventory.item.close")
+                            .getTranslated());
 
-                        gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> {
-                            gui.close(player);
-                            player.playSound(player, Sound.UI_BUTTON_CLICK, 1F, 1F);
-                        }).build());
-                        gui.appendElement(8, Component.element(info.toItemStack()).build());
+                    ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
+                    info.setCustomModelData(1018);
+                    info.hideAllFlags();
+                    info.setName(messageModule.get(player, "inventory.info_item.perks_inventory.name")
+                            .getTranslated());
+                    info.setLore(messageModule.get(player, "inventory.info_item.perks_inventory.lore").getTranslated());
+
+                    gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> {
+                        gui.close(player);
+                        player.playSound(player, Sound.UI_BUTTON_CLICK, 1F, 1F);
+                    }).build());
+                    gui.appendElement(8, Component.element(info.toItemStack()).build());
 
 
-                        gui.setContainer(9, Component.staticContainer()
-                                .size(9, 1)
-                                .init(container -> {
-                                    for (Perk perk : Minigame.getInstance().getPerkManager().getPerks()) {
-                                        Element element = Component.element(getEditedItem(gamePlayer, perk)).addClick(i -> {
-                                            PerkLevel nextLevel = perkManager.getNextPlayerPerkLevel(gamePlayer, perk);
-                                            if (balance <= nextLevel.price()) {
-                                                player.closeInventory();
-                                                player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
-                                                messageModule.get(player, "chat.dont_have_enough")
-                                                        .replace("%need_more%", "" + (nextLevel.price() - balance))
-                                                        .replace("%economy_name%", resource.getDisplayName())
-                                                        .send();
-                                            } else {
-                                                new ConfirmInventory(gamePlayer, getEditedItem(gamePlayer, perk), resource, nextLevel.price(), new Consumer<PlayerIdentity>() {
-                                                    @Override
-                                                    public void accept(PlayerIdentity gamePlayer) {
-                                                        perk.purchase((GamePlayer) gamePlayer);
-                                                        player.closeInventory();
-                                                    }
-                                                }, new Consumer<PlayerIdentity>() {
-                                                    @Override
-                                                    public void accept(PlayerIdentity gamePlayer) {
-                                                        openGUI((GamePlayer) gamePlayer);
-                                                    }
-                                                }).openGUI();
-                                            }
-                                        }).build();
+                    gui.setContainer(9, Component.staticContainer()
+                            .size(9, 1)
+                            .init(container -> {
+                                for (Perk perk : Minigame.getInstance().getPerkManager().getPerks()) {
+                                    Element element = Component.element(getEditedItem(gamePlayer, perk)).addClick(i -> {
+                                        PerkLevel nextLevel = perkManager.getNextPlayerPerkLevel(gamePlayer, perk);
+                                        if (balance <= nextLevel.price()) {
+                                            player.closeInventory();
+                                            player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
+                                            messageModule.get(player, "chat.dont_have_enough")
+                                                    .replace("%need_more%", "" + (nextLevel.price() - balance))
+                                                    .replace("%economy_name%", resource.getDisplayName())
+                                                    .send();
+                                        } else {
+                                            new ConfirmInventory(gamePlayer, getEditedItem(gamePlayer, perk), resource, nextLevel.price(), new Consumer<PlayerIdentity>() {
+                                                @Override
+                                                public void accept(PlayerIdentity gamePlayer) {
+                                                    perk.purchase((GamePlayer) gamePlayer);
+                                                    player.closeInventory();
+                                                }
+                                            }, new Consumer<PlayerIdentity>() {
+                                                @Override
+                                                public void accept(PlayerIdentity gamePlayer) {
+                                                    openGUI((GamePlayer) gamePlayer);
+                                                }
+                                            }).openGUI();
+                                        }
+                                    }).build();
 
-                                        container.appendElement(element);
-                                    }
-                                }).build());
+                                    container.appendElement(element);
+                                }
+                            }).build());
 
-                    }).build();
-            inventory.open(gamePlayer.getOnlinePlayer());
-        });
+                }).build();
+        inventory.open(gamePlayer.getOnlinePlayer());
     }
 
 }

@@ -11,13 +11,14 @@ import cz.johnslovakia.gameapi.users.PlayerIdentity;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.OfflinePlayer;
 
 import java.time.LocalDateTime;
 
 @Getter @Setter
 public class UnclaimedReward {
 
-    private final PlayerIdentity playerIdentity;
+    private final OfflinePlayer offlinePlayer;
     private final LocalDateTime createdAt;
     private final String rewardJson;
     private final JsonObject data;
@@ -30,8 +31,8 @@ public class UnclaimedReward {
     @Setter
     private boolean claimed = false;
 
-    public UnclaimedReward(PlayerIdentity playerIdentity, LocalDateTime createdAt, String rewardJson, JsonObject data, UnclaimedRewardType type) {
-        this.playerIdentity = playerIdentity;
+    public UnclaimedReward(OfflinePlayer offlinePlayer, LocalDateTime createdAt, String rewardJson, JsonObject data, UnclaimedRewardType type) {
+        this.offlinePlayer = offlinePlayer;
         this.createdAt = createdAt;
         this.rewardJson = rewardJson;
         this.data = data;
@@ -43,8 +44,8 @@ public class UnclaimedReward {
 
     }
 
-    public UnclaimedReward(PlayerIdentity playerIdentity, LocalDateTime createdAt, Reward reward, JsonObject data, UnclaimedRewardType type) {
-        this.playerIdentity = playerIdentity;
+    public UnclaimedReward(OfflinePlayer offlinePlayer, LocalDateTime createdAt, Reward reward, JsonObject data, UnclaimedRewardType type) {
+        this.offlinePlayer = offlinePlayer;
         this.createdAt = createdAt;
         this.reward = reward;
         this.data = data;
@@ -57,8 +58,8 @@ public class UnclaimedReward {
 
     public void claim(){
         //TODO: přepsat na lepší systém bonusů, neukládá se bonus
-        getReward().applyReward(playerIdentity, true, bonus);
+        getReward().applyReward(offlinePlayer, true, bonus);
         UnclaimedRewardsTable.removeUnclaimedReward(this);
-        ModuleManager.getModule(UnclaimedRewardsModule.class).removeUnclaimedReward(playerIdentity, this);
+        ModuleManager.getModule(UnclaimedRewardsModule.class).removeUnclaimedReward(offlinePlayer, this);
     }
 }

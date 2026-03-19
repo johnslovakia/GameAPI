@@ -5,13 +5,13 @@ import com.google.gson.JsonParser;
 import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.Module;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
-import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.utils.Logger;
 
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryRowsResult;
 import me.zort.sqllib.api.data.Row;
 
+import org.bukkit.OfflinePlayer;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -28,12 +28,10 @@ import java.util.stream.Collectors;
 
 public class UnclaimedRewardsModule implements Listener, Module {
 
-    private Map<PlayerIdentity, List<UnclaimedReward>> cache = new ConcurrentHashMap<>();
+    private Map<String, List<UnclaimedReward>> cache = new ConcurrentHashMap<>();
 
     @Override
-    public void initialize() {
-
-    }
+    public void initialize() {}
 
     @Override
     public void terminate() {
@@ -42,45 +40,73 @@ public class UnclaimedRewardsModule implements Listener, Module {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
-        loadUnclaimedRewards(PlayerIdentityRegistry.get(e.getPlayer()));
+        loadUnclaimedRewards(e.getPlayer());
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent e) {
-        cache.remove(PlayerIdentityRegistry.get(e.getPlayer()));
+        cache.remove(e.getPlayer().getName());
     }
 
 
-    public void addUnclaimedReward(PlayerIdentity playerIdentity, UnclaimedReward unclaimedReward){
-        cache.computeIfAbsent(playerIdentity, key -> new ArrayList<>())
+    public void addUnclaimedReward(OfflinePlayer player, UnclaimedReward unclaimedReward) {
+        cache.computeIfAbsent(player.getName(), key -> new ArrayList<>())
                 .add(unclaimedReward);
     }
 
-    public void removeUnclaimedReward(PlayerIdentity playerIdentity, UnclaimedReward unclaimedReward){
-        List<UnclaimedReward> rewards = cache.get(playerIdentity);
+    public void removeUnclaimedReward(OfflinePlayer player, UnclaimedReward unclaimedReward) {
+        List<UnclaimedReward> rewards = cache.get(player.getName());
         if (rewards == null) return;
 
         rewards.remove(unclaimedReward);
         if (rewards.isEmpty()) {
-            cache.remove(playerIdentity);
+            cache.remove(player.getName());
         }
     }
-
-    public List<UnclaimedReward> getPlayerUnclaimedRewards(PlayerIdentity playerIdentity) {
-        List<UnclaimedReward> rewards = cache.get(playerIdentity);
-        if (rewards == null) {
-            return new ArrayList<>();
-        }
-        return new ArrayList<>(rewards);
+    public List<UnclaimedReward> getPlayerUnclaimedRewards(OfflinePlayer player) {
+        List<UnclaimedReward> rewards = cache.get(player.getName());
+        return rewards != null ? new ArrayList<>(rewards) : new ArrayList<>();
     }
 
-    public List<UnclaimedReward> getPlayerUnclaimedRewardsByType(PlayerIdentity playerIdentity, UnclaimedRewardType type){
-        return getPlayerUnclaimedRewards(playerIdentity).stream()
+    public List<UnclaimedReward> getPlayerUnclaimedRewardsByType(PlayerIdentity playerIdentity, UnclaimedRewardType type) {
+        return getPlayerUnclaimedRewardsByType(playerIdentity.getOfflinePlayer(), type);
+    }
+
+    public List<UnclaimedReward> getPlayerUnclaimedRewardsByType(OfflinePlayer player, UnclaimedRewardType type) {
+        return getPlayerUnclaimedRewards(player).stream()
                 .filter(r -> r.getType() == type)
                 .collect(Collectors.toList());
     }
 
-    public CompletableFuture<List<UnclaimedReward>> loadUnclaimedRewards(PlayerIdentity playerIdentity) {
+    public CompletableFuture<List<UnclaimedReward>> getOrLoadUnclaimedRewards(OfflinePlayer player) {
+        List<UnclaimedReward> cached = cache.get(player.getName());
+        if (cached != null) {
+            return CompletableFuture.completedFuture(new ArrayList<>(cached));
+        }
+        return fetchFromDatabase(player);
+    }
+
+    public CompletableFuture<List<UnclaimedReward>> getOrLoadUnclaimedRewardsByType(OfflinePlayer player, UnclaimedRewardType type) {
+        return getOrLoadUnclaimedRewards(player).thenApply(rewards ->
+                rewards.stream()
+                        .filter(r -> r.getType() == type)
+                        .collect(Collectors.toList())
+        );
+    }
+
+    public CompletableFuture<List<UnclaimedReward>> getOrLoadUnclaimedRewardsByType(PlayerIdentity playerIdentity, UnclaimedRewardType type) {
+        return getOrLoadUnclaimedRewardsByType(playerIdentity.getOfflinePlayer(), type);
+    }
+
+
+    public CompletableFuture<List<UnclaimedReward>> loadUnclaimedRewards(OfflinePlayer player) {
+        return fetchFromDatabase(player).thenApply(rewards -> {
+            rewards.forEach(r -> addUnclaimedReward(player, r));
+            return rewards;
+        });
+    }
+
+    private CompletableFuture<List<UnclaimedReward>> fetchFromDatabase(OfflinePlayer player) {
         return CompletableFuture.supplyAsync(() -> {
             List<UnclaimedReward> unclaimedRewards = new ArrayList<>();
 
@@ -91,46 +117,40 @@ public class UnclaimedRewardsModule implements Listener, Module {
 
                 QueryRowsResult<Row> result = connection.select()
                         .from("unclaimed_rewards")
-                        .where().isEqual("Nickname", playerIdentity.getName())
+                        .where().isEqual("Nickname", player.getName())
                         .obtainAll();
 
                 if (result.isEmpty()) return unclaimedRewards;
 
                 for (Row row : result) {
                     try {
-                        LocalDateTime createdAt = null;
                         Object timestampObj = row.get("created_at");
-
-                        if (timestampObj instanceof Timestamp timestamp) {
-                            createdAt = timestamp.toLocalDateTime();
-                        }
-
-                        if (createdAt == null) {
-                            Logger.log("Missing created_at for reward of player " + playerIdentity.getName(), Logger.LogType.WARNING);
+                        if (!(timestampObj instanceof Timestamp)) {
+                            Logger.log("Missing created_at for reward of player " + player.getName(), Logger.LogType.WARNING);
                             continue;
                         }
 
+                        LocalDateTime createdAt = ((Timestamp) timestampObj).toLocalDateTime();
                         String rewardJson = row.getString("reward_json");
                         JsonObject dataJson = JsonParser.parseString(row.getString("data_json")).getAsJsonObject();
                         UnclaimedRewardType type = UnclaimedRewardType.valueOf(row.getString("type"));
 
                         UnclaimedReward unclaimedReward = switch (type) {
-                            case QUEST -> new QuestUnclaimedReward(playerIdentity, createdAt, rewardJson, dataJson, type);
-                            case DAILYMETER -> new DailyMeterUnclaimedReward(playerIdentity, createdAt, rewardJson, dataJson, type);
-                            case LEVELUP -> new LevelUpUnclaimedReward(playerIdentity, createdAt, rewardJson, dataJson, type);
-                            default -> throw new IllegalArgumentException("Unknown reward type: " + type);
+                            case QUEST      -> new QuestUnclaimedReward(player, createdAt, rewardJson, dataJson, type);
+                            case DAILYMETER -> new DailyMeterUnclaimedReward(player, createdAt, rewardJson, dataJson, type);
+                            case LEVELUP    -> new LevelUpUnclaimedReward(player, createdAt, rewardJson, dataJson, type);
+                            default         -> throw new IllegalArgumentException("Unknown reward type: " + type);
                         };
 
                         unclaimedRewards.add(unclaimedReward);
-                        addUnclaimedReward(playerIdentity, unclaimedReward);
 
                     } catch (Exception e) {
-                        Logger.log("Failed to parse unclaimed reward for player " + playerIdentity.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+                        Logger.log("Failed to parse unclaimed reward for player " + player.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
                     }
                 }
 
             } catch (Exception e) {
-                Logger.log("Failed to load unclaimed rewards for player " + playerIdentity.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+                Logger.log("Failed to load unclaimed rewards for player " + player.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
                 e.printStackTrace();
             }
 

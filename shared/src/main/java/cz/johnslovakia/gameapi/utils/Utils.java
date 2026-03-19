@@ -217,12 +217,56 @@ public class Utils {
         return item;
     }
 
-    public static ItemStack getPlayerHead(Player player) {
+    private static final Map<UUID, ItemStack> headCache = new HashMap<>();
+
+    /*public static ItemStack getPlayerHead(Player player) {
+        if (headCache.containsKey(player.getUniqueId())) return headCache.get(player.getUniqueId()).clone();
+
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) item.getItemMeta();
-        meta.setOwningPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()));
+
+        PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID(), null);
+        PlayerTextures textures = profile.getTextures();
+
+        URL skinUrl = player.getPlayerProfile().getTextures().getSkin();
+        if (skinUrl != null) {
+            textures.setSkin(skinUrl);
+            profile.setTextures(textures);
+        }
+
+        meta.setPlayerProfile(profile);
+        //meta.setPlayerProfile(player.getPlayerProfile());
         item.setItemMeta(meta);
+
+        headCache.put(player.getUniqueId(), item.clone());
         return item;
+    }*/
+
+    public static ItemStack getPlayerHead(Player player) {
+        UUID uuid = player.getUniqueId();
+        if (headCache.containsKey(uuid)) return headCache.get(uuid).clone();
+
+        PlayerProfile profile = player.getPlayerProfile();
+        PlayerTextures textures = profile.getTextures();
+        URL skinUrl = textures.getSkin();
+
+        ItemStack item;
+        if (skinUrl != null) {
+            item = getCustomHead(skinUrl.toString());
+        } else {
+            item = new ItemStack(Material.PLAYER_HEAD);
+            SkullMeta meta = (SkullMeta) item.getItemMeta();
+            PlayerProfile staticProfile = Bukkit.createProfile(uuid, player.getName());
+            meta.setPlayerProfile(staticProfile);
+            item.setItemMeta(meta);
+        }
+
+        headCache.put(uuid, item.clone());
+        return item;
+    }
+
+    public static void clearHeadCache(UUID uuid) {
+        headCache.remove(uuid);
     }
 
     public static void countdownTimerBar(Player player, String name, double startTime, double timeRemaining){

@@ -9,10 +9,10 @@ import lombok.Setter;
 
 import java.util.Random;
 
-@Getter
+@Getter @Setter
 public class RewardItem {
 
-    private final int amount;
+    private int amount;
     @Setter
     private String resource;
     private int chance = 100;
@@ -44,7 +44,7 @@ public class RewardItem {
         this.amount = amount;
     }
 
-    public boolean randomAmount(){
+    public boolean hasRandomAmount(){
         return randomMinRange != 0 && randomMaxRange > 0;
     }
 

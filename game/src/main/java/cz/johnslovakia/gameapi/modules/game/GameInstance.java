@@ -15,7 +15,7 @@ import cz.johnslovakia.gameapi.modules.game.session.GameSessionModule;
 import cz.johnslovakia.gameapi.modules.game.task.TaskModule;
 import cz.johnslovakia.gameapi.modules.messages.Message;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
-import cz.johnslovakia.gameapi.modules.serverManagement.DataManager;
+import cz.johnslovakia.gameapi.modules.serverManagement.ServerRegistry;
 import cz.johnslovakia.gameapi.modules.serverManagement.gameData.GameDataManager;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.game.task.Task;
@@ -34,12 +34,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
 import java.util.function.Consumer;
 
 @Getter
-public class GameInstance {
+public class GameInstance implements Terminate{
     private final GameInstance game = GameInstance.this;
 
     @Setter
@@ -54,17 +55,18 @@ public class GameInstance {
     private boolean firstGameKill = true;
 
     private GameDataManager<GameInstance> serverDataManager;
+    private BukkitTask updateTask;
 
-    private final List<GamePlayer> participants = new ArrayList<>();
+    private List<GamePlayer> participants = new ArrayList<>();
     private List<Block> placedBlocks;
-    private final Map<String, Object> metadata = new HashMap<>();
-    private final List<Placement<?>> placements = new ArrayList<>();
+    private Map<String, Object> metadata = new HashMap<>();
+    private List<Placement<?>> placements = new ArrayList<>();
     @Setter
     private boolean automaticStart = false;
 
-    private final GameEndHandler gameEndHandler;
-    private final GameStartHandler gameStartHandler;
-    private final PlayerJoinQuitHandler playerJoinQuitHandler;
+    private GameEndHandler gameEndHandler;
+    private GameStartHandler gameStartHandler;
+    private PlayerJoinQuitHandler playerJoinQuitHandler;
 
     private final Map<Class<? extends GameModule>, GameModule> modules = new HashMap<>();
 
@@ -85,6 +87,30 @@ public class GameInstance {
         this.gameEndHandler = new GameEndHandler(this);
         this.gameStartHandler = new GameStartHandler(this);
         this.playerJoinQuitHandler = new PlayerJoinQuitHandler(this);
+
+        updateTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!isValid()) this.cancel();
+                serverDataManager.updateGame();
+            }
+        }.runTaskTimerAsynchronously(Minigame.getInstance().getPlugin(), 30L, 30 * 20L);
+    }
+
+    @Override
+    public void terminate() {
+        updateTask.cancel();
+        spectatorManager = null;
+        serverDataManager = null;
+        participants = null;
+        placedBlocks = null;
+        metadata = null;
+        placements = null;
+        gameEndHandler = null;
+        gameStartHandler = null;
+        playerJoinQuitHandler = null;
+        getModule(TaskModule.class).cancelAll();
+        destroyAllModules();
     }
 
     public void joinPlayer(Player player){
@@ -93,6 +119,10 @@ public class GameInstance {
 
     public void quitPlayer(Player player){
         getPlayerJoinQuitHandler().quitPlayer(player);
+    }
+
+    public void spectate(Player player){
+        getPlayerJoinQuitHandler().spectateGame(player);
     }
 
     public void endGame(Winner winner){
@@ -154,6 +184,24 @@ public class GameInstance {
     public void finishSetup(Consumer<Boolean> callback){
         getSpectatorManager().loadItemManager();
 
+        Minigame minigame = Minigame.getInstance();
+        if (ModuleManager.getModule(ServerRegistry.class) != null){
+            serverDataManager = new GameDataManager<>(Minigame.getInstance().getName(), this, getName(), getSettings().getMaxPlayers());
+
+            serverDataManager.addProperty("GameState", new GameStateValueImple());
+            serverDataManager.addProperty("MaxPlayers", new MaxPlayersValueImple());
+            serverDataManager.addProperty("Players", new PlayersValueImple());
+            serverDataManager.addProperty("Map", new MapValueImple());
+            serverDataManager.addProperty("StartingTime", new StartingTimeValueImple());
+
+            if (minigame.getProperties() != null && !minigame.getProperties().isEmpty()) {
+                serverDataManager.addProperties(minigame.getProperties());
+                return;
+            }
+
+            serverDataManager.updateGame();
+        }
+
         if (getSettings().isChooseRandomMap()){
             selectRandomMap();
 
@@ -178,27 +226,9 @@ public class GameInstance {
             }.runTaskTimer(Minigame.getInstance().getPlugin(), 20L, 20L);
         }else {
             Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
-                state = GameState.WAITING;
+                setState(GameState.WAITING);
                 callback.accept(true);
             }, 10L);
-        }
-
-        Minigame minigame = Minigame.getInstance();
-        if (DataManager.getInstance() != null){
-            serverDataManager = new GameDataManager<>(Minigame.getInstance().getName(), this, getName(), getSettings().getMaxPlayers());
-
-            serverDataManager.addProperty("GameState", new GameStateValueImple());
-            serverDataManager.addProperty("MaxPlayers", new MaxPlayersValueImple());
-            serverDataManager.addProperty("Players", new PlayersValueImple());
-            serverDataManager.addProperty("Map", new MapValueImple());
-            serverDataManager.addProperty("StartingTime", new StartingTimeValueImple());
-
-            if (minigame.getProperties() != null && !minigame.getProperties().isEmpty()) {
-                serverDataManager.addProperties(minigame.getProperties());
-                return;
-            }
-
-            serverDataManager.updateGame();
         }
     }
 
@@ -279,12 +309,12 @@ public class GameInstance {
             a.setWinned(true);
             i++;
             if (playingArenas != 1) {
-                for (GamePlayer player : getPlayers()){
+                for (GamePlayer player : getParticipants()){
                     player.getOnlinePlayer().playSound(player.getOnlinePlayer(), Sound.UI_BUTTON_CLICK, 1.0F, 1.0F);
                     player.getOnlinePlayer().sendMessage(ModuleManager.getModule(MessageModule.class).get(player, "chat.map_won").replace("%map%", a.getName()).replace("%number%", "" + i).getTranslated());
                 }
             } else {
-                for (GamePlayer player : getPlayers()){
+                for (GamePlayer player : getParticipants()){
                     player.getOnlinePlayer().playSound(player.getOnlinePlayer(), Sound.UI_BUTTON_CLICK, 1.0F, 1.0F);
                     player.getOnlinePlayer().sendMessage(ModuleManager.getModule(MessageModule.class).get(player, "chat.map_won").replace("%map%", a.getName()).getTranslated());
                 }
@@ -393,6 +423,10 @@ public class GameInstance {
     public boolean containsBlock(Block block) {
         if (placedBlocks == null) return false;
         return placedBlocks.contains(block);
+    }
+
+    public boolean isValid(){
+        return ModuleManager.getModule(GameService.class).getGameByID(getID()).isPresent();
     }
 
 

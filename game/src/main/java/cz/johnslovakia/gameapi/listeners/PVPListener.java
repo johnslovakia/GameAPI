@@ -11,6 +11,7 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.GamePlayerState;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.GameUtils;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Utils;
 import lombok.Getter;
 import org.bukkit.Bukkit;
@@ -23,6 +24,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.util.Vector;
 
@@ -90,7 +92,7 @@ public class PVPListener implements Listener {
         if (player == null) return;
 
         GameInstance game = player.getGame();
-        if (game == null || game.getState() != GameState.INGAME || game.isPreparation()) {
+        if (game == null || game.getState() != GameState.INGAME || game.isPreparation() || player.isSpectator()) {
             e.setCancelled(true);
             return;
         }
@@ -105,14 +107,14 @@ public class PVPListener implements Listener {
 
 
         DamageRecord damageRecord = getDamagerFromEntity(e);
-        if (damageRecord == null) {
-            //e.setCancelled(true);
-            return;
-        }
+        if (damageRecord == null) return;
         GamePlayer damager = damageRecord.damager;
 
-        if (damager.isSpectator() || (player.equals(damager) && !damageRecord.cause.name().toLowerCase().contains("explosion"))){
+        if (damager.isSpectator() || !player.getGameSession().isEnabledPVP()){
             e.setCancelled(true);
+            return;
+        }
+        if (player.equals(damager)){
             return;
         }
         if (Minigame.getInstance().getSettings().isUseTeams()){
@@ -127,17 +129,6 @@ public class PVPListener implements Listener {
         damagerClass.setDamager(damager, System.currentTimeMillis());
         if (!damagers.contains(damagerClass)) {
             damagers.add(damagerClass);
-        }
-
-        if (game.getSettings().isUseTeams() &&
-                player.getGameSession().getTeam().equals(damager.getGameSession().getTeam())) {
-            e.setCancelled(true);
-            return;
-        }
-
-        if (!player.getGameSession().isEnabledPVP()) {
-            e.setCancelled(true);
-            return;
         }
 
         PlayerDamageByPlayerEvent ev = new PlayerDamageByPlayerEvent(game, damager, player, e.getCause());
@@ -202,23 +193,23 @@ public class PVPListener implements Listener {
         direction = direction.normalize();
 
         victim.setVelocity(direction.multiply(0.7));
-        GameUtils.damagePlayer(victim, 0.3);
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void entityDamage(EntityDamageEvent e) {
         if (e.getEntity() instanceof Player player) {
             GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+            if (!gamePlayer.isInGame()) return;
             GameInstance game = gamePlayer.getGame();
-            if (game != null && game.getState() == GameState.INGAME) {
-                if (gamePlayer.isSpectator() && e.getCause().equals(EntityDamageEvent.DamageCause.VOID)){
+            if (game.getState() == GameState.INGAME) {
+                if (gamePlayer.isSpectator() && (e.getCause().equals(EntityDamageEvent.DamageCause.VOID)  || e.getDamageSource().getDamageType().equals(DamageType.OUT_OF_WORLD))){
                     player.teleport(GameUtils.getNonRespawnLocation(game));
                     e.setCancelled(true);
                     return;
                 }
                 PlayerDamageByPlayerEvent ev = new PlayerDamageByPlayerEvent(game, null, PlayerManager.getGamePlayer(player), e.getCause());
                 Bukkit.getPluginManager().callEvent(ev);
-                e.setCancelled(ev.isCancelled());
+                if (ev.isCancelled()) e.setCancelled(true);
             }else{
                 e.setCancelled(true);
             }
@@ -227,36 +218,31 @@ public class PVPListener implements Listener {
 
 
     @EventHandler
-    public void onForceRespawn(PlayerDeathEvent e){
+    public void forceRespawn(PlayerDeathEvent e) {
         Bukkit.getServer().getScheduler().scheduleSyncDelayedTask((Minigame.getInstance().getPlugin()), () -> {
             e.getEntity().spigot().respawn();
             e.getEntity().setFireTicks(0);
-        }, 2L);
+        }, 1L);
     }
 
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPlayerDeath3(PlayerDeathEvent e) {
+    @EventHandler (priority = EventPriority.LOWEST)
+    public void onPlayerDeath(PlayerDeathEvent e){
         Player player = e.getEntity();
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
-        /*List<ItemStack> copy = new ArrayList<>(e.getDrops());
-        e.getDrops().clear();
-        for (ItemStack item : copy) {
-            if (item.getType().equals(Material.CARVED_PUMPKIN) && item.hasItemMeta() && item.getItemMeta().hasCustomModelData())
-                continue;
-            player.getWorld().dropItemNaturally(player.getLocation().clone().add(0, 0.2, 0), item);
-        }*/
+        if (!gamePlayer.isInGame()) return;
+        GameInstance game = gamePlayer.getGame();
+        if (!game.getState().equals(GameState.INGAME)) return;
+        if (gamePlayer.isSpectator()) {
+            e.setCancelled(true);
+            return;
+        }
+
         e.getDrops().removeIf(item ->
                 item.getType() == Material.CARVED_PUMPKIN &&
                         item.hasItemMeta() &&
                         item.getItemMeta().hasCustomModelData()
         );
-    }
-
-    @EventHandler
-    public void onPlayerDeath(PlayerDeathEvent e) {
-        Player player = e.getEntity();
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
         if (gamePlayer.getGameSession().getState().equals(GamePlayerState.DISCONNECTED)){
             e.setKeepInventory(true);
@@ -278,9 +264,9 @@ public class PVPListener implements Listener {
         DamageType damageType = e.getDamageSource().getDamageType();
         if (gamePlayer.getMetadata().containsKey("diedInVoid")){
             damageType = DamageType.OUT_OF_WORLD;
-            gamePlayer.getMetadata().remove("diedInVoid");
+            Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> gamePlayer.getMetadata().remove("diedInVoid"), 10L);
         }
-        
+
         if (killer){
             GamePlayer gamePlayerKiller = getLastDamager(gamePlayer).getLastDamager();
 
@@ -295,10 +281,11 @@ public class PVPListener implements Listener {
                 }
             }
 
-            GamePlayerDeathEvent ev = new GamePlayerDeathEvent(gamePlayer.getGame(), gamePlayerKiller, PlayerManager.getGamePlayer(player), (!assists.isEmpty() ? assists : null), damageType);
-            if (gamePlayer.getGame().isFirstGameKill()){
+
+            GamePlayerDeathEvent ev = new GamePlayerDeathEvent(game, gamePlayerKiller, PlayerManager.getGamePlayer(player), (!assists.isEmpty() ? assists : null), damageType, e.getDrops());
+            if (game.isFirstGameKill()){
                 ev.setFirstGameKill(true);
-                gamePlayer.getGame().setFirstGameKill(false);
+                game.setFirstGameKill(false);
             }
             Bukkit.getPluginManager().callEvent(ev);
 
@@ -306,10 +293,10 @@ public class PVPListener implements Listener {
             getDamagers(gamePlayer).removeAllDamagers();
         } else {
             if (player.getLastDamageCause() == null) {
-                GamePlayerDeathEvent ev = new GamePlayerDeathEvent(gamePlayer.getGame(), null, PlayerManager.getGamePlayer(player), null,null);
+                GamePlayerDeathEvent ev = new GamePlayerDeathEvent(game, null, PlayerManager.getGamePlayer(player), null,null, new ArrayList<>(e.getDrops()));
                 Bukkit.getPluginManager().callEvent(ev);
             } else {
-                GamePlayerDeathEvent ev = new GamePlayerDeathEvent(gamePlayer.getGame(), null, PlayerManager.getGamePlayer(player), null, damageType);
+                GamePlayerDeathEvent ev = new GamePlayerDeathEvent(game, null, PlayerManager.getGamePlayer(player), null, damageType, new ArrayList<>(e.getDrops()));
                 Bukkit.getPluginManager().callEvent(ev);
             }
         }

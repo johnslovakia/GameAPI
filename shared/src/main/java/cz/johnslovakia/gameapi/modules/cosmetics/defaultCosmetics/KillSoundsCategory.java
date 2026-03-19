@@ -3,10 +3,7 @@ package cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics;
 import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
-import cz.johnslovakia.gameapi.modules.cosmetics.Cosmetic;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticRarity;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsCategory;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
+import cz.johnslovakia.gameapi.modules.cosmetics.*;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.utils.Utils;
 
@@ -21,13 +18,12 @@ public class KillSoundsCategory extends CosmeticsCategory implements Listener {
     public KillSoundsCategory(CosmeticsModule manager) {
         super("Kill Sounds", new ItemStack(Material.MUSIC_DISC_5));
 
-        FileConfiguration config = Shared.getInstance().getPlugin().getConfig();
-
-        int LEGENDARY_COINS_PRICE = Utils.getPrice(config, "kill_sounds.legendary", 18000);
-        int EPIC_COINS_PRICE = Utils.getPrice(config, "kill_sounds.epic", 14000);
-        int RARE_COINS_PRICE = Utils.getPrice(config, "kill_sounds.rare", 8000);
-        int UNCOMMON_COINS_PRICE = Utils.getPrice(config, "kill_sounds.uncommon", 6000);
-        int COMMON_COINS_PRICE = Utils.getPrice(config, "kill_sounds.common", 4000);
+        CosmeticPrices.PriceSet p = manager.getPrices().getKillSounds();
+        int LEGENDARY_COINS_PRICE = p.getLegendary();
+        int EPIC_COINS_PRICE = p.getEpic();
+        int RARE_COINS_PRICE = p.getRare();
+        int UNCOMMON_COINS_PRICE = p.getUncommon();
+        int COMMON_COINS_PRICE = p.getCommon();
 
         int LEGENDARY_TOKEN_PRICE = 7;
         int EPIC_TOKEN_PRICE = 5;

@@ -77,7 +77,7 @@ public class StatsHolograms {
                     component = component.append(
                             ModuleManager.getModule(MessageModule.class).get(playerIdentity, "hologram.lifetime_stats.score_line")
                                     .replace("%stat_name%", stat.getTranslated(playerIdentity))
-                                    .replace("%value%", String.valueOf(playerStat))
+                                    .replace("%value%", StringUtils.betterNumberFormat(playerStat))
                                     .replace("%space_pad%", Component.text(StringUtils.calculateNegativeSpaces(dotCount)))
                                     .getTranslated()
                     );
@@ -98,6 +98,7 @@ public class StatsHolograms {
 
             entity.text(component);
             entity.setBillboard(Display.Billboard.FIXED);
+            //entity.set
             entity.setVisibleByDefault(false);
             entity.setPersistent(false);
         });

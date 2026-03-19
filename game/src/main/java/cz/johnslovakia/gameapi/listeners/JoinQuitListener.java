@@ -9,21 +9,15 @@ import cz.johnslovakia.gameapi.modules.game.GameService;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.events.GameQuitEvent;
 import cz.johnslovakia.gameapi.modules.levels.LevelModule;
-import cz.johnslovakia.gameapi.modules.serverManagement.DataManager;
+import cz.johnslovakia.gameapi.modules.serverManagement.PendingActionType;
+import cz.johnslovakia.gameapi.modules.serverManagement.PendingServerAction;
+import cz.johnslovakia.gameapi.modules.serverManagement.ServerRegistry;
 import cz.johnslovakia.gameapi.modules.stats.StatsModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.utils.Logger;
-import cz.johnslovakia.gameapi.utils.PlayerBossBar;
-import cz.johnslovakia.gameapi.utils.StringUtils;
-import cz.johnslovakia.gameapi.utils.UpdateChecker;
-import me.zort.sqllib.SQLDatabaseConnection;
-import me.zort.sqllib.api.data.Row;
+import cz.johnslovakia.gameapi.utils.*;
 
-import net.kyori.adventure.text.Component;
-
-import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -32,7 +26,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import java.util.List;
 import java.util.Optional;
 
 public class JoinQuitListener implements Listener {
@@ -58,37 +51,51 @@ public class JoinQuitListener implements Listener {
             return;
         }
 
-        if (gameService.getGames().size() > 1) {
-            if (DataManager.getInstance() != null) {
-                String gameIdentifier = null;
+        if (gameService.getGames().size() > 1 && ModuleManager.getModule(ServerRegistry.class) != null) {
+            String currentServer = minigame.getSettings().getServerName();
+            Optional<PendingServerAction> pending = ModuleManager.getModule(ServerRegistry.class)
+                    .consumePendingAction(player.getName(), currentServer);
 
-                if (DataManager.getInstance().useRedisForServerData()) {
-                    String key = "player:" + player.getName() + ":game";
-                    gameIdentifier = DataManager.getInstance().getServerDataRedis().get(key);
-                } else {
-                    try (SQLDatabaseConnection connection = minigame.getDatabase().getConnection()) {
-                        if (connection != null) {
-                            Optional<Row> result = connection.select()
-                                    .from(minigame.getMinigameTable().getTableName())
-                                    .where().isEqual("Nickname", player.getName())
-                                    .obtainOne();
-
-                            gameIdentifier = result.map(row -> row.getString("game")).orElse(null);
+            if (pending.isPresent()) {
+                PendingServerAction action = pending.get();
+                if (action.getType() == PendingActionType.JOIN_ARENA) {
+                    String arenaId = action.getData();
+                    Optional<GameInstance> optionalGameInstance = gameService.getGames().values().stream()
+                            .filter(g -> g.getName().endsWith(arenaId))
+                            .toList()
+                            .stream().findFirst();
+                    if (optionalGameInstance.isPresent()) {
+                        GameInstance game = optionalGameInstance.get();
+                        if (gameService.isAvailableFor(player, game)) {
+                            game.joinPlayer(player);
+                        }else if (Minigame.getInstance().hasSpectatePermission(player)){
+                            game.spectate(player);
                         }
-                    } catch (Exception exception) {
-                        Logger.log("Failed to load player's game identifier from DB: " + exception.getMessage(), Logger.LogType.ERROR);
-                        exception.printStackTrace();
+                        return;
                     }
-                }
-
-                if (gameIdentifier != null) {
-                    String finalGameIdentifier = gameIdentifier;
-                    List<GameInstance> game = gameService.getGames().values().stream()
-                            .filter(g -> g.getName().endsWith(finalGameIdentifier) &&
-                                    (g.getState().equals(GameState.WAITING) || g.getState().equals(GameState.STARTING)))
-                            .toList();
-                    if (!game.isEmpty()) game.get(0).joinPlayer(player);
-                    return;
+                } else if (action.getType() == PendingActionType.SPECTATE) {
+                    String data = action.getData();
+                    String[] parts = data.split(":");
+                    if (parts.length == 2) {
+                        if (parts[0].equalsIgnoreCase("player")) {
+                            String targetName = parts[1];
+                            Player targetPlayer = Bukkit.getPlayer(targetName);
+                            if (targetPlayer != null) {
+                                GamePlayer targetGamePlayer = PlayerManager.getGamePlayer(targetPlayer);
+                                if (targetGamePlayer != null && targetGamePlayer.isOnline() && targetGamePlayer.isInGame()) {
+                                    targetGamePlayer.getGame().spectate(player);
+                                    Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> player.teleport(targetPlayer.getLocation()), 5L);
+                                    return;
+                                }
+                            }
+                        }else if (parts[0].equalsIgnoreCase("game")) {
+                            String gameName = parts[1];
+                            if (gameService.getGameByName(gameName).isPresent()){
+                                gameService.getGameByName(gameName).get().spectate(player);
+                                return;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -102,36 +109,50 @@ public class JoinQuitListener implements Listener {
             if (game.isPresent() && Minigame.getInstance().getSettings().isEnabledReJoin() && game.get().getState().equals(GameState.INGAME)) {
                 game.get().joinPlayer(player);
             } else {
-                gameService.newArena(player, true);
+                if (!gameService.getFreeGames(player).isEmpty()) {
+                    gameService.newArena(player, true);
+                }else if (Minigame.getInstance().hasSpectatePermission(player)){
+                    Optional<GameInstance> gameToSpectate = gameService.getGames().values().stream().filter(gameInstance -> gameInstance.getState().equals(GameState.INGAME)).findFirst();
+                    if (gameToSpectate.isPresent()) {
+                        gameToSpectate.get().spectate(player);
+                    }else{
+                        player.sendMessage("§cNo running game found to watch. Sending you to lobby.");
+                        GameUtils.sendToLobby(player);
+                    }
+                }
             }
         }
     }
 
-    @EventHandler
+    @EventHandler (priority = EventPriority.HIGHEST)
     public void onPlayerQuit(PlayerQuitEvent e) {
         e.setQuitMessage(null);
 
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
-        LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
-        if (levelModule != null) {
-            if (gamePlayer.isInGame() && !gamePlayer.getGame().getState().equals(GameState.INGAME)) {
-                levelModule.getCache().remove(gamePlayer);
-            }else{
-                levelModule.getCache().remove(gamePlayer);
-            }
-        }
+
+        PlayerBossBar.removeBossBar(player.getUniqueId());
 
         Optional.ofNullable(gamePlayer.getGame())
                 .ifPresent(game -> game.quitPlayer(player));
 
-        PlayerBossBar.removeBossBar(player.getUniqueId());
+
+        LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
+        if (levelModule != null) {
+            /*if (gamePlayer.isInGame() && !gamePlayer.getGame().getState().equals(GameState.INGAME)) {
+                levelModule.getCache().remove(gamePlayer.getName());
+            }else{
+                levelModule.getCache().remove(gamePlayer.getName());
+            }*/
+            levelModule.getCache().remove(gamePlayer.getName());
+        }
     }
 
-    @EventHandler
+    @EventHandler (priority = EventPriority.HIGHEST)
     public void onGameQuit(GameQuitEvent e) {
         GamePlayer gamePlayer = e.getGamePlayer();
+        GameInstance game = gamePlayer.getGame();
 
         InventoryBuilder currentInventory = InventoryBuilder.getPlayerCurrentInventory(gamePlayer);
         if (currentInventory != null){
@@ -139,6 +160,11 @@ public class JoinQuitListener implements Listener {
         }
 
         ModuleManager.getModule(StatsModule.class).getStatsHolograms().remove(gamePlayer);
+        Utils.clearHeadCache(gamePlayer.getUniqueId());
+
+        if (game.getState().equals(GameState.INGAME) && !game.getSettings().isUseTeams() && !gamePlayer.isRespawning()){ //TODO: check
+            ModuleManager.getModule(StatsModule.class).setPlayerStat(gamePlayer, "Winstreak", 0);
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)

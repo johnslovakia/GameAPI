@@ -39,7 +39,7 @@ public interface Quest {
                 player.sendMessage(ModuleManager.getModule(MessageModule.class).get(player, "chat.quests.completed")
                         .replace("%type%", ModuleManager.getModule(MessageModule.class).get(player, "quest_type." + getType().toString().toLowerCase()).getTranslated())
                         .replace("%quest_name%", getName())
-                        .replace("%description%", ModuleManager.getModule(MessageModule.class).get(player, getTranslationKey()).getTranslated())
+                        .replace("%description%", "§7" + ModuleManager.getModule(MessageModule.class).get(player, getTranslationKey()).getRawTranslated().replace("\n", " "))
                         .getTranslated());
 
                 JsonObject json = new JsonObject();

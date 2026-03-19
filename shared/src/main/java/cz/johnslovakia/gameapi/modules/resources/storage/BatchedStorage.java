@@ -1,13 +1,12 @@
 package cz.johnslovakia.gameapi.modules.resources.storage;
 
 import cz.johnslovakia.gameapi.Shared;
-import cz.johnslovakia.gameapi.database.Type;
-import cz.johnslovakia.gameapi.users.PlayerIdentity;
-import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.utils.BatchConfig;
 import cz.johnslovakia.gameapi.utils.CachedBatchStorage;
 import me.zort.sqllib.SQLDatabaseConnection;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
@@ -22,7 +21,7 @@ public class BatchedStorage implements ResourceStorage {
     private final String resourceName;
     private final String tableName;
 
-    private CachedBatchStorage<PlayerIdentity, Integer> storage;
+    private CachedBatchStorage<String, Integer> storage;
 
     private final Listener playerQuitListener;
 
@@ -34,18 +33,17 @@ public class BatchedStorage implements ResourceStorage {
                 "resource-" + resourceName,
                 BatchConfig.builder("resource-" + resourceName)
                         .maxBatchSize(50)
-                        .flushIntervalSeconds(60)
+                        .flushIntervalSeconds(30)
                         .build(),
                 this::loadBalanceFromDB,
                 this::saveBalanceToDB,
                 Integer::sum
         );
-
+        
         this.playerQuitListener = new Listener() {
             @EventHandler
             public void onQuit(PlayerQuitEvent event) {
-                PlayerIdentity identity = PlayerIdentityRegistry.get(event.getPlayer());
-                storage.invalidate(identity);
+                storage.flushAndInvalidate(event.getPlayer().getName());
             }
         };
         Bukkit.getPluginManager().registerEvents(playerQuitListener, Shared.getInstance().getPlugin());
@@ -65,12 +63,7 @@ public class BatchedStorage implements ResourceStorage {
                 checkStmt.setString(3, resourceName);
 
                 try (ResultSet rs = checkStmt.executeQuery()) {
-                    boolean exists = false;
-                    if (rs.next()) {
-                        exists = rs.getInt(1) > 0;
-                    }
-
-                    if (!exists) {
+                    if (rs.next() && rs.getInt(1) == 0) {
                         String sql = "ALTER TABLE `" + tableName + "` ADD `" + resourceName + "` INT DEFAULT 0";
                         try (Statement alterStmt = conn.createStatement()) {
                             alterStmt.executeUpdate(sql);
@@ -83,53 +76,41 @@ public class BatchedStorage implements ResourceStorage {
             e.printStackTrace();
         }
     }
+    
+    private Map<String, Integer> loadBalanceFromDB(Set<String> nicknames) throws SQLException {
+        Map<String, Integer> results = new HashMap<>();
 
-    private Map<PlayerIdentity, Integer> loadBalanceFromDB(Set<PlayerIdentity> playerIdentities) throws SQLException {
-        Map<PlayerIdentity, Integer> results = new HashMap<>();
+        if (nicknames.isEmpty()) return results;
 
-        if (playerIdentities.isEmpty()) {
-            return results;
-        }
-
-        String placeholders = String.join(",", Collections.nCopies(playerIdentities.size(), "?"));
+        String placeholders = String.join(",", Collections.nCopies(nicknames.size(), "?"));
         String sql = "SELECT Nickname, " + resourceName +
                 " FROM " + tableName +
                 " WHERE Nickname IN (" + placeholders + ")";
 
         try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
-            if (dbConn != null) {
-                Connection conn = dbConn.getConnection();
+            if (dbConn == null) return results;
 
-                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    int i = 1;
-                    Map<String, PlayerIdentity> nicknameMap = new HashMap<>();
-                    for (PlayerIdentity playerIdentity : playerIdentities) {
-                        stmt.setString(i++, playerIdentity.getName());
-                        nicknameMap.put(playerIdentity.getName(), playerIdentity);
-                    }
-
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        while (rs.next()) {
-                            String nickname = rs.getString("Nickname");
-                            PlayerIdentity playerIdentity = nicknameMap.get(nickname);
-                            if (playerIdentity == null) continue;
-
-                            int balance = rs.getInt(resourceName);
-                            results.put(playerIdentity, balance);
-                        }
+            try (PreparedStatement stmt = dbConn.getConnection().prepareStatement(sql)) {
+                int i = 1;
+                for (String nickname : nicknames) {
+                    stmt.setString(i++, nickname);
+                }
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        results.put(rs.getString("Nickname"), rs.getInt(resourceName));
                     }
                 }
             }
         }
-
-        for (PlayerIdentity playerIdentity : playerIdentities) {
-            results.putIfAbsent(playerIdentity, 0);
+        
+        for (String nickname : nicknames) {
+            results.putIfAbsent(nickname, 0);
         }
 
         return results;
     }
-
-    private void saveBalanceToDB(Map<PlayerIdentity, CachedBatchStorage.PendingChange<PlayerIdentity, Integer>> changes)
+    
+    private void saveBalanceToDB(Map<String, CachedBatchStorage.PendingChange<String, Integer>> changes)
             throws SQLException {
         if (changes.isEmpty()) return;
 
@@ -138,39 +119,35 @@ public class BatchedStorage implements ResourceStorage {
 
             Connection conn = dbConn.getConnection();
             conn.setAutoCommit(false);
-
+            
             String setSql = "INSERT INTO " + tableName + " (Nickname, " + resourceName + ")" +
                     " VALUES (?, ?)" +
                     " ON DUPLICATE KEY UPDATE " + resourceName + " = VALUES(" + resourceName + ")";
-            String modifySql = "INSERT INTO " + tableName + " (Nickname, " + resourceName + ")" +
+            String deltaSql = "INSERT INTO " + tableName + " (Nickname, " + resourceName + ")" +
                     " VALUES (?, ?)" +
                     " ON DUPLICATE KEY UPDATE " + resourceName + " = " + resourceName + " + VALUES(" + resourceName + ")";
 
             try (PreparedStatement setStmt = conn.prepareStatement(setSql);
-                 PreparedStatement modifyStmt = conn.prepareStatement(modifySql)) {
+                 PreparedStatement deltaStmt = conn.prepareStatement(deltaSql)) {
 
-                int setCount = 0;
-                int modifyCount = 0;
+                int setCount = 0, deltaCount = 0;
 
-                for (CachedBatchStorage.PendingChange<PlayerIdentity, Integer> change : changes.values()) {
-                    PlayerIdentity player = change.getKey();
-                    int value = change.getDelta();
-
+                for (CachedBatchStorage.PendingChange<String, Integer> change : changes.values()) {
                     if (change.isSet()) {
-                        setStmt.setString(1, player.getName());
-                        setStmt.setInt(2, value);
+                        setStmt.setString(1, change.getKey());
+                        setStmt.setInt(2, change.getDelta());
                         setStmt.addBatch();
                         setCount++;
                     } else {
-                        modifyStmt.setString(1, player.getName());
-                        modifyStmt.setInt(2, value);
-                        modifyStmt.addBatch();
-                        modifyCount++;
+                        deltaStmt.setString(1, change.getKey());
+                        deltaStmt.setInt(2, change.getDelta());
+                        deltaStmt.addBatch();
+                        deltaCount++;
                     }
                 }
 
                 if (setCount > 0) setStmt.executeBatch();
-                if (modifyCount > 0) modifyStmt.executeBatch();
+                if (deltaCount > 0) deltaStmt.executeBatch();
 
                 conn.commit();
             } catch (SQLException e) {
@@ -181,45 +158,39 @@ public class BatchedStorage implements ResourceStorage {
             }
         }
     }
-
+    
     @Override
-    public void deposit(PlayerIdentity playerIdentity, int amount) {
-        storage.modify(playerIdentity, amount);
+    public void deposit(OfflinePlayer player, int amount) {
+        storage.modify(player.getName(), amount);
     }
 
     @Override
-    public void withdraw(PlayerIdentity playerIdentity, int amount) {
-        storage.modify(playerIdentity, -amount);
+    public void withdraw(OfflinePlayer player, int amount) {
+        storage.modify(player.getName(), -amount);
     }
 
     @Override
-    public CompletableFuture<Integer> getBalance(PlayerIdentity playerIdentity) {
-        return storage.get(playerIdentity);
+    public CompletableFuture<Integer> getBalance(OfflinePlayer player) {
+        return storage.get(player.getName());
     }
 
     @Override
-    public int getBalanceCached(PlayerIdentity playerIdentity) {
-        Integer cached = storage.getCached(playerIdentity);
-        if (cached == null) {
-            if (playerIdentity.getOnlinePlayer() != null)
-                playerIdentity.getOnlinePlayer().sendMessage("An error occurred. Your data wasn’t preloaded and isn’t available in the cache.");
-            return 0;
-        }
-
-        return cached;
+    public int getBalanceCached(OfflinePlayer player) {
+        Integer cached = storage.getCached(player.getName());
+        return cached != null ? cached : 0;
     }
 
     @Override
-    public CompletableFuture<Void> preload(Iterable<PlayerIdentity> players) {
-        Set<PlayerIdentity> playerSet = new HashSet<>();
-        players.forEach(playerSet::add);
-        return storage.preload(playerSet);
+    public CompletableFuture<Void> preload(Iterable<? extends OfflinePlayer> players) {
+        Set<String> nicknames = new HashSet<>();
+        players.forEach(p -> nicknames.add(p.getName()));
+        return storage.preload(nicknames);
     }
 
     @Override
     public void shutdown() {
+        HandlerList.unregisterAll(playerQuitListener);
         storage.shutdown();
         storage = null;
-        HandlerList.unregisterAll(playerQuitListener);
     }
 }

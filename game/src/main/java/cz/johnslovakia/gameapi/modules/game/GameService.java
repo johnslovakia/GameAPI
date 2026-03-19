@@ -7,8 +7,9 @@ import cz.johnslovakia.gameapi.events.GameResetEvent;
 import cz.johnslovakia.gameapi.events.NewArenaEvent;
 import cz.johnslovakia.gameapi.modules.levels.LevelModule;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
-import cz.johnslovakia.gameapi.modules.serverManagement.DataManager;
 import cz.johnslovakia.gameapi.modules.serverManagement.IGame;
+import cz.johnslovakia.gameapi.modules.serverManagement.IMinigame;
+import cz.johnslovakia.gameapi.modules.serverManagement.ServerRegistry;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
@@ -59,6 +60,10 @@ public class GameService implements Module {
     }
 
     public void newArena(Player player, boolean sendToLobbyIfNoArena) {
+        newArena(player, sendToLobbyIfNoArena, false);
+    }
+
+    public void newArena(Player player, boolean sendToLobbyIfNoArena, boolean includeOtherServers) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
         NewArenaEvent ev = new NewArenaEvent(PlayerManager.getGamePlayer(player));
@@ -66,7 +71,28 @@ public class GameService implements Module {
 
         if (ev.isCancelled()) return;
 
-        GameInstance game = getHighestGame();
+        ServerRegistry dataManager = ModuleManager.getModule(ServerRegistry.class);
+        boolean bungeecord = dataManager != null &&
+                (dataManager.getServerDataMySQL() != null
+                        || dataManager.getServerDataRedis() != null);
+        if (includeOtherServers && bungeecord){
+            Optional<IMinigame> iMinigame = dataManager.getMinigame(Minigame.getInstance().getName());
+            if (iMinigame.isPresent()){
+                IGame bestServer = iMinigame.get().getBestServer(gamePlayer);
+
+                if (!bestServer.getBungeecordServerName().equalsIgnoreCase(Minigame.getInstance().getSettings().getServerName())){
+                    bestServer.sendPlayerToServer(player);
+                    Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
+                        if (player.isOnline())
+                            newArena(player, true, false);
+                    }, 40L);
+                    return;
+                }
+            }
+        }
+
+
+        GameInstance game = getHighestGame(player);
         if (gamePlayer.getParty().isInParty()){
             for (GamePlayer partyMember : gamePlayer.getParty().getAllOnlinePlayers().stream()
                     .map(p -> (GamePlayer) p)
@@ -79,11 +105,11 @@ public class GameService implements Module {
         if (game != null) {
             game.joinPlayer(player);
             return;
-        }else if (DataManager.getInstance() != null){
-            if (DataManager.getInstance().getMinigame(Minigame.getInstance().getName()).isPresent()) {
-                IGame bestArena = DataManager.getInstance().getMinigame(Minigame.getInstance().getName()).get().getBestServer();
-                if ((DataManager.getInstance().getServerDataMySQL() != null || DataManager.getInstance().getServerDataRedis() != null) && bestArena != null) {
-                    bestArena.sendPlayerToServer(gamePlayer);
+        }else if (bungeecord && includeOtherServers){
+            if (dataManager.getMinigame(Minigame.getInstance().getName()).isPresent()) {
+                IGame bestArena = dataManager.getMinigame(Minigame.getInstance().getName()).get().getBestServer(gamePlayer);
+                if ((dataManager.getServerDataMySQL() != null || dataManager.getServerDataRedis() != null) && bestArena != null) {
+                    bestArena.sendPlayerToServer(player);
                     return;
                 }
             }
@@ -97,16 +123,17 @@ public class GameService implements Module {
         }
     }
 
-    public GameInstance getHighestGame() {
+    public GameInstance getHighestGame(Player player) {
         GameInstance highest = null;
 
         if (getGames().isEmpty()) return null;
 
         for(GameInstance game : getGames().values()) {
-            if (game.getState().equals(GameState.INGAME) && !game.getSettings().isEnabledJoiningAfterStart()){
+            if (!game.getState().equals(GameState.STARTING) && !game.getState().equals(GameState.WAITING)
+                    && !(game.getState().equals(GameState.INGAME) && game.getSettings().isEnabledJoiningAfterStart())) {
                 continue;
             }
-            if (game.getPlayers().size() >= game.getSettings().getMaxPlayers()) continue;
+            if (game.getPlayers().size() >= game.getSettings().getMaxPlayers() && !player.hasPermission("game.joinfullserver")) continue;
 
             if (highest == null || game.getPlayers().size() > highest.getPlayers().size()) {
                 highest = game;
@@ -119,8 +146,25 @@ public class GameService implements Module {
     public void resetGame(GameInstance toResetGame){
         toResetGame.setState(GameState.RESTARTING);
 
-        if (toResetGame.getSettings().isRestartServerAfterEnd()){
-            toResetGame.getParticipants().forEach(gp -> newArena(gp.getOnlinePlayer(), true));
+        if (toResetGame.getSettings().isRestartServerAfterEnd() && Minigame.getInstance().getSettings().getGamesPerServer() == 1){
+            ServerRegistry dataManager = ModuleManager.getModule(ServerRegistry.class);
+            boolean bungeecord = dataManager != null &&
+                    (dataManager.getServerDataMySQL() != null
+                            || dataManager.getServerDataRedis() != null);
+            if (bungeecord) {
+                Optional<IMinigame> iMinigame = dataManager.getMinigame(Minigame.getInstance().getName());
+                if (iMinigame.isPresent()) {
+                    for (GamePlayer gamePlayer : toResetGame.getParticipants()) {
+                        IGame bestServer = iMinigame.get().getBestServer(gamePlayer);
+
+                        if (!bestServer.getBungeecordServerName().equalsIgnoreCase(Minigame.getInstance().getSettings().getServerName())) {
+                            bestServer.sendPlayerToServer(gamePlayer.getOnlinePlayer());
+                        }
+                    }
+                }
+            }
+
+
             new BukkitRunnable(){
                 @Override
                 public void run() {
@@ -152,7 +196,7 @@ public class GameService implements Module {
                 }else{
                     LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
                     if (levelModule != null){
-                        levelModule.getCache().remove(gamePlayer);
+                        levelModule.getCache().remove(gamePlayer.getName());
                     }
                     PlayerIdentityRegistry.unregister(gamePlayer.getUniqueId());
                 }
@@ -168,7 +212,7 @@ public class GameService implements Module {
                 ModuleManager.getModule(MessageModule.class).get(player, "chat.finding_new_game").send();
                 Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
                     //PlayerManager.removeGamePlayer(player);
-                    newArena(player, true);
+                    newArena(player, true, true);
                 }, 25L);
             }
         }
@@ -180,7 +224,7 @@ public class GameService implements Module {
             }catch (Exception e){
                 e.printStackTrace();
             }
-            toResetGame.destroyAllModules();
+            toResetGame.terminate();
             //games.remove(toResetGame.getID());
         }, 70L);
     }
@@ -191,6 +235,37 @@ public class GameService implements Module {
 
     public Optional<GameInstance> getGameByName(String name){
         return games.values().stream().filter(gameInstance -> gameInstance.getName().equalsIgnoreCase(name)).findAny();
+    }
+
+    public Optional<GameInstance> getGameByNameOrID(String nameOrID) {
+        return games.values().stream()
+                .filter(gameInstance ->
+                        gameInstance.getName().equalsIgnoreCase(nameOrID) ||
+                                gameInstance.getID().equalsIgnoreCase(nameOrID)
+                )
+                .findAny();
+    }
+
+
+    public List<GameInstance> getFreeGames(Player player) {
+        return games.values().stream()
+                .filter(game -> isAvailableFor(player, game))
+                .toList();
+    }
+
+    public boolean isAvailableFor(Player player, GameInstance gameInstance){
+        boolean isFull = gameInstance.getPlayers().size() >= gameInstance.getSettings().getMaxPlayers();
+        GameState state = gameInstance.getState();
+
+        if (state == GameState.WAITING || state == GameState.STARTING) {
+            return !isFull || player.hasPermission("game.joinfullserver");
+        }
+
+        if (state == GameState.INGAME) {
+            return gameInstance.getSettings().isEnabledJoiningAfterStart() && !isFull;
+        }
+
+        return false;
     }
 
     public void addID(String id){

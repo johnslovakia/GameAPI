@@ -5,11 +5,8 @@ import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
-import cz.johnslovakia.gameapi.utils.ItemBuilder;
+import cz.johnslovakia.gameapi.utils.*;
 
-import cz.johnslovakia.gameapi.utils.Initialize;
-import cz.johnslovakia.gameapi.utils.Terminate;
-import cz.johnslovakia.gameapi.utils.Utils;
 import lombok.Getter;
 
 import lombok.Setter;
@@ -186,6 +183,10 @@ public class InventoryBuilder implements Listener, Initialize, Terminate {
             for (int i = 0; i < 36; i++) {
                 inventory.clear(i);
             }
+
+            /*ItemStack helmet = player.getInventory().getHelmet();
+            inventory.clear();
+            inventory.setHelmet(helmet);*/
         }
 
         if (fillFreeSlots != null){

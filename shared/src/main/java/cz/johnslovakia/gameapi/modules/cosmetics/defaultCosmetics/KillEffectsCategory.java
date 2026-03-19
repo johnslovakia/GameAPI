@@ -4,10 +4,7 @@ import com.cryptomorin.xseries.particles.ParticleDisplay;
 import com.cryptomorin.xseries.particles.Particles;
 import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
-import cz.johnslovakia.gameapi.modules.cosmetics.Cosmetic;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticRarity;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsCategory;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
+import cz.johnslovakia.gameapi.modules.cosmetics.*;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.utils.*;
 
@@ -35,13 +32,12 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
     public KillEffectsCategory(CosmeticsModule manager) {
         super("Kill Effects", new ItemStack(Material.IRON_SWORD));
 
-        FileConfiguration config = Shared.getInstance().getPlugin().getConfig();
-
-        int LEGENDARY_COINS_PRICE = Utils.getPrice(config, "kill_effects.legendary", 18000);
-        int EPIC_COINS_PRICE = Utils.getPrice(config, "kill_effects.epic", 14000);
-        int RARE_COINS_PRICE = Utils.getPrice(config, "kill_effects.rare", 8000);
-        int UNCOMMON_COINS_PRICE = Utils.getPrice(config, "kill_effects.uncommon", 6000);
-        int COMMON_COINS_PRICE = Utils.getPrice(config, "kill_effects.common", 4000);
+        CosmeticPrices.PriceSet p = manager.getPrices().getKillEffects();
+        int LEGENDARY_COINS_PRICE = p.getLegendary();
+        int EPIC_COINS_PRICE = p.getEpic();
+        int RARE_COINS_PRICE = p.getRare();
+        int UNCOMMON_COINS_PRICE = p.getUncommon();
+        int COMMON_COINS_PRICE = p.getCommon();
 
         int LEGENDARY_TOKEN_PRICE = 7;
         int EPIC_TOKEN_PRICE = 5;

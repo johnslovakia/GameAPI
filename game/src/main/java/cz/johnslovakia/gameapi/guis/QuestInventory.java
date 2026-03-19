@@ -7,6 +7,7 @@ import cz.johnslovakia.gameapi.modules.quests.QuestType;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.rewards.RewardItem;
 import cz.johnslovakia.gameapi.rewards.unclaimed.QuestUnclaimedReward;
+import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedReward;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardType;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardsModule;
 import cz.johnslovakia.gameapi.users.GamePlayer;
@@ -62,10 +63,10 @@ public class QuestInventory {
 
 
         ItemBuilder item = new ItemBuilder(Material.ECHO_SHARD);
-        if (!completed){
-            item.setCustomModelData(1023);
-        }else if (unclaimedReward.isPresent()){
+        if (unclaimedReward.isPresent()){
             item.setCustomModelData(1024);
+        } else if (!completed){
+            item.setCustomModelData(1023);
         }else{
             item = new ItemBuilder(Material.BARRIER); //TODO: item pro dokončený quest
         }
@@ -90,7 +91,7 @@ public class QuestInventory {
         item.addLoreLine(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.rewards").getTranslated());
         for (RewardItem rewardItem : quest.getReward().getRewardItems()) {
             Resource resource = rewardItem.getResource();
-            item.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.randomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName()  + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
+            item.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName()  + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
             if (bonus != 0 && resource.isApplicableBonus()){
                 item.addLoreLine(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.bonus")
                         .replace("%bonus%", "" + bonus)
@@ -107,13 +108,11 @@ public class QuestInventory {
         }
 
         item.addLoreLine("");
-        if (completed) {
-            if (unclaimedReward.isPresent()) {
-                ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.unclaimed_rewards.click_to_claim").addToItemLore(item);
-            }else{
-                ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.completed").addToItemLore(item);
-            }
-        }else{
+        if (unclaimedReward.isPresent()) {
+            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.unclaimed_rewards.click_to_claim").addToItemLore(item);
+        } else if (completed) {
+            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.completed").addToItemLore(item);
+        } else {
             ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.currently_active").addToItemLore(item);
         }
 
@@ -144,6 +143,7 @@ public class QuestInventory {
         int bonus = getBonus(gamePlayer);
 
 
+
         GUI inventory = Component.gui()
                 .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七ㆼ").font(Key.key("jsplugins", "guis")))
                 .rows(2)
@@ -171,6 +171,16 @@ public class QuestInventory {
                             .sorted(Comparator.comparing(q -> q.getType() == QuestType.WEEKLY))
                             .toList();
 
+                    List<QuestUnclaimedReward> orphanedRewards = ModuleManager.getModule(UnclaimedRewardsModule.class)
+                            .getPlayerUnclaimedRewardsByType(gamePlayer, UnclaimedRewardType.QUEST).stream()
+                            .filter(QuestUnclaimedReward.class::isInstance)
+                            .map(QuestUnclaimedReward.class::cast)
+                            .filter(r -> sorted.stream().noneMatch(q ->
+                                    q.getType().equals(r.getQuestType()) &&
+                                            q.getName().equalsIgnoreCase(r.getQuestName())))
+                            .toList();
+                    orphanedRewards.forEach(UnclaimedReward::claim);
+
                     int slot = 11;
                     for (Quest quest : sorted) {
                         Optional<QuestUnclaimedReward> unclaimedReward = ModuleManager.getModule(UnclaimedRewardsModule.class)
@@ -182,20 +192,16 @@ public class QuestInventory {
                                 .findFirst();
 
                         Element element = Component.element(getEditedItem(gamePlayer, quest)).addClick(i -> {
-                            if (data.getQuestData(quest).isCompleted()){
-
-                                if (unclaimedReward.isPresent()){
-                                    ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.unclaimed_reward.quest.claimed").send();
-                                    if (bonus != 0) {
-                                        unclaimedReward.get().setBonus(bonus);
-                                    }
-                                    unclaimedReward.get().claim();
-                                    //Minigame.getInstance().getQuestManager().shouldReset(gamePlayer.getPlayerData().getQuestData(quest));
-                                    openGUI(gamePlayer);
-                                }else {
-                                    ModuleManager.getModule(MessageModule.class).get(player, "chat.quests.already_completed")
-                                            .send();
+                            if (unclaimedReward.isPresent()){
+                                ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.unclaimed_reward.quest.claimed").send();
+                                if (bonus != 0) {
+                                    unclaimedReward.get().setBonus(bonus);
                                 }
+                                unclaimedReward.get().claim();
+                                openGUI(gamePlayer);
+                                player.playSound(player, Sound.UI_BUTTON_CLICK, 1F, 1F);
+                            } else if (data.getQuestData(quest).isCompleted()){
+                                ModuleManager.getModule(MessageModule.class).get(player, "chat.quests.already_completed").send();
                                 player.playSound(player, Sound.BLOCK_ANVIL_BREAK, 1F, 1F);
                             }/*else if (data.getQuestData(quest).getStatus().equals(PlayerQuestData.Status.IN_PROGRESS)){
                                 ModuleManager.getModule(MessageModule.class).get(player, "chat.quests.already_started")

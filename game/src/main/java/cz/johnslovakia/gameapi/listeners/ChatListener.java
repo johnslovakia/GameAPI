@@ -104,7 +104,7 @@ public class ChatListener implements Listener {
                                 .replace("%prefix%", StringUtils.colorizer(prefix))
                                 .replace("%name%", player.getName())
                                 .replace("%message%", e.getMessage())
-                                //.replace("%team_color%", "" + team.getTeamColor().getChatColor())
+                                .replace("%team_color%", "§f")
                                 .replace("%team%", "")
                                 .replace("%level_evolution_icon%", (levelModule != null && levelModule.getPlayerData(gamePlayer) != null ? levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon() : Component.text("")))
                                 .send();

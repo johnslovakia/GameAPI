@@ -2,10 +2,7 @@ package cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics;
 
 import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
-import cz.johnslovakia.gameapi.modules.cosmetics.Cosmetic;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticRarity;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsCategory;
-import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
+import cz.johnslovakia.gameapi.modules.cosmetics.*;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.utils.Utils;
@@ -23,14 +20,12 @@ public class KillMessagesCategory extends CosmeticsCategory {
     public KillMessagesCategory(CosmeticsModule manager) {
         super("Kill Messages", new ItemStack(Material.OAK_SIGN));
 
-
-        FileConfiguration config = Shared.getInstance().getPlugin().getConfig();
-
-        int LEGENDARY_COINS_PRICE = Utils.getPrice(config, "kill_messages.legendary", 18000);
-        int EPIC_COINS_PRICE = Utils.getPrice(config, "kill_messages.epic", 14000);
-        int RARE_COINS_PRICE = Utils.getPrice(config, "kill_messages.rare", 8000);
-        int UNCOMMON_COINS_PRICE = Utils.getPrice(config, "kill_messages.uncommon", 6000);
-        int COMMON_COINS_PRICE = Utils.getPrice(config, "kill_messages.common", 4000);
+        CosmeticPrices.PriceSet p = manager.getPrices().getKillMessages();
+        int LEGENDARY_COINS_PRICE = p.getLegendary();
+        int EPIC_COINS_PRICE = p.getEpic();
+        int RARE_COINS_PRICE = p.getRare();
+        int UNCOMMON_COINS_PRICE = p.getUncommon();
+        int COMMON_COINS_PRICE = p.getCommon();
 
         int LEGENDARY_TOKEN_PRICE = 7;
         int EPIC_TOKEN_PRICE = 5;
@@ -76,9 +71,9 @@ public class KillMessagesCategory extends CosmeticsCategory {
                 .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), COMMON_TOKEN_PRICE)
                 .setAsPurchasable();
 
-        Cosmetic swiftie = new Cosmetic("Swiftie", new ItemStack(Material.DIAMOND), CosmeticRarity.LEGENDARY)
+        /*Cosmetic swiftie = new Cosmetic("Swiftie", new ItemStack(Material.DIAMOND), CosmeticRarity.LEGENDARY)
                 .addCost(manager.getMainResource(), LEGENDARY_COINS_PRICE)
-                .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), LEGENDARY_TOKEN_PRICE);
+                .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), LEGENDARY_TOKEN_PRICE);*/
 
         greekMythology.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), greekMythology));
         dragon.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), dragon));
@@ -89,9 +84,9 @@ public class KillMessagesCategory extends CosmeticsCategory {
         genAlpha.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), genAlpha));
         enchanted.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), enchanted));
         dramatic.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), dramatic));
-        swiftie.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), swiftie));
+        //swiftie.setPreviewConsumer(gamePlayer -> sendKillMessagePreview(gamePlayer.getOnlinePlayer(), swiftie));
 
-        addCosmetic(greekMythology, dragon, toilet, glorious, wizard, ninja, genAlpha, enchanted, dramatic, swiftie);
+        addCosmetic(greekMythology, dragon, toilet, glorious, wizard, ninja, genAlpha, enchanted, dramatic/*, swiftie*/);
     }
 
     private static void sendKillMessagePreview(Player player, Cosmetic cosmetic){
@@ -100,10 +95,10 @@ public class KillMessagesCategory extends CosmeticsCategory {
         player.sendMessage("");
         player.sendMessage("§fKill Messages §7- §a" + cosmetic.getName() + " §8(Chat Messages)");
 
-        player.sendMessage(Component.text(" §aMelee Kill:").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".melee").replace("%player_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
-        player.sendMessage(Component.text(" §aFall Damage Kill: ").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".fall").replace("%player_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
-        player.sendMessage(Component.text(" §aVoid Kill: ").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".void").replace("%player_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
-        player.sendMessage(Component.text(" §aRanged Kill: ").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".ranged").replace("%player_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
+        player.sendMessage(Component.text(" §aMelee Kill:").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".melee").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
+        player.sendMessage(Component.text(" §aFall Damage Kill: ").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".fall").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
+        player.sendMessage(Component.text(" §aVoid Kill: ").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".void").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
+        player.sendMessage(Component.text(" §aRanged Kill: ").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".ranged").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
         player.sendMessage("");
     }
 }

@@ -13,10 +13,12 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 
 import cz.johnslovakia.gameapi.utils.GameUtils;
+import cz.johnslovakia.gameapi.utils.Logger;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.damage.DamageType;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -32,11 +34,20 @@ import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class MapSettingsListener implements Listener {
 
+
+    @EventHandler
+    public void onArrowPickup(PlayerPickupArrowEvent e) {
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
+        if (!gamePlayer.isInGame()) return;
+
+        if (gamePlayer.isSpectator() || gamePlayer.getGame().getState() != GameState.INGAME){
+            e.setCancelled(true);
+        }
+    }
 
     @EventHandler
     public void onXpPickup(PlayerPickupExperienceEvent e) {
@@ -85,7 +96,9 @@ public class MapSettingsListener implements Listener {
                     //FLINT & STEEL
                     if(e.getItem() != null){
                         if(e.getItem().getType().equals(Material.FLINT_AND_STEEL)){
-                            if(!settings.canFlintAndSteel()) e.setCancelled(true);
+                            if(!settings.canFlintAndSteel()) {
+                                e.setCancelled(true);
+                            }
                         }
                     }
                 }
@@ -192,24 +205,21 @@ public class MapSettingsListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void entityDamage(EntityDamageEvent e){
-        if (!(e.getEntity() instanceof Player)){
-            return;
-        }
-        Player player = (Player) e.getEntity();
+        if (!(e.getEntity() instanceof Player player)) return;
+
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         if (!gamePlayer.isInGame()) return;
         GameInstance game = gamePlayer.getGame();
+        if (game == null) return;
 
-        if (game != null) {
-            if (game.getState() == GameState.WAITING || game.getState() == GameState.STARTING || game.getState() == GameState.ENDING) {
-                e.setCancelled(true);
-                if (e.getEntity() instanceof Player) {
-                    if (e.getCause() == EntityDamageEvent.DamageCause.VOID) {
-                        if (game.getState() == GameState.ENDING && !game.getSettings().isTeleportPlayersAfterEnd()) {
-                            player.teleport(GameUtils.getNonRespawnLocation(game));
-                        }else{
-                            e.getEntity().teleport(game.getModule(LobbyModule.class).getLobbyLocation().getLocation());
-                        }
+        if (game.getState() == GameState.WAITING || game.getState() == GameState.STARTING || game.getState() == GameState.ENDING) {
+            e.setCancelled(true);
+            if (e.getEntity() instanceof Player) {
+                if (e.getCause() == EntityDamageEvent.DamageCause.VOID || e.getDamageSource().getDamageType().equals(DamageType.OUT_OF_WORLD)) {
+                    if (game.getState() == GameState.ENDING && !game.getSettings().isTeleportPlayersAfterEnd()) {
+                        player.teleport(GameUtils.getNonRespawnLocation(game));
+                    }else{
+                        e.getEntity().teleport(game.getModule(LobbyModule.class).getLobbyLocation().getLocation());
                     }
                 }
             }
@@ -217,7 +227,6 @@ public class MapSettingsListener implements Listener {
 
         AreaSettings settings = AreaManager.getActiveSettings(e.getEntity().getLocation());
         if(settings != null){
-
             if(e.getEntity().getType().equals(EntityType.ITEM_FRAME)){
                 if(!settings.canItemFrameDamage()) e.setCancelled(true);
             }else if(e.getEntity().getType().equals(EntityType.PAINTING)){
@@ -525,7 +534,7 @@ public class MapSettingsListener implements Listener {
             if (!gamePlayer.isInGame()) return;
             GameInstance game = PlayerManager.getGamePlayer(player).getGame();
 
-            if ((game != null && game.getState() != GameState.INGAME) || gamePlayer.isSpectator()) {
+            if (game.getState() != GameState.INGAME || gamePlayer.isSpectator()) {
                 e.setCancelled(true);
             }
 
@@ -534,10 +543,11 @@ public class MapSettingsListener implements Listener {
                 if (!settings.isAllowFallDamage() && e.getCause().equals(EntityDamageEvent.DamageCause.FALL)) {
                     e.setCancelled(true);
                 }
-                if (settings.isAllowedInstantVoidKill() && e.getCause().equals(EntityDamageEvent.DamageCause.VOID)){
+                if (settings.isAllowedInstantVoidKill() && (e.getCause().equals(EntityDamageEvent.DamageCause.VOID) || e.getDamageSource().getDamageType().equals(DamageType.OUT_OF_WORLD))){
                     e.setCancelled(true);
                     gamePlayer.getMetadata().put("diedInVoid", true);
-                    player.damage(player.getHealth());
+                    //player.damage(player.getHealth());
+                    player.setHealth(Double.MIN_VALUE);
 
                 }
                 if(settings.canPlayerInvincibility()) {
@@ -547,36 +557,45 @@ public class MapSettingsListener implements Listener {
         }
     }
 
-    @EventHandler
+    private final Set<UUID> processingVoidKill = new HashSet<>();
+
+    @EventHandler(ignoreCancelled = true)
     public void onPlayerMove(PlayerMoveEvent e) {
+        if (e.getFrom().getBlockX() == e.getTo().getBlockX()
+                && e.getFrom().getBlockY() == e.getTo().getBlockY()
+                && e.getFrom().getBlockZ() == e.getTo().getBlockZ()) return;
+
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         if (!gamePlayer.isInGame()) return;
-        GameInstance game = PlayerManager.getGamePlayer(player).getGame();
-
+        GameInstance game = gamePlayer.getGame();
         if (game == null || game.getState() != GameState.INGAME) return;
 
+        Area borderArea = game.getCurrentMap().getMainArea();
+        if (borderArea == null) return;
+
         AreaSettings settings = AreaManager.getActiveSettings(gamePlayer);
-        if(game.getCurrentMap().getMainArea() != null && settings != null) {
-            Area borderArea =  game.getCurrentMap().getMainArea();
-            if (settings.isAllowedInstantVoidKill() && borderArea != null || gamePlayer.isSpectator()) {
-                double lowestAreaY = borderArea.getLocation1().getY();
-                if (borderArea.getLocation2().getY() < lowestAreaY){
-                    lowestAreaY = borderArea.getLocation2().getY();
-                }
-                if (e.getTo().getY() < lowestAreaY - 20){
-                    if (!gamePlayer.isSpectator()) {
-                        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
-                            player.getInventory().clear();
-                            gamePlayer.getMetadata().put("diedInVoid", true);
-                            player.damage(player.getHealth());
-                        }, 1L);
-                    }else{
-                        player.teleport(GameUtils.getNonRespawnLocation(game));
-                    }
-                }
-            }
+        if (settings == null) return;
+
+        boolean shouldCheck = settings.isAllowedInstantVoidKill() || gamePlayer.isSpectator();
+        if (!shouldCheck) return;
+
+        double lowestAreaY = Math.min(borderArea.getLocation1().getY(), borderArea.getLocation2().getY());
+        if (e.getTo().getY() >= lowestAreaY - 20) return;
+
+        if (gamePlayer.isSpectator()) {
+            player.teleport(GameUtils.getNonRespawnLocation(game));
+            return;
         }
+
+        if (!processingVoidKill.add(player.getUniqueId())) return;
+        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
+            processingVoidKill.remove(player.getUniqueId());
+            if (!gamePlayer.isInGame() || game.getState() != GameState.INGAME) return;
+
+            gamePlayer.getMetadata().put("diedInVoid", true);
+            player.damage(player.getHealth());
+        }, 1L);
     }
 
     @EventHandler

@@ -27,6 +27,7 @@ import lombok.Setter;
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.Row;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -46,7 +47,7 @@ public class DailyRewardTrackModule implements Module, Listener {
 
     private List<DailyRewardTier> tiers = new ArrayList<>();
     @Getter(AccessLevel.PACKAGE)
-    private Map<PlayerIdentity, Integer> dailyRewardsClaims = new ConcurrentHashMap<>();
+    private Map<String, Integer> dailyRewardsClaims = new ConcurrentHashMap<>();
 
     @Setter
     private Reward afterMaxTierReward;
@@ -55,213 +56,187 @@ public class DailyRewardTrackModule implements Module, Listener {
 
     @Override
     public void initialize() {
-
     }
 
     @Override
     public void terminate() {
-        tiers = null;;
+        tiers = null;
     }
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
-        Player player = e.getPlayer();
-        PlayerIdentity playerIdentity = PlayerIdentityRegistry.get(player);
-
-        loadPlayerData(playerIdentity);
+        loadPlayerData(e.getPlayer());
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent e) {
-        dailyRewardsClaims.remove(PlayerIdentityRegistry.get(e.getPlayer()));
+        dailyRewardsClaims.remove(e.getPlayer().getName());
     }
 
-    private void loadPlayerData(PlayerIdentity playerIdentity) {
-        CompletableFuture.runAsync(() -> {
-            if (Shared.getInstance().getDatabase() == null) {
-                return;
-            }
+    @EventHandler
+    public void onDailyXPGain(DailyXPGainEvent e) {
+        OfflinePlayer offlinePlayer = e.getOfflinePlayer();
+        UnclaimedRewardsModule unclaimedRewardsModule = ModuleManager.getModule(UnclaimedRewardsModule.class);
+        int dailyXP = e.getNewXP();
 
-            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
-                if (connection == null) {
-                    return;
-                }
+        unclaimedRewardsModule.getOrLoadUnclaimedRewardsByType(offlinePlayer, UnclaimedRewardType.DAILYMETER)
+                .thenAccept(dailyMeterRewards -> {
 
-                String tableName = PlayerTable.TABLE_NAME;
-                LocalDate today = LocalDate.now();
+                    int accumulatedXP = 0;
 
-                Optional<Row> result = connection.select()
-                        .from(tableName)
-                        .where().isEqual("Nickname", playerIdentity.getName())
-                        .obtainOne();
+                    for (DailyRewardTier tier : getTiers()) {
+                        accumulatedXP += tier.neededXP();
 
-                if (result.isPresent()) {
-                    String lastReset = result.get().getString("DailyRewards_reset");
+                        if (dailyXP < accumulatedXP) continue;
 
-                    if (lastReset == null) {
-                        connection.update()
-                                .table(tableName)
-                                .set("DailyRewards_reset", today.toString())
-                                .where().isEqual("Nickname", playerIdentity.getName())
-                                .execute();
-                    } else {
-                        LocalDate lastResetDate = LocalDate.parse(lastReset);
+                        boolean alreadyHasReward = dailyMeterRewards.stream()
+                                .map(r -> (DailyMeterUnclaimedReward) r)
+                                .filter(r -> r.getCreatedAt().toLocalDate().equals(LocalDate.now()))
+                                .anyMatch(r -> r.getTier() == tier.tier());
 
-                        if (!lastResetDate.equals(today)) {
-                            Connection conn = connection.getConnection();
-                            String sql = "UPDATE `" + tableName + "` SET " +
-                                    "DailyRewards_reset = ?, " +
-                                    "DailyXP = 0, " +
-                                    "DailyRewards_claims = 0 " +
-                                    "WHERE Nickname = ?";
+                        boolean alreadyClaimed = tier.tier() <= getPlayerDailyClaims(offlinePlayer);
 
-                            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                                stmt.setString(1, today.toString());
-                                stmt.setString(2, playerIdentity.getName());
-                                stmt.executeUpdate();
-                            }
-
-                            if (ModuleManager.getInstance().hasModule(LevelModule.class)) {
-                                ModuleManager.getModule(LevelModule.class).getPlayerData(playerIdentity).setDailyXP(0);
-                            }
-                            dailyRewardsClaims.put(playerIdentity, 0);
-                        } else {
-                            dailyRewardsClaims.computeIfAbsent(playerIdentity,
-                                    pi -> result.get().getInt("DailyRewards_claims"));
+                        if (!alreadyHasReward && !alreadyClaimed) {
+                            Reward reward = tier.reward();
+                            JsonObject json = new JsonObject();
+                            json.addProperty("tier", tier.tier());
+                            reward.setAsClaimable(offlinePlayer, UnclaimedRewardType.DAILYMETER, json);
                         }
                     }
-                }
-
-            } catch (SQLException e) {
-                Logger.log("Error loading player data for " + playerIdentity.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
-                e.printStackTrace();
-            }
-        });
+                });
     }
 
-    public void setPlayerDailyRewardsClaim(PlayerIdentity playerIdentity, int claims){
-        dailyRewardsClaims.put(playerIdentity, claims);
-    }
-
-    public void savePlayerDailyRewardsClaim(PlayerIdentity playerIdentity) {
-        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
+    private void loadPlayerData(OfflinePlayer player) {
+        CompletableFuture.runAsync(() -> {
             if (Shared.getInstance().getDatabase() == null) return;
 
             try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
                 if (connection == null) return;
 
                 String tableName = PlayerTable.TABLE_NAME;
+                LocalDate today = LocalDate.now();
 
-                connection.update()
-                        .table(tableName)
-                        .set("DailyRewards_claims", getPlayerDailyClaims(playerIdentity))
-                        .where().isEqual("Nickname", playerIdentity.getName())
-                        .execute();
+                Optional<Row> result = connection.select()
+                        .from(tableName)
+                        .where().isEqual("Nickname", player.getName())
+                        .obtainOne();
 
-            } catch (Exception e) {
-                Logger.log("Failed to save daily rewards claims for " + playerIdentity.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+                if (result.isEmpty()) return;
+
+                String lastReset = result.get().getString("DailyRewards_reset");
+
+                if (lastReset == null) {
+                    connection.update()
+                            .table(tableName)
+                            .set("DailyRewards_reset", today.toString())
+                            .where().isEqual("Nickname", player.getName())
+                            .execute();
+                    return;
+                }
+
+                LocalDate lastResetDate = LocalDate.parse(lastReset);
+
+                if (!lastResetDate.equals(today)) {
+                    Connection conn = connection.getConnection();
+                    String sql = "UPDATE `" + tableName + "` SET " +
+                            "DailyRewards_reset = ?, " +
+                            "DailyXP = 0, " +
+                            "DailyRewards_claims = 0 " +
+                            "WHERE Nickname = ?";
+
+                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        stmt.setString(1, today.toString());
+                        stmt.setString(2, player.getName());
+                        stmt.executeUpdate();
+                    }
+
+                    if (ModuleManager.getInstance().hasModule(LevelModule.class)) {
+                        PlayerLevelData levelData = ModuleManager.getModule(LevelModule.class).getPlayerData(player);
+                        if (levelData != null) {
+                            levelData.setDailyXP(0);
+                        }
+                    }
+
+                    dailyRewardsClaims.put(player.getName(), 0);
+                } else {
+                    dailyRewardsClaims.computeIfAbsent(player.getName(),
+                            pi -> result.get().getInt("DailyRewards_claims"));
+                }
+
+            } catch (SQLException e) {
+                Logger.log("Error loading player data for " + player.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
                 e.printStackTrace();
             }
         });
     }
 
-    public int getPlayerDailyClaims(PlayerIdentity playerIdentity){
-        return dailyRewardsClaims.getOrDefault(playerIdentity, 0);
+    public void setPlayerDailyRewardsClaim(PlayerIdentity playerIdentity, int claims) {
+        setPlayerDailyRewardsClaim(playerIdentity.getOfflinePlayer(), claims);
     }
 
-    /*@EventHandler
-    public void onDailyXPGain(DailyXPGainEvent e) {
-        PlayerIdentity playerIdentity = e.getPlayerIdentity();
-        UnclaimedRewardsModule unclaimedRewardsModule = ModuleManager.getModule(UnclaimedRewardsModule.class);
-        int newBalance = e.getNewXP();
+    public void setPlayerDailyRewardsClaim(OfflinePlayer player, int claims) {
+        dailyRewardsClaims.put(player.getName(), claims);
+    }
 
-        /*List<DailyRewardTier> tiers = new ArrayList<>(getTiers()
-                .stream()
-                .filter(t ->
-                        t.tier() > getPlayerDailyClaims(playerIdentity) &&
-                                unclaimedRewardsModule.getPlayerUnclaimedRewardsByType(playerIdentity, UnclaimedRewardType.DAILYMETER)
-                                        .stream()
-                                        .map(r -> (DailyMeterUnclaimedReward) r)
-                                        .noneMatch(r -> r.getTier() == t.tier())
-                )
-                .toList());*
+    public void savePlayerDailyRewardsClaim(PlayerIdentity playerIdentity) {
+        savePlayerDailyRewardsClaim(playerIdentity.getOfflinePlayer());
+    }
 
+    public void savePlayerDailyRewardsClaim(OfflinePlayer player) {
+        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
+            if (Shared.getInstance().getDatabase() == null) return;
 
-        int xp = newBalance;
-        for (DailyRewardTier tier : getTiers()) {
+            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+                if (connection == null) return;
 
-            boolean isClaimedOrUnclaimed = tier.tier() <= getPlayerDailyClaims(playerIdentity) ||
-                    unclaimedRewardsModule.getPlayerUnclaimedRewardsByType(playerIdentity, UnclaimedRewardType.DAILYMETER)
-                            .stream()
-                            .map(r -> (DailyMeterUnclaimedReward) r)
-                            .anyMatch(r -> r.getTier() == tier.tier());
+                connection.update()
+                        .table(PlayerTable.TABLE_NAME)
+                        .set("DailyRewards_claims", getPlayerDailyClaims(player))
+                        .where().isEqual("Nickname", player.getName())
+                        .execute();
 
-            if (isClaimedOrUnclaimed) {
-                xp -= tier.neededXP();
-            } else if (xp >= tier.neededXP()) {
-                Reward reward = tier.reward();
-
-                JsonObject json = new JsonObject();
-                json.addProperty("tier", tier.tier());
-                reward.setAsClaimable(playerIdentity, UnclaimedRewardType.DAILYMETER, json);
-
-                xp -= tier.neededXP();
-            } else {
-                break;
+            } catch (Exception e) {
+                Logger.log("Failed to save daily rewards claims for " + player.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+                e.printStackTrace();
             }
-        }
-    }*/
+        });
+    }
 
-    @EventHandler
-    public void onDailyXPGain(DailyXPGainEvent e) {
-        PlayerIdentity playerIdentity = e.getPlayerIdentity();
-        UnclaimedRewardsModule unclaimedRewardsModule = ModuleManager.getModule(UnclaimedRewardsModule.class);
-        int dailyXP = e.getNewXP();
+    public int getPlayerDailyClaims(PlayerIdentity playerIdentity) {
+        return getPlayerDailyClaims(playerIdentity.getOfflinePlayer());
+    }
 
-        int accumulatedXP = 0;
-
-        for (DailyRewardTier tier : getTiers()) {
-            accumulatedXP += tier.neededXP();
-
-            if (dailyXP >= accumulatedXP) {
-                boolean alreadyHasReward = unclaimedRewardsModule
-                        .getPlayerUnclaimedRewardsByType(playerIdentity, UnclaimedRewardType.DAILYMETER)
-                        .stream()
-                        .map(r -> (DailyMeterUnclaimedReward) r)
-                        .filter(r -> r.getCreatedAt().toLocalDate().equals(LocalDate.now()))
-                        .anyMatch(r -> r.getTier() == tier.tier());
-
-                boolean alreadyClaimed = tier.tier() <= getPlayerDailyClaims(playerIdentity);
-
-                if (!alreadyHasReward && !alreadyClaimed) {
-                    Reward reward = tier.reward();
-                    JsonObject json = new JsonObject();
-                    json.addProperty("tier", tier.tier());
-                    reward.setAsClaimable(playerIdentity, UnclaimedRewardType.DAILYMETER, json);
-                }
-            }
-        }
+    public int getPlayerDailyClaims(OfflinePlayer player) {
+        return dailyRewardsClaims.getOrDefault(player.getName(), 0);
     }
 
     public int getXpProgressOnCurrentTier(PlayerIdentity playerIdentity) {
-        PlayerLevelData data = ModuleManager.getModule(LevelModule.class).getPlayerData(playerIdentity);
+        return getXpProgressOnCurrentTier(playerIdentity.getOfflinePlayer());
+    }
+
+    public int getXpProgressOnCurrentTier(OfflinePlayer player) {
+        PlayerLevelData data = ModuleManager.getModule(LevelModule.class).getPlayerData(player);
         if (data == null) return 0;
 
         int dailyXp = data.getDailyXP();
-        int xpSpent = 0;
+        int accumulatedXP = 0;
 
         for (DailyRewardTier tier : tiers) {
-            if (dailyXp < xpSpent + tier.neededXP()) {
-                return dailyXp - xpSpent;
+            if (dailyXp < accumulatedXP + tier.neededXP()) {
+                return dailyXp - accumulatedXP;
             }
-            xpSpent += tier.neededXP();
+            accumulatedXP += tier.neededXP();
         }
 
-        return tiers.isEmpty() ? 0 : tiers.getLast().neededXP();
+        return dailyXp - accumulatedXP;
     }
 
     public DailyRewardTier getPlayerCurrentTier(PlayerIdentity playerIdentity) {
-        PlayerLevelData data = ModuleManager.getModule(LevelModule.class).getPlayerData(playerIdentity);
+        return getPlayerCurrentTier(playerIdentity.getOfflinePlayer());
+    }
+
+    public DailyRewardTier getPlayerCurrentTier(OfflinePlayer player) {
+        PlayerLevelData data = ModuleManager.getModule(LevelModule.class).getPlayerData(player);
         if (data == null) return null;
 
         int dailyXp = data.getDailyXP();
@@ -281,7 +256,11 @@ public class DailyRewardTrackModule implements Module, Listener {
     }
 
     public DailyRewardTier getPlayerCurrentTargetTier(PlayerIdentity playerIdentity) {
-        PlayerLevelData data = ModuleManager.getModule(LevelModule.class).getPlayerData(playerIdentity);
+        return getPlayerCurrentTargetTier(playerIdentity.getOfflinePlayer());
+    }
+
+    public DailyRewardTier getPlayerCurrentTargetTier(OfflinePlayer player) {
+        PlayerLevelData data = ModuleManager.getModule(LevelModule.class).getPlayerData(player);
         if (data == null) return null;
 
         int dailyXp = data.getDailyXP();
@@ -296,7 +275,6 @@ public class DailyRewardTrackModule implements Module, Listener {
 
         return null;
     }
-
 
 
     public static Builder builder() {
@@ -345,23 +323,23 @@ public class DailyRewardTrackModule implements Module, Listener {
                     .setMaxTier(7)
                     .addTier(500)
                         .withRandomReward("Coins", 250, 500)
-                    .addTier(750)
-                        .withRandomReward("Coins", 400, 600)
+                    .addTier(500)
+                        .withRandomReward("Coins", 250, 500)
                         .withChanceReward("CosmeticTokens", 1, 4)
-                    .addTier(750)
-                        .withRandomReward("Coins", 500, 700)
+                    .addTier(1000)
+                        .withRandomReward("Coins", 400, 700)
                         .withChanceReward("CosmeticTokens", 1, 8)
                     .addTier(1000)
-                        .withRandomReward("Coins", 600, 700)
+                        .withRandomReward("Coins", 400, 700)
                         .withChanceReward("CosmeticTokens", 1, 12)
                     .addTier(1500)
-                        .withRandomReward("Coins", 700, 900)
+                        .withRandomReward("Coins", 500, 750)
                         .withChanceReward("CosmeticTokens", 1, 18)
                     .addTier(2000)
-                        .withRandomReward("Coins", 700, 900)
+                        .withRandomReward("Coins", 700, 1000)
                         .withChanceReward("CosmeticTokens", 1, 24)
-                    .addTier(2500)
-                        .withRandomReward("Coins", 800, 1000)
+                    .addTier(3000)
+                        .withRandomReward("Coins", 800, 1200)
                         .withRandomChanceReward("CosmeticTokens", 1, 2, 30)
                     .done();
         }
@@ -448,14 +426,11 @@ public class DailyRewardTrackModule implements Module, Listener {
                                     ", current count: " + module.tiers.size()
                     );
                 }
-
                 if (tierBuilder.neededXP <= 0) {
                     throw new IllegalArgumentException("neededXP must be positive, got: " + tierBuilder.neededXP);
                 }
-
                 DailyRewardTier tier = tierBuilder.buildTier(tierNumber++);
                 module.tiers.add(tier);
-
             }
             module.tiers.sort(Comparator.comparingInt(DailyRewardTier::tier));
             return module;

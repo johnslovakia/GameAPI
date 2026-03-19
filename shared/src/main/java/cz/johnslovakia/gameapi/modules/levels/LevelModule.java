@@ -17,8 +17,6 @@ import cz.johnslovakia.gameapi.rewards.Reward;
 import cz.johnslovakia.gameapi.rewards.RewardItem;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardType;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
-import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
-
 import cz.johnslovakia.gameapi.utils.CharRepo;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.StringUtils;
@@ -40,6 +38,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -56,20 +55,19 @@ import java.util.concurrent.ConcurrentHashMap;
 @NoArgsConstructor
 public class LevelModule implements Module, Listener {
 
-    @Getter(AccessLevel.PACKAGE)
+    @Getter
     private List<LevelRange> levelRanges = new ArrayList<>();
-    @Getter(AccessLevel.PACKAGE)
+    @Getter
     private List<LevelReward> levelRewards = new ArrayList<>();
-    @Getter(AccessLevel.PACKAGE)
+    @Getter
     private List<LevelEvolution> levelEvolutions = new ArrayList<>();
 
     @Getter
-    public transient Map<PlayerIdentity, PlayerLevelData> cache = new ConcurrentHashMap<>();
+    public transient Map<String, PlayerLevelData> cache = new ConcurrentHashMap<>();
 
 
     @Override
     public void initialize() {
-
     }
 
     @Override
@@ -80,93 +78,94 @@ public class LevelModule implements Module, Listener {
         cache = null;
     }
 
-    /*@EventHandler
-    public void onPlayerQuit(PlayerQuitEvent e) {
-        PlayerIdentity playerIdentity = PlayerIdentityRegistry.get(e.getPlayer());
-        cache.remove(PlayerIdentityRegistry.get(e.getPlayer()));
-    }*/
-
     public CompletableFuture<PlayerLevelData> loadPlayerData(PlayerIdentity playerIdentity) {
+        return loadPlayerData(playerIdentity.getOfflinePlayer());
+    }
+
+    public CompletableFuture<PlayerLevelData> loadPlayerData(OfflinePlayer offlinePlayer) {
         if (!ModuleManager.getInstance().hasModule(LevelModule.class)) {
             Logger.log("LevelModule is not registered!", Logger.LogType.ERROR);
         }
 
-        PlayerLevelData cached = cache.get(playerIdentity);
+        String nickname = offlinePlayer.getName();
+
+        PlayerLevelData cached = cache.get(nickname);
         if (cached != null) {
             return CompletableFuture.completedFuture(cached);
         }
 
-        return CompletableFuture.supplyAsync(() -> {
-            if (Shared.getInstance().getDatabase() == null) return null;
+        CompletableFuture<Optional<Row>> rowFuture = CompletableFuture.supplyAsync(() -> {
+            if (Shared.getInstance().getDatabase() == null) return Optional.empty();
 
             try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
-                if (connection == null) return null;
+                if (connection == null) return Optional.empty();
 
-                Optional<Row> result = connection.select()
+                return connection.select()
                         .from(PlayerTable.TABLE_NAME)
-                        .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
+                        .where().isEqual("Nickname", nickname)
                         .obtainOne();
 
-                return result.orElse(null);
             } catch (Exception e) {
-                Logger.log("Failed to load player level data for " + playerIdentity.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+                Logger.log("Failed to load player level data for " + nickname + ": " + e.getMessage(), Logger.LogType.ERROR);
                 e.printStackTrace();
-                return null;
+                return Optional.empty();
             }
-        }).thenCompose(row -> {
-            if (row == null) {
-                PlayerLevelData defaultData = new PlayerLevelData(playerIdentity, 1, 0);
-                return defaultData.calculate().thenApply(v -> {
-                    Player player = playerIdentity.getOnlinePlayer();
-                    if (player != null) {
-                        player.setExp(0f);
-                        player.setLevel(1);
-                    }
-                    cache.put(playerIdentity, defaultData);
-                    return defaultData;
+        });
+
+        CompletableFuture<Integer> xpFuture = ModuleManager.getModule(ResourcesModule.class)
+                .getPlayerBalance(offlinePlayer, "ExperiencePoints");
+
+        return rowFuture.thenCombine(xpFuture, (optRow, xp) -> {
+            int dailyXP = optRow.map(row -> row.getInt("DailyXP")).orElse(0);
+            int level = calculateLevelFromXp(xp);
+
+            PlayerLevelData data = new PlayerLevelData(offlinePlayer, level, dailyXP);
+            data.calculateSync(xp);
+
+            Player player = offlinePlayer instanceof Player p ? p : null;
+            if (player != null) {
+                float xpProgress = data.getXpToNextLevel() > 0
+                        ? (float) data.getXpOnCurrentLevel() / data.getXpToNextLevel()
+                        : 1.0f;
+                // setExp/setLevel musí na hlavním vlákně
+                Bukkit.getScheduler().runTask(Shared.getInstance().getPlugin(), () -> {
+                    player.setExp(Math.min(xpProgress, 1.0f));
+                    player.setLevel(level);
                 });
             }
 
-            int dailyXP = row.getInt("DailyXP");
-
-            return ModuleManager.getModule(ResourcesModule.class)
-                    .getPlayerBalance(playerIdentity, "ExperiencePoints")
-                    .thenCompose(xp -> {
-                        int level = calculateLevelFromXp(xp);
-                        PlayerLevelData data = new PlayerLevelData(playerIdentity, level, dailyXP);
-
-                        return data.calculate().thenApply(v -> {
-                            float xpProgress = (float) data.getXpOnCurrentLevel() / data.getXpToNextLevel();
-                            Player player = playerIdentity.getOnlinePlayer();
-                            if (player != null) {
-                                player.setExp(Math.min(xpProgress, 1.0f));
-                                player.setLevel(level);
-                            }
-
-                            cache.put(playerIdentity, data);
-                            return data;
-                        });
-                    });
+            cache.put(nickname, data);
+            return data;
+        }).exceptionally(ex -> {
+            Logger.log("loadPlayerData failed for " + nickname + ": " + ex.getMessage(), Logger.LogType.ERROR);
+            ex.printStackTrace();
+            return null;
         });
     }
 
     public PlayerLevelData getPlayerData(PlayerIdentity playerIdentity) {
-        PlayerLevelData data = cache.get(playerIdentity);
-        if (data == null)
-            playerIdentity.getOnlinePlayer().sendMessage("§cUnable to retrieve your Player Level Data at the moment. Sorry for the inconvenience.");
+        return getPlayerData(playerIdentity.getOfflinePlayer());
+    }
 
+    public PlayerLevelData getPlayerData(OfflinePlayer offlinePlayer) {
+        PlayerLevelData data = cache.get(offlinePlayer.getName());
+        if (data == null) {
+            Player online = offlinePlayer instanceof Player p ? p : null;
+            if (online != null)
+                online.sendMessage("§cUnable to retrieve your Player Level Data at the moment. Sorry for the inconvenience.");
+        }
         return data;
     }
 
-    public int getPlayerLevel(PlayerIdentity playerIdentity){
-        return getPlayerData(playerIdentity).getLevel();
+    public int getPlayerLevel(OfflinePlayer offlinePlayer) {
+        return getPlayerData(offlinePlayer).getLevel();
     }
 
-    public Component getPlayerLevelColored(PlayerIdentity playerIdentity){
-        PlayerLevelData data = getPlayerData(playerIdentity);
+    public Component getPlayerLevelColored(OfflinePlayer offlinePlayer) {
+        PlayerLevelData data = getPlayerData(offlinePlayer);
         if (data == null) return Component.text("§c0");
 
-        if (data.getLevel() >= 100){
+        if (data.getLevel() >= 100) {
             return Component.text()
                     .append(Component.text("1", TextColor.fromHexString("#5fb243")))
                     .append(Component.text("0", TextColor.fromHexString("#d86dd8")))
@@ -178,8 +177,8 @@ public class LevelModule implements Module, Listener {
                 .color(data.getLevelEvolution().color());
     }
 
-    public Component getLevelColored(int level){
-        if (level >= 100){
+    public Component getLevelColored(int level) {
+        if (level >= 100) {
             return Component.text()
                     .append(Component.text("1", TextColor.fromHexString("#5fb243")))
                     .append(Component.text("0", TextColor.fromHexString("#d86dd8")))
@@ -191,42 +190,40 @@ public class LevelModule implements Module, Listener {
                 .color(getLevelEvolution(level).color());
     }
 
-    public LevelRange getPlayerLevelRange(PlayerIdentity playerIdentity){
-        return getPlayerData(playerIdentity).getLevelRange();
-    }
-    public LevelRange getPlayerNextLevelRange(PlayerIdentity playerIdentity){
-        return getLevelRange(getPlayerData(playerIdentity).getLevel() + 1);
+    public LevelRange getPlayerLevelRange(OfflinePlayer offlinePlayer) {
+        return getPlayerData(offlinePlayer).getLevelRange();
     }
 
-    public void addDailyXP(PlayerIdentity playerIdentity, int amount) {
-        PlayerLevelData data = getPlayerData(playerIdentity);
+    public LevelRange getPlayerNextLevelRange(OfflinePlayer offlinePlayer) {
+        return getLevelRange(getPlayerData(offlinePlayer).getLevel() + 1);
+    }
+
+    public void addDailyXP(OfflinePlayer offlinePlayer, int amount) {
+        PlayerLevelData data = getPlayerData(offlinePlayer);
 
         int oldXP = data.getDailyXP();
         int newXP = oldXP + amount;
         data.setDailyXP(newXP);
 
-        DailyXPGainEvent event = new DailyXPGainEvent(playerIdentity, oldXP, newXP, amount);
+        DailyXPGainEvent event = new DailyXPGainEvent(offlinePlayer, oldXP, newXP, amount);
         Bukkit.getPluginManager().callEvent(event);
 
         Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
-            CompletableFuture.runAsync(() -> {
-                try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
-                    if (dbConn == null) return;
+            try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+                if (dbConn == null) return;
 
-                    Connection conn = dbConn.getConnection();
-                    String sql = "UPDATE " + PlayerTable.TABLE_NAME + " SET DailyXP = ? WHERE Nickname = ?";
+                Connection conn = dbConn.getConnection();
+                String sql = "UPDATE " + PlayerTable.TABLE_NAME + " SET DailyXP = ? WHERE Nickname = ?";
 
-                    try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                        ps.setInt(1, data.getDailyXP());
-                        ps.setString(2, playerIdentity.getName());
-                        ps.executeUpdate();
-                    }
-
-                } catch (Exception e) {
-                    Bukkit.getLogger().severe("Failed to save player data for " + playerIdentity.getName());
-                    e.printStackTrace();
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, data.getDailyXP());
+                    ps.setString(2, offlinePlayer.getName());
+                    ps.executeUpdate();
                 }
-            });
+            } catch (Exception e) {
+                Bukkit.getLogger().severe("Failed to save DailyXP for " + offlinePlayer.getName());
+                e.printStackTrace();
+            }
         });
     }
 
@@ -259,7 +256,7 @@ public class LevelModule implements Module, Listener {
         return result;
     }
 
-    public LevelEvolution getNextLevelEvolution(int level){
+    public LevelEvolution getNextLevelEvolution(int level) {
         for (LevelEvolution evo : levelEvolutions) {
             if (evo.startLevel() > level) {
                 return evo;
@@ -288,52 +285,50 @@ public class LevelModule implements Module, Listener {
         return currentLevel;
     }
 
-    public Reward getRewardForLevel(int level){
+    public Reward getRewardForLevel(int level) {
         LevelReward levelReward = levelRewards.stream()
                 .filter(lr -> Arrays.stream(lr.level()).anyMatch(l -> l == level))
                 .findFirst()
                 .orElse(null);
-        if (levelReward != null){
+        if (levelReward != null) {
             Reward merged = new Reward();
             getLevelRange(level).reward().getRewardItems().forEach(merged::addRewardItem);
             levelReward.reward().getRewardItems().forEach(merged::addRewardItem);
             return merged;
-        }else{
+        } else {
             return getLevelRange(level).reward();
         }
     }
 
-    public void checkLevelUp(PlayerIdentity playerIdentity) {
-        PlayerLevelData data = getPlayerData(playerIdentity);
+    public void checkLevelUp(OfflinePlayer offlinePlayer) {
+        PlayerLevelData data = getPlayerData(offlinePlayer);
         if (data == null) return;
         int currentLevel = data.getLevel();
 
         if (currentLevel >= levelRanges.getLast().endLevel())
             return;
 
-        ModuleManager.getModule(ResourcesModule.class).getPlayerBalance(playerIdentity, "ExperiencePoints").thenAccept(xp -> {
+        ModuleManager.getModule(ResourcesModule.class).getPlayerBalance(offlinePlayer, "ExperiencePoints").thenAccept(xp -> {
             int newLevel = calculateLevelFromXp(xp);
 
             if (newLevel > currentLevel) {
-                performLevelUp(playerIdentity, currentLevel, newLevel);
+                performLevelUp(offlinePlayer, currentLevel, newLevel);
                 data.setLevel(newLevel);
             }
         });
     }
 
-    private void performLevelUp(PlayerIdentity playerIdentity, int currentLevel, int newLevel){
-        //ToDo: new Sound
-
-        new BukkitRunnable(){
+    private void performLevelUp(OfflinePlayer offlinePlayer, int currentLevel, int newLevel) {
+        new BukkitRunnable() {
             @Override
             public void run() {
-                Player player = playerIdentity.getOnlinePlayer();
+                Player player = offlinePlayer instanceof Player p ? p : null;
                 if (player != null) {
-                    player.playSound(playerIdentity.getOnlinePlayer(), "jsplugins:completed", 20.0F, 20.0F);
-                    ModuleManager.getModule(MessageModule.class).get(playerIdentity, "chat.level.levelUp")
+                    player.playSound(player, "jsplugins:completed", 20.0F, 20.0F);
+                    ModuleManager.getModule(MessageModule.class).get(player, "chat.level.levelUp")
                             .replace("%level%", String.valueOf(newLevel))
                             .send();
-                    levelUpBanner(playerIdentity, newLevel);
+                    levelUpBanner(player, newLevel);
                     player.setLevel(newLevel);
                 }
 
@@ -343,24 +338,22 @@ public class LevelModule implements Module, Listener {
                     if (reward != null) {
                         JsonObject json = new JsonObject();
                         json.addProperty("level", lvl);
-
-                        reward.setAsClaimable(playerIdentity, UnclaimedRewardType.LEVELUP, json);
+                        reward.setAsClaimable(offlinePlayer, UnclaimedRewardType.LEVELUP, json);
                     }
                 }
             }
         }.runTaskLater(Shared.getInstance().getPlugin(), 1L);
     }
 
-    public void levelUpBanner(PlayerIdentity playerIdentity, int level) {
+    public void levelUpBanner(Player player, int level) {
         Component text = Component.text("§f\uE00B ").font(Key.key("jsplugins", "actionbar_offset"))
                 .shadowColor(ShadowColor.shadowColor(0))
-                .append(ModuleManager.getModule(MessageModule.class).get(playerIdentity, "chat.actionbar.level_up").getTranslated())
+                .append(ModuleManager.getModule(MessageModule.class).get(player, "chat.actionbar.level_up").getTranslated())
                 .append(getLevelColored(level))
                 .append(getLevelEvolution(level).getIcon().font(Key.key("jsplugins", "actionbar_offset")))
                 .append(Component.text(" §f\uE00B").font(Key.key("jsplugins", "actionbar_offset")));
-        playerIdentity.getOnlinePlayer().sendActionBar(TextBackground.getTextWithBackground(text));
+        player.sendActionBar(TextBackground.getTextWithBackground(text));
     }
-
 
 
     public static Builder builder() {
@@ -430,7 +423,7 @@ public class LevelModule implements Module, Listener {
                     .addLevelRange(81, 90, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 7500)
                     .addLevelRange(91, 100, 20000, LevelRange.XPScaling.AGGRESSIVE_EXPONENTIAL).withReward("Coins", 10000)
 
-                    .addLevelEvolution(0, "\uE000", TextColor.fromHexString("#707070"),1027, 1028)
+                    .addLevelEvolution(0, "\uE000", TextColor.fromHexString("#707070"), 1027, 1028)
                     .addLevelEvolution(10, "\uE001", TextColor.fromHexString("#d0d0d0"), 1029, 1030)
                     .addLevelEvolution(20, "\uE002", TextColor.fromHexString("#4bd81c"), 1031, 1032)
                     .addLevelEvolution(30, "\uE003", TextColor.fromHexString("#63dfdf"), 1033, 1034)
@@ -450,17 +443,13 @@ public class LevelModule implements Module, Listener {
         }
 
         public LevelRangeBuilder addLevelRange(int startLevel, int endLevel, int xpPerLevel) {
-            LevelRangeBuilder rangeBuilder = new LevelRangeBuilder(
-                    this, startLevel, endLevel, xpPerLevel, LevelRange.XPScaling.FLAT
-            );
+            LevelRangeBuilder rangeBuilder = new LevelRangeBuilder(this, startLevel, endLevel, xpPerLevel, LevelRange.XPScaling.FLAT);
             pendingRanges.add(rangeBuilder);
             return rangeBuilder;
         }
 
         public LevelRangeBuilder addLevelRange(int startLevel, int endLevel, int baseXP, LevelRange.XPScaling scaling) {
-            LevelRangeBuilder rangeBuilder = new LevelRangeBuilder(
-                    this, startLevel, endLevel, baseXP, scaling
-            );
+            LevelRangeBuilder rangeBuilder = new LevelRangeBuilder(this, startLevel, endLevel, baseXP, scaling);
             pendingRanges.add(rangeBuilder);
             return rangeBuilder;
         }
@@ -584,4 +573,3 @@ public class LevelModule implements Module, Listener {
         }
     }
 }
-

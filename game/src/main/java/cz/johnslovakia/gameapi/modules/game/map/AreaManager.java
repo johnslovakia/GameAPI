@@ -71,9 +71,9 @@ public class AreaManager {
     public static AreaSettings getActiveSettings(GamePlayer gamePlayer) {
         GameInstance game = gamePlayer.getGame();
 
+        if (game == null) return null;
         if (gamePlayer.getGameSession() == null) return getLimitedSettings(gamePlayer);
         if (gamePlayer.getGameSession().isLimited()) return getLimitedSettings(gamePlayer);
-        if (game == null) return null;
         if (game.getState() != GameState.INGAME) return getLimitedSettings(gamePlayer);
         if (game.getCurrentMap() == null) return null;
         if (gamePlayer.isSpectator()) return getLimitedSettings(gamePlayer);

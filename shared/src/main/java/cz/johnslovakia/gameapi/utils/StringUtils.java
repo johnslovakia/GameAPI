@@ -9,6 +9,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.chat.ComponentSerializer;
+import org.apache.commons.lang3.text.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -95,7 +96,7 @@ public class StringUtils {
             }
         }
         if (formatedName == null){
-            formatedName = org.apache.commons.lang3.StringUtils.capitalize(item.getType().name().toLowerCase().replaceAll("_", " "));
+            formatedName = WordUtils.capitalizeFully(item.getType().name().toLowerCase().replaceAll("_", " "));
         }
 
         formatedName = (item.getAmount() > 1 ? item.getAmount() + "x " : "") + formatedName;
@@ -110,7 +111,7 @@ public class StringUtils {
                 formatedEnchantment += " " + numeral(item.getEnchantmentLevel(enchantment));
                 stringBuilder.append(formatedEnchantment);
                 if (item.getEnchantments().size() > i){
-                    stringBuilder.append(",");
+                    stringBuilder.append(", ");
                     if (formatedName.length() + formatedEnchantment.length() >= maxLoreLength){
                         stringBuilder.append("\n ");
                     }
@@ -136,10 +137,10 @@ public class StringUtils {
             int i = 1;
             for (PotionEffect effect : list) {
                 PotionEffectType effectType = effect.getType();
-                int duration = effect.getDuration();
+                int duration = effect.getDuration() / 20;
 
-                String formatedPotion = org.apache.commons.lang3.StringUtils.capitalize(effectType.getKey().getKey().toLowerCase().replaceAll("_", " ")) + " " + numeral(effect.getAmplifier());
-                formatedPotion += " " + getDurationString(duration);
+                String formatedPotion = (item.getType().name().contains("SPLASH") ? "Splash " : "") + WordUtils.capitalizeFully(effectType.getKey().getKey().toLowerCase().replaceAll("_", " ")) + " " + numeral(effect.getAmplifier() + 1);
+                if (effect.getDuration() > 2) formatedPotion += " " + getDurationString(duration);
                 stringBuilder.append(formatedPotion);
                 if (item.getEnchantments().size() > i){
                     stringBuilder.append(",");
@@ -157,7 +158,7 @@ public class StringUtils {
             Damageable damageable = (Damageable) item.getItemMeta();
             if (damageable != null) {
                 if (damageable.getDamage() != 0) {
-                    String duration = item.getType().getMaxDurability() - damageable.getDamage() + " " + ModuleManager.getModule(MessageModule.class).get(player, "word.uses").getTranslated();
+                    String duration = item.getType().getMaxDurability() - damageable.getDamage() + " " + ModuleManager.getModule(MessageModule.class).get(player, "word.uses").getRawTranslated();
                     if (formatedName.contains("(")) {
                         if (formatedName.length() >= maxLoreLength) {
                             formatedName += ",\n ";

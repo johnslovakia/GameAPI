@@ -5,8 +5,11 @@ import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
+import cz.johnslovakia.gameapi.modules.game.lobby.LobbyLocation;
 import cz.johnslovakia.gameapi.modules.game.map.GameMap;
 import cz.johnslovakia.gameapi.modules.game.map.MapLocation;
+import cz.johnslovakia.gameapi.modules.game.session.GameSessionModule;
+import cz.johnslovakia.gameapi.modules.game.session.PlayerGameSession;
 import cz.johnslovakia.gameapi.modules.game.team.GameTeam;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.scores.ScoreModule;
@@ -14,6 +17,7 @@ import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -28,6 +32,37 @@ import org.bukkit.scoreboard.Team;
 import java.util.*;
 
 public class GameUtils {
+
+    public static MapLocation getMapLocation(FileConfiguration fileConfig, GameMap gameMap, String id, String path){
+        return getMapLocation(fileConfig, gameMap, id, path, false);
+    }
+
+    public static MapLocation getMapLocation(FileConfiguration fileConfig, GameMap gameMap, String id, String path, boolean yaw_and_pitch){
+        if (fileConfig.get(path) == null) {
+            Logger.log("getMapLocation: Path '" + path + "' is null!", Logger.LogType.ERROR);
+            return null;
+        }
+        return GameUtils.getMapLocationFromString(gameMap, id, fileConfig.getString(path), yaw_and_pitch);
+    }
+
+    public static LobbyLocation getLobbyLocation(FileConfiguration fileConfig, GameInstance game, String path){
+        if (fileConfig.get(path) == null) {
+            Logger.log("getLobbyLocation: Path '" + path + "' is null!", Logger.LogType.ERROR);
+            return null;
+        }
+
+        final String[] parts = fileConfig.getString(path).split(";");
+        final String world = parts[0];
+        final double x = Double.parseDouble(parts[1]);
+        final double y = Double.parseDouble(parts[2]);
+        final double z = Double.parseDouble(parts[3]);
+        final float yaw =  Float.parseFloat(parts[4]);
+        final float pitch =  Float.parseFloat(parts[5]);
+
+        return new LobbyLocation(game, world, x, y, z, yaw, pitch);
+    }
+
+
 
     public static Location getNonRespawnLocation(GameInstance game){
         GameMap playingMap = game.getCurrentMap();
@@ -52,14 +87,18 @@ public class GameUtils {
     }
 
     public static void hideAndShowPlayers(GameInstance game, Player player){
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (gamePlayer == null) return;
         for (Player serverPlayer : Bukkit.getOnlinePlayers()){
             player.hidePlayer(Shared.getInstance().getPlugin(), serverPlayer);
             serverPlayer.hidePlayer(Shared.getInstance().getPlugin(), player);
 
-            for (GamePlayer gamePlayer : game.getParticipants()){
-                Player p = gamePlayer.getOnlinePlayer();
-                p.showPlayer(Shared.getInstance().getPlugin(), player);
-                player.showPlayer(Shared.getInstance().getPlugin(), p);
+            for (GamePlayer targetGamePlayer : game.getParticipants()){
+                Player target = targetGamePlayer.getOnlinePlayer();
+                if (!gamePlayer.isSpectator()) {
+                    target.showPlayer(Shared.getInstance().getPlugin(), player);
+                }
+                player.showPlayer(Shared.getInstance().getPlugin(), target);
             }
         }
     }
@@ -133,31 +172,29 @@ public class GameUtils {
         }
     }
 
-    public static Map<GamePlayer, Integer> getTopPlayers(GameInstance game, String scoreName, int maxResults) {
-        ScoreModule scoreModule = ModuleManager.getModule(ScoreModule.class);
+    public static Map<GamePlayer, Integer> getTopPlayers(GameInstance game, String scoreName, int maxRank, int hardCap) {
+        List<PlayerGameSession> sessions = game.getModule(GameSessionModule.class).getPlayerSessions();
 
-        List<GamePlayer> gamePlayers = game.getParticipants();
-        gamePlayers.sort((p1, p2) -> Integer.compare(p2.getGameSession().getScore(scoreName), p1.getGameSession().getScore(scoreName)));
+        List<PlayerGameSession> sorted = sessions.stream()
+                .filter(s -> s.getScore(scoreName) > 0)
+                .sorted((s1, s2) -> Integer.compare(s2.getScore(scoreName), s1.getScore(scoreName)))
+                .toList();
 
-        Map<GamePlayer, Integer> result = new HashMap<>();
+        Map<GamePlayer, Integer> result = new LinkedHashMap<>();
         int rank = 1;
-        int lastKills = -1;
-        int count = 0;
 
-        for (int i = 0; i < gamePlayers.size() && count < maxResults; i++) {
-            GamePlayer gamePlayer = gamePlayers.get(i);
+        for (int i = 0; i < sorted.size(); i++) {
+            PlayerGameSession session = sorted.get(i);
 
-            if (gamePlayer.getGameSession().getScore(scoreName) == 0){
-                continue;
-            }
-
-            if (gamePlayer.getGameSession().getScore(scoreName) != lastKills) {
+            if (i > 0 && session.getScore(scoreName) != sorted.get(i - 1).getScore(scoreName)) {
                 rank = i + 1;
-                lastKills = gamePlayer.getGameSession().getScore(scoreName);
             }
 
-            result.put(gamePlayer, rank);
-            count++;
+            if (rank > maxRank) break;
+
+            result.put((GamePlayer) session.getPlayerIdentity(), rank);
+
+            if (result.size() >= hardCap) break;
         }
 
         return result;
@@ -181,9 +218,9 @@ public class GameUtils {
         return null;
     }
 
-    public static void damagePlayer(Player player, double damage) {
+    public static double getDamageForPlayer(Player player, double damage) {
         if (PlayerManager.getGamePlayer(player).isSpectator()){
-            return;
+            return 0.0;
         }
 
         double points = Objects.requireNonNull(
@@ -198,7 +235,7 @@ public class GameUtils {
         int resistance = effect == null ? 0 : effect.getAmplifier();
         int epf = Utils.getEPF(player.getInventory());
 
-        player.damage(Utils.calculateDamageApplied(damage, points, toughness, resistance, epf));
+       return Utils.calculateDamageApplied(damage, points, toughness, resistance, epf);
     }
 
     public static void setTeamNameTag(Player player, String id, ChatColor chatColor) {

@@ -12,6 +12,9 @@ import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.rewards.unclaimed.*;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
+import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -55,41 +58,57 @@ public class Reward {
         }
     }
 
+    public void setAsClaimable(PlayerIdentity playerIdentity, UnclaimedRewardType type, JsonObject data) {
+        setAsClaimable(playerIdentity.getOfflinePlayer(), type, data);
+    }
 
-    public void setAsClaimable(PlayerIdentity playerIdentity, UnclaimedRewardType type, JsonObject data){
+    public void setAsClaimable(OfflinePlayer player, UnclaimedRewardType type, JsonObject data) {
         Gson gson = new GsonBuilder()
-                //.excludeFieldsWithoutExposeAnnotation()
                 .create();
         String rewardJson = gson.toJson(this, Reward.class);
 
-        UnclaimedReward unclaimedReward;
-        switch (type) {
-            case QUEST -> unclaimedReward = new QuestUnclaimedReward(playerIdentity, LocalDateTime.now(), rewardJson, data, type);
-            case DAILYMETER -> unclaimedReward = new DailyMeterUnclaimedReward(playerIdentity, LocalDateTime.now(), rewardJson, data, type);
-            case LEVELUP -> unclaimedReward = new LevelUpUnclaimedReward(playerIdentity, LocalDateTime.now(), rewardJson, data, type);
+        UnclaimedReward unclaimedReward = switch (type) {
+            case QUEST -> new QuestUnclaimedReward(player, LocalDateTime.now(), rewardJson, data, type);
+            case DAILYMETER -> new DailyMeterUnclaimedReward(player, LocalDateTime.now(), rewardJson, data, type);
+            case LEVELUP -> new LevelUpUnclaimedReward(player, LocalDateTime.now(), rewardJson, data, type);
             default -> throw new IllegalArgumentException("Unknown reward type: " + type);
         };
 
         UnclaimedRewardsTable.addUnclaimedReward(unclaimedReward, data != null ? data.toString() : "");
-        ModuleManager.getModule(UnclaimedRewardsModule.class).addUnclaimedReward(playerIdentity, unclaimedReward);
+        ModuleManager.getModule(UnclaimedRewardsModule.class).addUnclaimedReward(player, unclaimedReward);
 
-        InventoryBuilder currentInventoryManager = InventoryBuilder.getPlayerCurrentInventory(playerIdentity);
-        if (currentInventoryManager != null) currentInventoryManager.give(playerIdentity);
+        if (player.isOnline()) {
+            PlayerIdentity playerIdentity = PlayerIdentityRegistry.get(player);
+            InventoryBuilder currentInventoryManager = InventoryBuilder.getPlayerCurrentInventory(playerIdentity);
+            if (currentInventoryManager != null) currentInventoryManager.give(playerIdentity);
+        }
     }
 
-    public PlayerRewardRecord applyReward(PlayerIdentity playerIdentity){
-        return applyReward(playerIdentity, true, 0);
+    public PlayerRewardRecord applyReward(PlayerIdentity playerIdentity) {
+        return applyReward(playerIdentity.getOfflinePlayer(), true, 0);
     }
 
-    public PlayerRewardRecord applyReward(PlayerIdentity playerIdentity, boolean sendMessage){
-        return applyReward(playerIdentity, sendMessage, 0);
+    public PlayerRewardRecord applyReward(PlayerIdentity playerIdentity, boolean sendMessage) {
+        return applyReward(playerIdentity.getOfflinePlayer(), sendMessage, 0);
     }
 
     public PlayerRewardRecord applyReward(PlayerIdentity playerIdentity, boolean sendMessage, int bonus) {
-        Map<Resource, Integer> earned = new HashMap<>();
+        return applyReward(playerIdentity.getOfflinePlayer(), sendMessage, bonus);
+    }
+
+    public PlayerRewardRecord applyReward(OfflinePlayer player) {
+        return applyReward(player, true, 0);
+    }
+
+    public PlayerRewardRecord applyReward(OfflinePlayer player, boolean sendMessage) {
+        return applyReward(player, sendMessage, 0);
+    }
+
+    public PlayerRewardRecord applyReward(OfflinePlayer player, boolean sendMessage, int bonus) {
+        Map<Resource, Integer> earned = new LinkedHashMap<>();
 
         boolean atleastOneApplied = false;
-        for (RewardItem item : getRewardItems()) {
+        for (RewardItem item : getRewardItems().stream().sorted(new RewardComparator()).toList()) {
             int amount = item.getAmount();
             if (item.getResource().isApplicableBonus()) amount += (int) (amount * bonus / 100.0);
 
@@ -100,25 +119,25 @@ public class Reward {
             atleastOneApplied = true;
         }
 
-
         if (atleastOneApplied) {
-            if (sendMessage && linkedMessageKey == null) {
-                sendMessage(playerIdentity, earned, bonus);
+            Player online = player instanceof Player p ? p : null;
+            if (sendMessage && linkedMessageKey == null && online != null) {
+                sendMessage(online, earned, bonus);
             }
 
-            for (Resource resource : earned.keySet()) {
-                resource.getResourceInterface().deposit(playerIdentity, earned.get(resource));
+            for (Map.Entry<Resource, Integer> entry : earned.entrySet()) {
+                entry.getKey().getResourceInterface().deposit(player, entry.getValue());
             }
         }
 
         return new PlayerRewardRecord(source, earned);
     }
 
-    public void sendMessage(PlayerIdentity playerIdentity, Map<Resource, Integer> earned){
-        sendMessage(playerIdentity, earned, 0);
+    public void sendMessage(Player player, Map<Resource, Integer> earned) {
+        sendMessage(player, earned, 0);
     }
 
-    public void sendMessage(PlayerIdentity playerIdentity, Map<Resource, Integer> earned, int bonus){
+    public void sendMessage(Player player, Map<Resource, Integer> earned, int bonus) {
         Set<Map.Entry<Resource, Integer>> entrySet = earned.entrySet();
         boolean bonusAppliedToAll = entrySet.stream()
                 .allMatch(entry -> entry.getKey().isApplicableBonus());
@@ -134,7 +153,7 @@ public class Reward {
                             .build();
 
                     if (!bonusAppliedToAll && resource.isApplicableBonus()) {
-                        Component bonusComponent = ModuleManager.getModule(MessageModule.class).get(playerIdentity, "chat.reward.bonus_applied")
+                        Component bonusComponent = ModuleManager.getModule(MessageModule.class).get(player, "chat.reward.bonus_applied")
                                 .replace("%bonus%", String.valueOf(bonus))
                                 .getTranslated();
 
@@ -152,19 +171,18 @@ public class Reward {
         }
 
         if (source == null) {
-            ModuleManager.getModule(MessageModule.class).get(playerIdentity, "chat.resources.linked_to_message_reward")
+            ModuleManager.getModule(MessageModule.class).get(player, "chat.resources.linked_to_message_reward")
                     .replace("%rewards%", text)
                     .addAndTranslate("chat.reward.bonus_applied", gp -> bonusAppliedToAll && bonus != 0)
                     .replace("%bonus%", "" + bonus)
                     .send();
-        }else{
-            ModuleManager.getModule(MessageModule.class).get(playerIdentity, "chat.resources.reward")
+        } else {
+            ModuleManager.getModule(MessageModule.class).get(player, "chat.resources.reward")
                     .replace("%rewards%", text)
                     .addAndTranslate("chat.reward.bonus_applied", gp -> bonusAppliedToAll && bonus != 0)
-                    .replace("%for_what%", ModuleManager.getModule(MessageModule.class).existMessage(source) ? ModuleManager.getModule(MessageModule.class).get(playerIdentity, source).getTranslated() : Component.text(source))
+                    .replace("%for_what%", ModuleManager.getModule(MessageModule.class).existMessage(source) ? ModuleManager.getModule(MessageModule.class).get(player, source).getTranslated() : Component.text(source))
                     .replace("%bonus%", "" + bonus)
                     .send();
         }
     }
 }
-

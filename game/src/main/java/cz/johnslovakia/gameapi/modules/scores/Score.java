@@ -77,6 +77,13 @@ public class Score {
         return displayName;
     }
 
+    public String getDisplayName(int score){
+        if (score > 1 && pluralName != null){
+            return getPluralName();
+        }
+        return displayName;
+    }
+
     public String getPluralName(){
         if (pluralName == null || pluralName.equals(name)){
             return getDisplayName();
@@ -133,7 +140,6 @@ public class Score {
                             if (playerIdentity instanceof GamePlayer gamePlayer)
                                 ModuleManager.getModule(ScoreModule.class).incrementScore(gamePlayer, getName());
                         }
-                        return;
                     }
                 }
             }

@@ -15,18 +15,13 @@ public class JSONProperty<T> {
 
     public Object getValue(T context) {
         String type = valueInterface.getWhat();
-        switch (type.toLowerCase()) {
-            case "string":
-                return valueInterface.getStringValue(context);
-            case "integer":
-                return valueInterface.getIntegerValue(context);
-            case "double":
-                return valueInterface.getDoubleValue(context);
-            case "boolean":
-                return valueInterface.getBooleanValue(context);
-            default:
-                return null;
-        }
+        return switch (type.toLowerCase()) {
+            case "string" -> valueInterface.getStringValue(context);
+            case "integer" -> valueInterface.getIntegerValue(context);
+            case "double" -> valueInterface.getDoubleValue(context);
+            case "boolean" -> valueInterface.getBooleanValue(context);
+            default -> null;
+        };
     }
 
     public UpdatedValueInterface<T> getUpdatedValueInterface() {

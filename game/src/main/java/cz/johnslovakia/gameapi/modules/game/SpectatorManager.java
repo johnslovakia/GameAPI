@@ -6,10 +6,10 @@ import cz.johnslovakia.gameapi.guis.TeleporterInventory;
 import cz.johnslovakia.gameapi.inventoryBuilder.InventoryBuilder;
 import cz.johnslovakia.gameapi.inventoryBuilder.Item;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
-import cz.johnslovakia.gameapi.modules.serverManagement.DataManager;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardType;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardsModule;
 import cz.johnslovakia.gameapi.users.PlayerManager;
+import cz.johnslovakia.gameapi.utils.GameUtils;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 
 import org.bukkit.Material;
@@ -26,12 +26,14 @@ public class SpectatorManager {
         InventoryBuilder im = new InventoryBuilder("Spectator");
         InventoryBuilder im2 = new InventoryBuilder("Spectator");
 
-        if (gameService.getGames().size() > 1 || (DataManager.getInstance() != null)) {
-            Item playAgain = new Item(new ItemBuilder(Material.PAPER).hideAllFlags().toItemStack(),
-                    1, "item.play_again", event -> gameService.newArena(event.getPlayer(), false));
-            im.registerItem(playAgain);
-            im2.registerItem(playAgain);
-        }
+        Item playAgain = new Item(new ItemBuilder(Material.PAPER).hideAllFlags().toItemStack(),
+                1, "item.play_again", event -> {
+            gameService.newArena(event.getPlayer(), false, true);
+        });
+        im.registerItem(playAgain);
+        im2.registerItem(playAgain);
+
+        Item backToLobby = new Item(new ItemBuilder(Material.ENDER_PEARL).hideAllFlags().toItemStack(), 2, "item.back_to_lobby", e -> GameUtils.sendToLobby(e.getPlayer()));
 
         /*Item teamSelector = new Item(new ItemBuilder(XMaterial.WHITE_WOOL.parseMaterial()).hideAllFlags().toItemStack(),
                 3,
@@ -44,7 +46,7 @@ public class SpectatorManager {
                 e -> Minigame.getInstance().getInventories().openSettingsInventory(e.getPlayer()));*/
 
         Item alivePlayers = new Item(new ItemBuilder(Material.COMPASS).hideAllFlags().toItemStack(),
-                3,
+                4,
                 "item.teleporter",
                 e -> TeleporterInventory.openGUI(PlayerManager.getGamePlayer(e.getPlayer())));
         //TODO: dodělat inventáře
@@ -60,16 +62,16 @@ public class SpectatorManager {
         quests.setBlinkingItemCustomModelData(1010);
 
 
-        im.setHoldItemSlot(4);
+        im.setHoldItemSlot(1);
         //im.registerItem(settings);
-        im.registerItem(alivePlayers, playerMenu, quests);
+        im.registerItem(alivePlayers, playerMenu, quests, backToLobby);
         itemManager = im;
 
 
-        im2.setHoldItemSlot(4);
+        im2.setHoldItemSlot(1);
         //im2.registerItem(teamSelector);
         //im2.registerItem(settings);
-        im2.registerItem(alivePlayers, playerMenu, quests);
+        im2.registerItem(alivePlayers, playerMenu, quests, backToLobby);
         withTeamSelectorItemManager = im2;
     }
 

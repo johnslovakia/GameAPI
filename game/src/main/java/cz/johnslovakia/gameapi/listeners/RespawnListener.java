@@ -3,6 +3,7 @@ package cz.johnslovakia.gameapi.listeners;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.game.GameState;
+import cz.johnslovakia.gameapi.modules.game.lobby.LobbyModule;
 import cz.johnslovakia.gameapi.modules.game.map.GameMap;
 import cz.johnslovakia.gameapi.modules.game.map.MapLocation;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
@@ -27,9 +28,19 @@ public class RespawnListener implements Listener {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         if (!gamePlayer.isInGame()) return;
         GameInstance game = PlayerManager.getGamePlayer(player).getGame();
+        if (!game.getState().equals(GameState.INGAME)) {
+            if (game.getState().equals(GameState.WAITING) || game.getState().equals(GameState.STARTING)) {
+                LobbyModule lobbyModule = game.getModule(LobbyModule.class);
+                if (lobbyModule != null && lobbyModule.getLobbyLocation() != null) {
+                    e.setRespawnLocation(lobbyModule.getLobbyLocation().getLocation());
+                }
+            }else{
+                e.setRespawnLocation(GameUtils.getNonRespawnLocation(game));
+            }
+            return;
+        }
         GameMap playingMap = game.getCurrentMap();
 
-        if (!game.getState().equals(GameState.INGAME)) return;
 
         player.setVisualFire(false);
 
@@ -62,7 +73,7 @@ public class RespawnListener implements Listener {
                     }
                 }.runTaskTimer(Minigame.getInstance().getPlugin(), 0L, 20L);
             }
-        }else if (player.getLastDamageCause() == null || (player.getLastDamageCause() != null && player.getLastDamageCause().getCause().equals(EntityDamageEvent.DamageCause.VOID))){
+        }else if (player.getLastDamageCause() == null || (player.getLastDamageCause() != null && player.getLastDamageCause().getCause().equals(EntityDamageEvent.DamageCause.VOID)) || gamePlayer.getMetadata().containsKey("diedInVoid")){
             e.setRespawnLocation(GameUtils.getNonRespawnLocation(game));
         }else{
             e.setRespawnLocation((Location) gamePlayer.getMetadata().get("death_location"));

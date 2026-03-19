@@ -17,6 +17,7 @@ import lombok.Setter;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +30,7 @@ public class PlayerLevelData {
     @Getter(AccessLevel.PRIVATE)
     private final LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
     @Getter(AccessLevel.PRIVATE)
-    private final PlayerIdentity playerIdentity;
+    private final OfflinePlayer offlinePlayer;
 
     private int level;
     private int xpOnCurrentLevel;
@@ -40,42 +41,49 @@ public class PlayerLevelData {
     private LevelRange levelRange;
     private LevelEvolution levelEvolution;
 
-    public PlayerLevelData(PlayerIdentity playerIdentity, int level, int dailyXP) {
-        this.playerIdentity = playerIdentity;
+    public PlayerLevelData(OfflinePlayer offlinePlayer, int level, int dailyXP) {
+        this.offlinePlayer = offlinePlayer;
         this.level = level;
         this.dailyXP = dailyXP;
     }
 
-    public CompletableFuture<Void> calculate(){
-        return ModuleManager.getModule(ResourcesModule.class)
-                .getPlayerBalance(playerIdentity, "ExperiencePoints")
-                .thenAccept(totalXp -> {
-                    int xpSum = 0;
+    public CompletableFuture<Void> calculate(int totalXp) {
+        return CompletableFuture.runAsync(() -> applyXp(totalXp));
+    }
 
-                    for (LevelRange range : levelModule.getLevelRanges()) {
-                        for (int lvl = range.startLevel(); lvl <= range.endLevel(); lvl++) {
-                            int xpPerLevel = range.getXPForLevel(lvl);
+    public void calculateSync(int totalXp) {
+        applyXp(totalXp);
+    }
 
-                            if (totalXp < xpSum + xpPerLevel) {
-                                int xpOnCurrent = totalXp - xpSum;
+    private void applyXp(int totalXp) {
+        int xpSum = 0;
 
-                                this.levelRange = range;
-                                this.levelEvolution = levelModule.getLevelEvolution(level);
-                                this.xpOnCurrentLevel = xpOnCurrent;
-                                this.xpToNextLevel = xpPerLevel;
+        for (LevelRange range : levelModule.getLevelRanges()) {
+            for (int lvl = range.startLevel(); lvl <= range.endLevel(); lvl++) {
+                int xpPerLevel = range.getXPForLevel(lvl);
 
-                                return;
-                            }
-
-                            xpSum += xpPerLevel;
-                        }
-                    }
-
-                    this.levelRange = levelModule.getLevelRanges().getLast();
+                if (totalXp < xpSum + xpPerLevel) {
+                    this.levelRange = range;
                     this.levelEvolution = levelModule.getLevelEvolution(level);
-                    this.xpOnCurrentLevel = 0;
-                    this.xpToNextLevel = 0;
-                })
+                    this.xpOnCurrentLevel = totalXp - xpSum;
+                    this.xpToNextLevel = xpPerLevel;
+                    return;
+                }
+
+                xpSum += xpPerLevel;
+            }
+        }
+
+        this.levelRange = levelModule.getLevelRanges().getLast();
+        this.levelEvolution = levelModule.getLevelEvolution(level);
+        this.xpOnCurrentLevel = 0;
+        this.xpToNextLevel = 0;
+    }
+
+    public CompletableFuture<Void> calculate() {
+        return ModuleManager.getModule(ResourcesModule.class)
+                .getPlayerBalance(offlinePlayer, "ExperiencePoints")
+                .thenAccept(this::applyXp)
                 .exceptionally(ex -> {
                     Logger.log("calculate: FAILED - " + ex.getMessage(), Logger.LogType.ERROR);
                     ex.printStackTrace();
@@ -86,15 +94,5 @@ public class PlayerLevelData {
     public void setLevel(int level) {
         this.level = level;
         calculate();
-        /*Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
-            QueryResult result = Shared.getInstance().getDatabase().getConnection().update()
-                    .table(PlayerTable.TABLE_NAME)
-                    .set("Level", level)
-                    .where().isEqual("Nickname", getPlayerIdentity().getOnlinePlayer().getName())
-                    .execute();
-            if (!result.isSuccessful()) {
-                Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
-            }
-        });*/
     }
 }

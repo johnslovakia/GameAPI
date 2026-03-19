@@ -1,11 +1,11 @@
 package cz.johnslovakia.gameapi.modules.resources.storage;
 
-import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import net.milkbowl.vault.economy.Economy;
+import org.bukkit.OfflinePlayer;
 
 import java.util.concurrent.CompletableFuture;
 
-public class VaultStorage implements ResourceStorage{
+public class VaultStorage implements ResourceStorage {
 
     private final Economy vaultEconomy;
 
@@ -14,23 +14,23 @@ public class VaultStorage implements ResourceStorage{
     }
 
     @Override
-    public void deposit(PlayerIdentity playerIdentity, int amount) {
-        vaultEconomy.depositPlayer(playerIdentity.getOfflinePlayer(), amount);
+    public void deposit(OfflinePlayer player, int amount) {
+        vaultEconomy.depositPlayer(player, amount);
     }
 
     @Override
-    public void withdraw(PlayerIdentity playerIdentity, int amount) {
-        vaultEconomy.withdrawPlayer(playerIdentity.getOfflinePlayer(), amount);
+    public void withdraw(OfflinePlayer player, int amount) {
+        vaultEconomy.withdrawPlayer(player, amount);
     }
 
     @Override
-    public CompletableFuture<Integer> getBalance(PlayerIdentity playerIdentity) {
-        return CompletableFuture.supplyAsync(() -> (int) vaultEconomy.getBalance(playerIdentity.getOfflinePlayer()));
+    public CompletableFuture<Integer> getBalance(OfflinePlayer player) {
+        return CompletableFuture.supplyAsync(() -> (int) vaultEconomy.getBalance(player));
     }
 
     @Override
-    public int getBalanceCached(PlayerIdentity playerIdentity) {
-        return (int) vaultEconomy.getBalance(playerIdentity.getOfflinePlayer());
+    public int getBalanceCached(OfflinePlayer player) {
+        return (int) vaultEconomy.getBalance(player);
     }
 
     @Override

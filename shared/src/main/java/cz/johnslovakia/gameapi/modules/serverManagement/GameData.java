@@ -25,9 +25,7 @@ public class GameData {
     }
 
     public boolean shouldUpdate(){
-        if (getLastUpdate() == null){
-            return true;
-        }
+        if (getLastUpdate() == null) return true;
         LocalTime localTime = LocalTime.now();
         Duration dur = Duration.between(lastUpdate, localTime);
         return dur.getSeconds() >= 3;

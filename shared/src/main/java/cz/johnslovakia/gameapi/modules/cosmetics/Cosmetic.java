@@ -119,7 +119,7 @@ public class Cosmetic {
             costStringList.add(StringUtils.betterNumberFormat(cost) + " " + resource.getDisplayName());
 
             Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
-                resource.getResourceInterface().withdraw(PlayerIdentityRegistry.get(player), cost);
+                resource.getResourceInterface().withdraw(player, cost);
             });
         }
 

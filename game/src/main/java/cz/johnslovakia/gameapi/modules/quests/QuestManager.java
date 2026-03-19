@@ -114,7 +114,8 @@ public class QuestManager {
                 .getPlayerUnclaimedRewardsByType(data.getGamePlayer(), UnclaimedRewardType.QUEST).stream()
                 .filter(r -> r instanceof QuestUnclaimedReward)
                 .map(r -> (QuestUnclaimedReward) r)
-                .filter(r -> r.getQuestName().equals(data.getQuest().getName()))
+                .filter(r -> r.getQuestName().equals(data.getQuest().getName())
+                        && r.getQuestType().equals(data.getQuest().getType()))
                 .findFirst();
         if (unclaimedReward.isPresent())
             return false;
