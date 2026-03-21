@@ -35,7 +35,7 @@ dependencies {
     implementation("org.json:json:20230227")
     implementation("redis.clients:jedis:4.4.3")
     implementation("org.apache.commons:commons-pool2:2.12.1")
-    implementation("com.github.cryptomorin:XSeries:13.5.1")
+    implementation("com.github.cryptomorin:XSeries:13.6.0")
     implementation("org.apache.commons:commons-lang3:3.20.0")
 }
 

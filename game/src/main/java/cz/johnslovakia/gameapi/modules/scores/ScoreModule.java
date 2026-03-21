@@ -37,6 +37,7 @@ public class ScoreModule implements Module {
 
     public void incrementScore(GamePlayer gamePlayer, String scoreName){
         getScore(scoreName).ifPresent(score -> {
+            if (gamePlayer.getGame() == null) return;
             PlayerGameSession session = gamePlayer.getGame().getModule(GameSessionModule.class).getPlayerSession(gamePlayer);
             if (session == null) return;
 

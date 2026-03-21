@@ -359,7 +359,7 @@ public class PlayerJoinQuitHandler {
         } else if (gameInstance.getState() == GameState.INGAME){
             if (!gamePlayer.isSpectator()){
                 session.setState(GamePlayerState.DISCONNECTED);
-                player.damage(player.getAttribute(Attribute.MAX_HEALTH).getValue());
+                player.damage(player.getHealth());
 
                 /*boolean killer = PVPListener.hasLastDamager(gamePlayer) && (System.currentTimeMillis() - PVPListener.getLastDamager(gamePlayer).getMs()) <= 12000;
                 GamePlayerDeathEvent deathEvent = new GamePlayerDeathEvent(gamePlayer.getGame(), (killer ? PVPListener.getLastDamager(gamePlayer).getLastDamager() : null), PlayerManager.getGamePlayer(player), null,null);
@@ -375,6 +375,9 @@ public class PlayerJoinQuitHandler {
                 gameInstance.endGame(null);
             }
         }
-        gamePlayer.setGameID(null);
+        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
+            if (gamePlayer.isOnline()) return;
+            gamePlayer.setGameID(null);
+        }, 10L);
     }
 }

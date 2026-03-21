@@ -39,8 +39,11 @@ import org.bukkit.inventory.ItemStack;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ProfileInventory {
+
+    private static final Set<UUID> claimingDailyReward = ConcurrentHashMap.newKeySet();
 
     private static int getBonus(PlayerIdentity gamePlayer) {
         if (gamePlayer.getMetadata().get("quest_reward_bonus") == null) {
@@ -281,15 +284,21 @@ public class ProfileInventory {
                         }
                         gui.appendElement(15, Component.element(dailyRewardTrack.toItemStack()).addClick(i -> {
                             dailyMeterUnclaimedReward.ifPresent(unclaimedReward -> {
-                                messageModule.get(gamePlayer, "chat.unclaimed_reward.daily_reward_track.claimed").send();
-                                if (bonus != 0) unclaimedReward.setBonus(bonus);
-                                unclaimedReward.claim();
-                                player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1F, 1F);
-                                int claimedTier = unclaimedReward.getTier();
-                                if (claimedTier > dailyMeter.getPlayerDailyClaims(gamePlayer)) {
-                                    dailyMeter.setPlayerDailyRewardsClaim(gamePlayer, claimedTier);
+                                UUID uuid = player.getUniqueId();
+                                if (!claimingDailyReward.add(uuid)) return;
+                                try {
+                                    messageModule.get(gamePlayer, "chat.unclaimed_reward.daily_reward_track.claimed").send();
+                                    if (bonus != 0) unclaimedReward.setBonus(bonus);
+                                    unclaimedReward.claim();
+                                    player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1F, 1F);
+                                    int claimedTier = unclaimedReward.getTier();
+                                    if (claimedTier > dailyMeter.getPlayerDailyClaims(gamePlayer)) {
+                                        dailyMeter.setPlayerDailyRewardsClaim(gamePlayer, claimedTier);
+                                    }
+                                    openGUI(gamePlayer);
+                                } finally {
+                                    claimingDailyReward.remove(uuid);
                                 }
-                                openGUI(gamePlayer);
                             });
                         }).build());
                     }

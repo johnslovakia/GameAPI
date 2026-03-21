@@ -326,9 +326,9 @@ chat.description: "§2§l§m=======================================§r/newline//
 chat.description.map: "§fMap: §a%map% §f(Created by %authors%)"
 chat.end.thanks: "§aThanks for playing."
 chat.format.spectator: "§8[§7Spectator Chat§8] %prefix%§r%level_evolution_icon% §r§7%name%§r: %message%"
-chat.format.all: "§8[%team_color%All§8] %prefix%§r%level_evolution_icon% §r%team_color%%name%§r: %message%"
-chat.format.team: "§8[%team_color%%team%§8] %prefix%§r%level_evolution_icon%§r%team_color%%name%§r: %message%"
-chat.format.default: "%prefix%§r%level_evolution_icon%§r§7%name%§r: §f%message%"
+chat.format.all: "§8[%team_color%All§8] %prefix%§r%level_evolution_icon% §r%team_color% %name%§r: %message%"
+chat.format.team: "§8[%team_color%%team%§8] %prefix%§r%level_evolution_icon%§r%team_color% %name%§r: %message%"
+chat.format.default: "%prefix%§r%level_evolution_icon%§r §7%name%§r: §f%message%"
 chat.actionbar.level_up: "§fYou reached level "
 
 title.battle_started: "/title/§aThe battle has begun!/subtitle/§7Good luck!"

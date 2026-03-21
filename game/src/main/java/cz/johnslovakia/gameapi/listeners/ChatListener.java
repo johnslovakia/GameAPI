@@ -58,6 +58,7 @@ public class ChatListener implements Listener {
                     if (team != null) {
                         if (e.getMessage().startsWith("!")) {
                             e.setCancelled(true);
+                            if (e.getMessage().length() == 1) return;
                             e.setMessage(e.getMessage().substring(1));
                             if (!ModuleManager.getModule(MessageModule.class).existMessage("chat.format.all")) {
                                 String msg = "§8[" + team.getChatColor() + word_all + "§8] " + StringUtils.colorizer(prefix) + "§r" + team.getChatColor() + player.getName() + "§r: " + e.getMessage();
