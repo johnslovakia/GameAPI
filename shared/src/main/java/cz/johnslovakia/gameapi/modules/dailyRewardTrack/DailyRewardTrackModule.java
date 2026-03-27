@@ -47,7 +47,7 @@ public class DailyRewardTrackModule implements Module, Listener {
 
     private List<DailyRewardTier> tiers = new ArrayList<>();
     @Getter(AccessLevel.PACKAGE)
-    private Map<String, Integer> dailyRewardsClaims = new ConcurrentHashMap<>();
+    private transient Map<String, Integer> dailyRewardsClaims = new ConcurrentHashMap<>();
 
     @Setter
     private Reward afterMaxTierReward;
@@ -70,6 +70,7 @@ public class DailyRewardTrackModule implements Module, Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent e) {
+        savePlayerDailyRewardsClaim(e.getPlayer());
         dailyRewardsClaims.remove(e.getPlayer().getName());
     }
 
@@ -87,7 +88,7 @@ public class DailyRewardTrackModule implements Module, Listener {
                     for (DailyRewardTier tier : getTiers()) {
                         accumulatedXP += tier.neededXP();
 
-                        if (dailyXP < accumulatedXP) continue;
+                        if (dailyXP < accumulatedXP) break;
 
                         boolean alreadyHasReward = dailyMeterRewards.stream()
                                 .map(r -> (DailyMeterUnclaimedReward) r)

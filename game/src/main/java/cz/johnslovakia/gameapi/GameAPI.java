@@ -5,6 +5,7 @@ import com.comphenix.protocol.ProtocolManager;
 import com.infernalsuite.asp.api.AdvancedSlimePaperAPI;
 import com.infernalsuite.asp.api.world.SlimeWorld;
 import com.infernalsuite.asp.loaders.mysql.MysqlLoader;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
@@ -18,6 +19,8 @@ import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
 import cz.johnslovakia.gameapi.modules.dailyRewardTrack.DailyRewardTrackModule;
 import cz.johnslovakia.gameapi.modules.game.GameService;
 import cz.johnslovakia.gameapi.modules.game.GameState;
+import cz.johnslovakia.gameapi.modules.game.runtime.RestartScheduler;
+import cz.johnslovakia.gameapi.modules.game.runtime.ServerHealthMonitor;
 import cz.johnslovakia.gameapi.modules.killMessage.KillMessageModule;
 import cz.johnslovakia.gameapi.modules.kits.Kit;
 import cz.johnslovakia.gameapi.modules.kits.KitListener;
@@ -123,6 +126,27 @@ public class GameAPI{
                     .build();
             commands.registrar().register(saveInventory);
 
+            LiteralCommandNode<CommandSourceStack> scheduleRestart = Commands.literal("scheduleRestart")
+                    .requires(source -> {
+                        if (!(source.getSender() instanceof Player player)) return true;
+                        return player.isOp() || player.hasPermission(Minigame.getInstance().getName().toLowerCase() + ".admin");
+                    })
+                    .executes(context -> {
+                        ModuleManager.getModule(RestartScheduler.class)
+                                .scheduleRestart(RestartScheduler.RestartReason.ADMIN_SCHEDULED, false);
+                        return 1;
+                    })
+                    .then(Commands.argument("hardDeadline", BoolArgumentType.bool())
+                            .executes(context -> {
+                                ModuleManager.getModule(RestartScheduler.class)
+                                        .scheduleRestart(RestartScheduler.RestartReason.ADMIN_SCHEDULED, BoolArgumentType.getBool(context, "hardDeadline"));
+                                return 1;
+                            })
+                    )
+                    .build();
+            commands.registrar().register(scheduleRestart);
+
+
             LiteralCommandNode<CommandSourceStack> profile = Commands.literal("profile")
                     .executes(context -> {
                         CommandSender source = context.getSource().getSender();
@@ -134,6 +158,7 @@ public class GameAPI{
                     })
                     .build();
             commands.registrar().register(profile);
+
 
             if (minigame.isTestServer()) {
                 LiteralCommandNode<CommandSourceStack> rateCommand = Commands.literal("rate")
@@ -280,7 +305,9 @@ public class GameAPI{
         pm.registerEvents(new PVPListener(), plugin);
         pm.registerEvents(new RespawnListener(), plugin);
         pm.registerEvents(new WorldListener(), plugin);
-        pm.registerEvents(new AntiAFK(), plugin);
+        if (minigame.getSettings().isEnabledAntiAFKSystem()) {
+            pm.registerEvents(new AntiAFK(), plugin);
+        }
         pm.registerEvents(new ViewPlayerInventory(), plugin);
         pm.registerEvents(new HologramListener(), plugin);
         pm.registerEvents(new ItemPickupListener(), plugin);
@@ -414,6 +441,10 @@ public class GameAPI{
         moduleManager.registerModule(new GameService());
         moduleManager.registerModule(new KillMessageModule());
         moduleManager.registerModule(new UnclaimedRewardsModule());
+        if (minigame.getSettings().isEnabledServerHealthMonitor()) {
+            moduleManager.registerModule(new ServerHealthMonitor());
+        }
+        moduleManager.registerModule(new RestartScheduler());
         ResourcesModule resourcesModule = moduleManager.registerModule(new ResourcesModule());
 
 
@@ -476,21 +507,15 @@ public class GameAPI{
                 .build();
 
         FileConfiguration config = minigame.getPlugin().getConfig();
-        boolean vault = false;
-        RegisteredServiceProvider<Economy> rsp = null;
-        if (Bukkit.getPluginManager().getPlugin("Vault") != null && config.getBoolean("useVault")) {
-            vault = true;
-            rsp = Bukkit.getServer().getServicesManager().getRegistration(Economy.class);
-        }
 
         Resource.Builder coins = Resource.builder("Coins")
                 .color(ChatColor.GOLD)
                 .rank(2)
                 .applicableBonus(true);
-        if (vault && rsp != null){
-            Economy vaultEconomy = rsp.getProvider();
-            coins.vault(vaultEconomy);
-        }else{
+
+        if (config.getBoolean("useVault", false)) {
+            coins.deferredVault("gameapi_playertable", plugin);
+        } else {
             coins.batched("gameapi_playertable");
         }
 

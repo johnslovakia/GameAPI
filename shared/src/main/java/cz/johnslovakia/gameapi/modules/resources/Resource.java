@@ -1,12 +1,14 @@
 package cz.johnslovakia.gameapi.modules.resources;
 
 import cz.johnslovakia.gameapi.modules.resources.storage.BatchedStorage;
+import cz.johnslovakia.gameapi.modules.resources.storage.DeferredVaultStorage;
 import cz.johnslovakia.gameapi.modules.resources.storage.ResourceStorage;
 import cz.johnslovakia.gameapi.modules.resources.storage.VaultStorage;
 
 import lombok.Getter;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.ChatColor;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
@@ -122,6 +124,11 @@ public class Resource {
 
         public Builder vault(Economy vaultEconomy) {
             this.resourceStorage = new VaultStorage(vaultEconomy);
+            return this;
+        }
+
+        public Builder deferredVault(String tableName, JavaPlugin plugin) {
+            this.resourceStorage = new DeferredVaultStorage(getName(), tableName, plugin);
             return this;
         }
 

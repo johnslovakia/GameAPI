@@ -18,6 +18,7 @@ import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsCategory;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
 import cz.johnslovakia.gameapi.modules.killMessage.KillMessageModule;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
+import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.scores.Score;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
@@ -145,6 +146,7 @@ public class PlayerDeathListener implements Listener {
         GameInstance game = e.getGame();
         Player player = gamePlayer.getOnlinePlayer();
         PlayerGameSession session = gamePlayer.getGameSession();
+        MessageModule messageModule = ModuleManager.getModule(MessageModule.class);
         boolean useTeams = game.getSettings().isUseTeams();
 
         if (!game.getState().equals(GameState.INGAME)) {
@@ -173,7 +175,7 @@ public class PlayerDeathListener implements Listener {
                 blockedXKill.put(killerId + ":" + currentCount, true);
             }
 
-            ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), ModuleManager.getModule(KillMessageModule.class).getForPlayer(killer).getTranslationKey(e.getDmgType()))
+            messageModule.get(game.getParticipants(), ModuleManager.getModule(KillMessageModule.class).getForPlayer(killer).getTranslationKey(e.getDmgType()))
                     .replace("%dead%", gamePlayer.getName())
                     .replace("%killer%", killer.getName())
                     .replace("%dead_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
@@ -184,14 +186,14 @@ public class PlayerDeathListener implements Listener {
 
             if (e.getAssists() != null && !e.getAssists().isEmpty()) {
                 for (GamePlayer gp : e.getAssists()) {
-                    ModuleManager.getModule(MessageModule.class).get(gp, "chat.assisted")
+                    messageModule.get(gp, "chat.assisted")
                             .replace("%player%", gamePlayer.getOnlinePlayer().getName())
                             .send();
                 }
             }
 
             if (e.isFirstGameKill()) {
-                ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), "chat.first_blood")
+                messageModule.get(game.getParticipants(), "chat.first_blood")
                         .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                         .replace("%killer%", killer.getOnlinePlayer().getName())
                         .replace("%killer_color%", useTeams ? "" + killer.getGameSession().getTeam().getChatColor() : "§a")
@@ -207,7 +209,7 @@ public class PlayerDeathListener implements Listener {
             }.runTaskLater(Minigame.getInstance().getPlugin(), 12 * 20L);*/
 
             /*if (currentCount >= 6) {
-                ModuleManager.getModule(MessageModule.class).get(killer, "chat.kill_fast").send();
+                messageModule.get(killer, "chat.kill_fast").send();
             }*/
 
             //killer.getOnlinePlayer().playSound(killer.getOnlinePlayer().getLocation(), "jsplugins:good", 1F, 1F);
@@ -222,7 +224,7 @@ public class PlayerDeathListener implements Listener {
                 key = "chat.died";
             }
 
-            ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), key)
+            messageModule.get(game.getParticipants(), key)
                     .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                     .replace("%player_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
                     .replace("%dead_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
@@ -233,12 +235,7 @@ public class PlayerDeathListener implements Listener {
             int placement = game.getPlayers().size();
             game.getPlacements().add(new Placement<>(gamePlayer, placement));
 
-            // It sometimes caused spectator items to drop in certain cases,
-            // for example when a player was killed by a fireball explosion that landed nearby.
-            Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
-
-            }, 1L);
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "title.spectator")
+            messageModule.get(gamePlayer, "title.spectator")
                     .send();
             gamePlayer.setSpectator(true);
 
@@ -249,24 +246,29 @@ public class PlayerDeathListener implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
+                    if (!game.getState().equals(GameState.INGAME)) return;
+
+                    player.sendMessage(Component.empty());
+
+                    Component message = messageModule
+                            .get(gamePlayer, "chat.view_summary")
+                            .getTranslated();
+
+                    Component hoverText = messageModule.get(gamePlayer, "chat.view_statistic.survived_for")
+                            .replace("%time%", StringUtils.getDurationString(
+                                    game.getRunningMainTask().getStartCounter() - game.getRunningMainTask().getCounter()))
+                            .getTranslated()
+                            .appendNewline();
+                    hoverText = hoverText.append(messageModule.get(gamePlayer, "chat.view_statistic.outlived")
+                            .replace("%outlived%", String.valueOf((int) game.getMetadata().get("players_at_start") - (game.getPlayers().size() + 1)))
+                            .getTranslated());
+
                     Map<Score, Integer> stats = session.getScores().entrySet()
                             .stream().filter(entry -> entry.getKey().getLinkedStat() != null)
                             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-                    if (game.getState() == GameState.INGAME && !stats.isEmpty()) {
-                        Component message = ModuleManager.getModule(MessageModule.class)
-                                .get(gamePlayer, "chat.view_statistic")
-                                .getTranslated();
-
-                        Component hoverText = ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.view_statistic.survived_for")
-                                    .replace("%time%", StringUtils.getDurationString(
-                                        game.getRunningMainTask().getStartCounter() - game.getRunningMainTask().getCounter()))
-                                    .getTranslated()
-                                .appendNewline();
-
-                        hoverText = hoverText.append(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.view_statistic.outlived")
-                                .replace("%outlived%", String.valueOf((int) game.getMetadata().get("players_at_start") - (game.getPlayers().size() + 1)))
-                                .getTranslated());
+                    if (!stats.isEmpty()) {
+                        hoverText = hoverText.appendNewline();
 
                         List<Component> lines = stats.entrySet().stream()
                                 .map(entry -> Component.text()
@@ -278,18 +280,34 @@ public class PlayerDeathListener implements Listener {
                         Component statsComponent = Component.join(JoinConfiguration.newlines(), lines);
 
                         hoverText = hoverText.appendNewline().append(statsComponent);
-
-                        player.sendMessage(message.hoverEvent(hoverText));
-                        player.sendMessage(Component.empty());
                     }
+
+                    if (session.earnedSomething()) {
+                        hoverText = hoverText.appendNewline().appendNewline()
+                                .append(messageModule.get(gamePlayer, "chat.view_statistic.rewards_earned").getTranslated());
+
+                        for (Map.Entry<Resource, Integer> entry : session.getTotalEarned().entrySet()) {
+                            Resource resource = entry.getKey();
+                            String imgChar = resource.getImgChar() != null ? resource.getImgChar() + " " : "";
+
+                            hoverText = hoverText.appendNewline()
+                                    .append(Component.text(
+                                            " §7• " + imgChar + resource.getColor()
+                                                    + entry.getValue() + " §7" + resource.getDisplayName()
+                                    ));
+                        }
+                    }
+
+                    player.sendMessage(message.hoverEvent(hoverText));
+                    player.sendMessage(Component.empty());
                 }
-            }.runTaskLater(Minigame.getInstance().getPlugin(), 20L);
+            }.runTaskLater(Minigame.getInstance().getPlugin(), 30L);
         }
 
         if (game.hasModule(TeamModule.class)) {
             GameTeam gameTeam = session.getTeam();
             if (gameTeam.getAliveMembers().isEmpty()) {
-                ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), "chat.team_eliminated")
+                messageModule.get(game.getParticipants(), "chat.team_eliminated")
                         .replace("%team%", Component.text(gameTeam.getName()).color(gameTeam.getTeamColor().getTextColor()))
                         .send();
 

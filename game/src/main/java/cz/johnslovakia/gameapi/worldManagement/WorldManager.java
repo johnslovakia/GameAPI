@@ -9,6 +9,7 @@ import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
+import org.bukkit.GameRules;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
@@ -100,7 +101,7 @@ public class WorldManager {
 
         World bukkitWorld = Bukkit.getWorld(worldName);
         if (bukkitWorld != null){
-            bukkitWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+            bukkitWorld.setGameRule(GameRules.ADVANCE_TIME, false);
         }
 
     }

@@ -53,8 +53,9 @@ public class ClassicWorldLoader {
                     Logger.log(source.getAbsolutePath() + " (" + worldName + ")", Logger.LogType.INFO);
 
                     World bukkitWorld = new WorldCreator(worldName).createWorld();
-                    bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-                    bukkitWorld.setGameRule(GameRule.LOCATOR_BAR, false);
+                    bukkitWorld.setGameRule(GameRules.SHOW_ADVANCEMENT_MESSAGES, false);
+                    bukkitWorld.setGameRule(GameRules.LOCATOR_BAR, false);
+                    bukkitWorld.setGameRule(GameRules.IMMEDIATE_RESPAWN, true);
                     bukkitWorld.setAutoSave(false);
                     return bukkitWorld;
                 }else {
@@ -95,8 +96,9 @@ public class ClassicWorldLoader {
                 SchematicUtils.pasteSchematic(Minigame.getInstance().getPlugin(), location, worldName, "maps");
             }
 
-            bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-            bukkitWorld.setGameRule(GameRule.LOCATOR_BAR, false);
+            bukkitWorld.setGameRule(GameRules.SHOW_ADVANCEMENT_MESSAGES, false);
+            bukkitWorld.setGameRule(GameRules.LOCATOR_BAR, false);
+            bukkitWorld.setGameRule(GameRules.IMMEDIATE_RESPAWN, true);
             bukkitWorld.setAutoSave(false);
             WorldManager.addLoadedWorld(active.getName());
 
@@ -145,8 +147,9 @@ public class ClassicWorldLoader {
 
         world.setAutoSave(false);
         if (!arena.getSettings().isAllowTimeChange()) {
-            world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-            world.setGameRule(GameRule.LOCATOR_BAR, false);
+            world.setGameRule(GameRules.SHOW_ADVANCEMENT_MESSAGES, false);
+            world.setGameRule(GameRules.LOCATOR_BAR, false);
+            world.setGameRule(GameRules.IMMEDIATE_RESPAWN, true);
         }
         arena.setWorld(world);
         WorldManager.addLoadedWorld(worldName);

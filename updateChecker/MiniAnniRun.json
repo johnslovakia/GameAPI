@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.2.1",
-  "update_message": "Bug Fixes",
+  "latest_version": "2.2.2",
+  "update_message": "Server Health Monitoring & Fixes",
   "update_messages": {
     "2.0": "MAJOR UPDATE: custom resourcepack, 1.21 support and more!",
     "2.0.1": "Support for 1.21.9+ & small bug fixes",
@@ -8,6 +8,7 @@
     "2.1.1": "Bug Fixes",
     "2.1.2": "Improvements & Bug Fixes",
     "2.2": "New Settings, Improvements, Bug Fixes, and more...",
-    "2.2.1": "Big Fixes"
+    "2.2.1": "Big Fixes",
+    "2.2.2": "Server Health Monitoring & Fixes"
   }
 }

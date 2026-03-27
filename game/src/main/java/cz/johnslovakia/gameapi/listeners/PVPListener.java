@@ -219,10 +219,19 @@ public class PVPListener implements Listener {
 
     @EventHandler
     public void forceRespawn(PlayerDeathEvent e) {
-        Bukkit.getServer().getScheduler().scheduleSyncDelayedTask((Minigame.getInstance().getPlugin()), () -> {
-            e.getEntity().spigot().respawn();
-            e.getEntity().setFireTicks(0);
-        }, 1L);
+        if (e.isCancelled()) return;
+
+        Player player = e.getEntity();
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (gamePlayer == null || !gamePlayer.isInGame()) return;
+
+        Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(
+                Minigame.getInstance().getPlugin(), () -> {
+                    if (!player.isOnline()) return;
+                    player.spigot().respawn();
+                    player.setFireTicks(0);
+                }, 2L
+        );
     }
 
     @EventHandler (priority = EventPriority.LOWEST)

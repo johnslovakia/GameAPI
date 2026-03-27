@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.modules.game;
 
 import cz.johnslovakia.gameapi.modules.Module;
+import cz.johnslovakia.gameapi.modules.game.runtime.RestartScheduler;
 import cz.johnslovakia.gameapi.modules.kits.KitManager;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.GameResetEvent;
@@ -45,6 +46,13 @@ public class GameService implements Module {
     }
 
     public void registerGame(GameInstance game){
+        RestartScheduler scheduler = ModuleManager.getModule(RestartScheduler.class);
+        if (scheduler != null && scheduler.isRestartPending()) {
+            Logger.log("Game registration blocked — restart pending. (" + game.getID() + ")",
+                       Logger.LogType.WARNING);
+            return;
+        }
+
         game.finishSetup(success -> {
             if (!success){
                 Logger.log("Game (" + game.getID() + ") setup failed.", Logger.LogType.INFO);
@@ -53,10 +61,6 @@ public class GameService implements Module {
                 Logger.log("Added Game " + game.getID(), Logger.LogType.INFO);
             }
         });
-        /*if (games.size() > 1 && Minigame.getInstance().getDatabase() != null){
-            //TODO: dát jinde
-            Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> Minigame.getInstance().getMinigameTable().createNewColumn(Type.VARCHAR128, "game"));
-        }*/
     }
 
     public void newArena(Player player, boolean sendToLobbyIfNoArena) {
@@ -65,6 +69,27 @@ public class GameService implements Module {
 
     public void newArena(Player player, boolean sendToLobbyIfNoArena, boolean includeOtherServers) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+
+        RestartScheduler scheduler = ModuleManager.getModule(RestartScheduler.class);
+        if (scheduler != null && scheduler.isRestartPending()) {
+            ServerRegistry dataManager = ModuleManager.getModule(ServerRegistry.class);
+            boolean bungeecord = dataManager != null &&
+                    (dataManager.getServerDataMySQL() != null || dataManager.getServerDataRedis() != null);
+            if (bungeecord) {
+                Optional<IMinigame> iMinigame = dataManager.getMinigame(Minigame.getInstance().getName());
+                if (iMinigame.isPresent()) {
+                    IGame bestServer = iMinigame.get().getBestServer(gamePlayer);
+                    if (!bestServer.getBungeecordServerName()
+                            .equalsIgnoreCase(Minigame.getInstance().getSettings().getServerName())) {
+                        bestServer.sendPlayerToServer(player);
+                        return;
+                    }
+                }
+            }
+
+            GameUtils.sendToLobby(player, false);
+            return;
+        }
 
         NewArenaEvent ev = new NewArenaEvent(PlayerManager.getGamePlayer(player));
         Bukkit.getPluginManager().callEvent(ev);
@@ -90,7 +115,6 @@ public class GameService implements Module {
                 }
             }
         }
-
 
         GameInstance game = getHighestGame(player);
         if (gamePlayer.getParty().isInParty()){
@@ -146,6 +170,9 @@ public class GameService implements Module {
     public void resetGame(GameInstance toResetGame){
         toResetGame.setState(GameState.RESTARTING);
 
+        RestartScheduler scheduler = ModuleManager.getModule(RestartScheduler.class);
+        boolean restartPending = scheduler != null && scheduler.isRestartPending();
+
         if (toResetGame.getSettings().isRestartServerAfterEnd() && Minigame.getInstance().getSettings().getGamesPerServer() == 1){
             ServerRegistry dataManager = ModuleManager.getModule(ServerRegistry.class);
             boolean bungeecord = dataManager != null &&
@@ -164,7 +191,6 @@ public class GameService implements Module {
                 }
             }
 
-
             new BukkitRunnable(){
                 @Override
                 public void run() {
@@ -172,7 +198,6 @@ public class GameService implements Module {
                         Bukkit.getOnlinePlayers().forEach(p -> p.sendMessage("§cRestarting server..."));
                     }
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "restart");
-                    //Bukkit.shutdown();
                 }
             }.runTaskLater(Minigame.getInstance().getPlugin(), 80L);
             return;
@@ -180,13 +205,8 @@ public class GameService implements Module {
 
         KitManager.removeKitManager(toResetGame);
 
-
-
         String gameName = toResetGame.getName();
         games.remove(toResetGame.getID());
-
-        GameInstance newGame = Minigame.getInstance().setupGame(gameName);
-
 
         List<Player> players = new ArrayList<>();
         if (!toResetGame.getParticipants().isEmpty()) {
@@ -204,6 +224,14 @@ public class GameService implements Module {
         }
 
 
+        GameInstance newGame = null;
+        if (!restartPending) {
+            newGame = Minigame.getInstance().setupGame(gameName);
+        } else {
+            Logger.log("[RestartScheduler] Skipping new game creation for '" + gameName +
+                       "' — restart pending.", Logger.LogType.INFO);
+        }
+
         GameResetEvent ev = new GameResetEvent(toResetGame, newGame);
         Bukkit.getPluginManager().callEvent(ev);
 
@@ -211,12 +239,10 @@ public class GameService implements Module {
             for (Player player : players) {
                 ModuleManager.getModule(MessageModule.class).get(player, "chat.finding_new_game").send();
                 Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
-                    //PlayerManager.removeGamePlayer(player);
                     newArena(player, true, true);
                 }, 25L);
             }
         }
-
 
         Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
             try {
@@ -225,7 +251,6 @@ public class GameService implements Module {
                 e.printStackTrace();
             }
             toResetGame.terminate();
-            //games.remove(toResetGame.getID());
         }, 70L);
     }
 
@@ -245,7 +270,6 @@ public class GameService implements Module {
                 )
                 .findAny();
     }
-
 
     public List<GameInstance> getFreeGames(Player player) {
         return games.values().stream()

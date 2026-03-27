@@ -149,7 +149,7 @@ public class GameUtils {
         Collections.shuffle(lobbies);
         Utils.sendToServer(player, (lobbies.isEmpty() ? "Lobby" : lobbies.get(0)));
 
-        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> player.kick(ModuleManager.getModule(MessageModule.class).get(player, "kick.offline_server").getTranslated()), 60L);
+        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> player.kick(ModuleManager.getModule(MessageModule.class).get(player, "kick.offline_server").getTranslated()), 50L);
     }
 
     public static void colorizeArmor(GamePlayer gamePlayer) {

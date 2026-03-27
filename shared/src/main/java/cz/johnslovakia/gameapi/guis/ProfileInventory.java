@@ -225,15 +225,19 @@ public class ProfileInventory {
                                         .replace("%needed_xp%", StringUtils.betterNumberFormat(dailyMeterClaim.neededXP()))
                                         .getTranslated());
                             } else {
-                                DailyRewardTier unclaimedRewardTier = dailyMeter.getTiers().get(dailyMeterUnclaimedReward.get().getTier() - 1);
-                                dailyRewardTrack.addLoreLine(Utils.getStringProgressBar(unclaimedRewardTier.neededXP(), unclaimedRewardTier.neededXP()));
-                                dailyRewardTrack.addLoreLine(messageModule.get(player, "inventory.profile_menu.daily_reward_track.progress")
-                                        .replace("%xp%", "§a" + StringUtils.betterNumberFormat(unclaimedRewardTier.neededXP()))
-                                        .replace("%needed_xp%", StringUtils.betterNumberFormat(unclaimedRewardTier.neededXP()))
-                                        .getTranslated());
+                                int tierIndex = dailyMeterUnclaimedReward.get().getTier() - 1;
+                                if (tierIndex >= 0 && tierIndex < dailyMeter.getTiers().size()) {
+                                    DailyRewardTier unclaimedRewardTier = dailyMeter.getTiers().get(tierIndex);
+                                    dailyRewardTrack.addLoreLine(Utils.getStringProgressBar(unclaimedRewardTier.neededXP(), unclaimedRewardTier.neededXP()));
+                                    dailyRewardTrack.addLoreLine(messageModule.get(player, "inventory.profile_menu.daily_reward_track.progress")
+                                            .replace("%xp%", "§a" + StringUtils.betterNumberFormat(unclaimedRewardTier.neededXP()))
+                                            .replace("%needed_xp%", StringUtils.betterNumberFormat(unclaimedRewardTier.neededXP()))
+                                            .getTranslated());
+                                }
                             }
                         }
-                        if (dailyMeterClaim != null && dailyMeterClaim.tier() <= dailyMeter.getMaxTier()) {
+                        if ((dailyMeterClaim != null && dailyMeterClaim.tier() <= dailyMeter.getMaxTier())
+                                || dailyMeterUnclaimedReward.isPresent()) {
                             dailyRewardTrack.addLoreLine("");
                             dailyRewardTrack.addLoreLine(messageModule.get(gamePlayer, "inventory.profile_menu.daily_reward_track.rewards").getTranslated());
                             if (dailyMeterUnclaimedReward.isEmpty()) {

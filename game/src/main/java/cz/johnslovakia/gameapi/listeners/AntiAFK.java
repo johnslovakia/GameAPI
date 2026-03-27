@@ -33,9 +33,8 @@ public class AntiAFK implements Listener {
     private final Map<GamePlayer, Boolean> isAfk = new ConcurrentHashMap<>();
     private final Map<GamePlayer, Long> lastReschedule = new ConcurrentHashMap<>();
 
-
     private boolean isExempt(Player player) {
-        return player.isOp() || player.hasPermission("*");
+        return player.isOp() || player.hasPermission(Minigame.getInstance().getName().toLowerCase() + ".admin");
     }
 
     private boolean hasPlayerMoved(PlayerMoveEvent event) {
@@ -44,7 +43,7 @@ public class AntiAFK implements Listener {
         if (to == null) return false;
 
         return from.distanceSquared(to) > 0.0025
-                || Math.abs(from.getYaw() - to.getYaw())   > 0.5f
+                || Math.abs(from.getYaw() - to.getYaw()) > 0.5f
                 || Math.abs(from.getPitch() - to.getPitch()) > 0.5f;
     }
 
@@ -57,7 +56,7 @@ public class AntiAFK implements Listener {
     }
 
     private void scheduleAfkTask(Player player, GamePlayer gamePlayer) {
-        long now  = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
         Long last = lastReschedule.get(gamePlayer);
 
         if (last != null && afkTasks.containsKey(gamePlayer) && (now - last) < RESCHEDULE_DEBOUNCE_MS) {
@@ -70,6 +69,7 @@ public class AntiAFK implements Listener {
         BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
+                afkTasks.remove(gamePlayer);
                 isAfk.put(gamePlayer, true);
                 kickPlayerIfAfk(player, gamePlayer);
             }
@@ -78,13 +78,11 @@ public class AntiAFK implements Listener {
         afkTasks.put(gamePlayer, task);
     }
 
-
     private void cleanupPlayer(GamePlayer gamePlayer) {
         cancelAfkTask(gamePlayer);
         isAfk.remove(gamePlayer);
         lastReschedule.remove(gamePlayer);
     }
-
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
@@ -97,12 +95,21 @@ public class AntiAFK implements Listener {
         GameInstance game = gamePlayer.getGame();
         if (game == null) return;
         if (!game.getSettings().isEnabledAntiAFKSystem()) return;
-        if (game.getState() != GameState.INGAME) return;
+        if (game.getState() != GameState.INGAME) {
+            if (isAfk.getOrDefault(gamePlayer, false)) {
+                cancelAfkTask(gamePlayer);
+                isAfk.put(gamePlayer, false);
+            }
+            return;
+        }
 
         if (!hasPlayerMoved(event)) return;
 
-        if (isAfk.getOrDefault(gamePlayer, false)) {
-            isAfk.put(gamePlayer, false);
+        isAfk.put(gamePlayer, false);
+
+        if (countdownTasks.containsKey(gamePlayer)) {
+            cancelAfkTask(gamePlayer);
+            lastReschedule.remove(gamePlayer);
         }
 
         scheduleAfkTask(player, gamePlayer);
@@ -119,6 +126,7 @@ public class AntiAFK implements Listener {
             if (game == null) continue;
             if (!game.getSettings().isEnabledAntiAFKSystem()) continue;
 
+            lastReschedule.remove(gamePlayer);
             scheduleAfkTask(player, gamePlayer);
         }
     }
@@ -128,12 +136,19 @@ public class AntiAFK implements Listener {
         cleanupPlayer(event.getGamePlayer());
     }
 
-
     private void kickPlayerIfAfk(Player player, GamePlayer gamePlayer) {
-        if (!player.isOnline()) return;
+        if (!player.isOnline()) {
+            cleanupPlayer(gamePlayer);
+            return;
+        }
         if (isExempt(player)) return;
         if (gamePlayer.getPlayerData() == null || gamePlayer.getGame() == null) return;
+        if (gamePlayer.getGame().getState() != GameState.INGAME) {
+            cleanupPlayer(gamePlayer);
+            return;
+        }
         if (!isAfk.getOrDefault(gamePlayer, false)) return;
+        if (countdownTasks.containsKey(gamePlayer)) return;
 
         player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 1.0f, 1.0f);
 
@@ -142,8 +157,8 @@ public class AntiAFK implements Listener {
 
             @Override
             public void run() {
-                if (!isAfk.getOrDefault(gamePlayer, false)
-                        || PlayerManager.getGamePlayer(player) != gamePlayer) {
+                GamePlayer current = PlayerManager.getGamePlayer(player);
+                if (!isAfk.getOrDefault(gamePlayer, false) || current != gamePlayer) {
                     countdownTasks.remove(gamePlayer);
                     this.cancel();
                     return;
@@ -152,8 +167,8 @@ public class AntiAFK implements Listener {
                 if (countdown <= 0) {
                     if (player.isOnline() && !player.isDead()) {
                         GameUtils.sendToLobby(player);
-                        cleanupPlayer(gamePlayer);
                     }
+                    cleanupPlayer(gamePlayer);
                     this.cancel();
                     return;
                 }

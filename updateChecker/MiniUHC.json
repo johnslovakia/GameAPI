@@ -1,12 +1,13 @@
 {
-  "latest_version": "2.3",
-  "update_message": "New Settings, Improvements, Bug Fixes, and more...",
+  "latest_version": "2.3.1",
+  "update_message": "Optimization, Server Health Monitoring, and Bug Fixes",
   "update_messages": {
     "2.1": "LevelSystem, Changes and Bug Fixes",
     "2.1.1": "Bug Fixes",
     "2.1.2": "Bug Fixes",
     "2.2": "Lobby System, Leaderboard Hologram, and more...",
     "2.2.1": "Bug Fixes",
-    "2.3": "New Settings, Improvements, Bug Fixes, and more..."
+    "2.3": "New Settings, Improvements, Bug Fixes, and more...",
+    "2.3.1": "Optimization, Server Health Monitoring, and Bug Fixes"
   }
 }

@@ -14,19 +14,19 @@ import org.bukkit.event.player.PlayerJoinEvent;
 
 public class UpdateCheckerListener implements Listener {
 
-
-
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
         Player player = e.getPlayer();
         Minigame minigame = Minigame.getInstance();
-        
+
         if (minigame == null) return;
         if (!hasUpdatePermission(player, minigame)) return;
 
         UpdateChecker updateChecker = minigame.getUpdateChecker();
 
         Bukkit.getScheduler().runTaskLater(minigame.getPlugin(), task -> {
+            if (updateChecker.isAllSuppressed()) return;
+
             if (updateChecker.isOutdated()) {
                 sendOutdatedMessage(player, minigame, updateChecker);
             } else if (updateChecker.isUnreleased()) {
@@ -51,8 +51,6 @@ public class UpdateCheckerListener implements Listener {
         if (updateChecker.hasUpdateMessages()) {
             hover = hover.append(Component.text("\n\n" + updateChecker.getFormattedUpdateMessagesForHover()));
         }
-
-        hover = hover.append(Component.text("\n\n§7Click to see detailed update history!"));
 
         Component message = Component.text(
                         "§c[!] §fYour version of the §a" + minigame.getName()

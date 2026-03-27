@@ -99,9 +99,16 @@ public class UnclaimedRewardsModule implements Listener, Module {
     }
 
 
-    public CompletableFuture<List<UnclaimedReward>> loadUnclaimedRewards(OfflinePlayer player) {
+    /*public CompletableFuture<List<UnclaimedReward>> loadUnclaimedRewards(OfflinePlayer player) {
         return fetchFromDatabase(player).thenApply(rewards -> {
             rewards.forEach(r -> addUnclaimedReward(player, r));
+            return rewards;
+        });
+    }*/
+
+    public CompletableFuture<List<UnclaimedReward>> loadUnclaimedRewards(OfflinePlayer player) {
+        return fetchFromDatabase(player).thenApply(rewards -> {
+            cache.put(player.getName(), new ArrayList<>(rewards));
             return rewards;
         });
     }
