@@ -36,8 +36,10 @@ public class ServerRegistry implements Module {
 
     @Override
     public void initialize() {
-        GameDataManager.createTableIfNotExists(serverDataMySQL);
-        createPendingActionsTable();
+        if (!useRedisForServerData()) {
+            GameDataManager.createTableIfNotExists(serverDataMySQL);
+            createPendingActionsTable();
+        }
     }
 
     @Override
@@ -58,9 +60,7 @@ public class ServerRegistry implements Module {
         return serverDataRedis != null;
     }
 
-
     private void createPendingActionsTable() {
-        if (useRedisForServerData()) return;
         String query = "CREATE TABLE IF NOT EXISTS player_pending_actions (" +
                 "player VARCHAR(64) NOT NULL, " +
                 "server VARCHAR(64) NOT NULL, " +
@@ -83,13 +83,13 @@ public class ServerRegistry implements Module {
         }
     }
 
+    /** Pending action TTL in seconds. */
+    private static final int PENDING_ACTION_TTL_SECONDS = 120;
+
     /**
      * Queues a pending action for when the player connects to the given BungeeCord server.
-     * Expires after 120 seconds. Overwrites any existing action for the same player+server.
-     *
-     * @param playerName the player name
-     * @param serverName the BungeeCord server name (e.g. "skywars1")
-     * @param action     what should happen on join
+     * Expires after {@value #PENDING_ACTION_TTL_SECONDS} seconds.
+     * Overwrites any existing action for the same player+server.
      */
     public void setPendingAction(String playerName, String serverName, PendingServerAction action) {
         if (useRedisForServerData()) {
@@ -97,13 +97,13 @@ public class ServerRegistry implements Module {
             JsonObject json = new JsonObject();
             json.addProperty("type", action.getType().name());
             if (action.getData() != null) json.addProperty("data", action.getData());
-            serverDataRedis.set(key, json.toString(), 120);
+            serverDataRedis.set(key, json.toString(), PENDING_ACTION_TTL_SECONDS);
             return;
         }
         String query = "INSERT INTO player_pending_actions (player, server, action_type, action_data, expires_at) " +
-                "VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 120 SECOND)) " +
+                "VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL " + PENDING_ACTION_TTL_SECONDS + " SECOND)) " +
                 "ON DUPLICATE KEY UPDATE action_type = VALUES(action_type), action_data = VALUES(action_data), " +
-                "expires_at = DATE_ADD(NOW(), INTERVAL 120 SECOND)";
+                "expires_at = DATE_ADD(NOW(), INTERVAL " + PENDING_ACTION_TTL_SECONDS + " SECOND)";
         try (SQLDatabaseConnection connection = serverDataMySQL.getConnection()) {
             if (connection == null) return;
             try (PreparedStatement stmt = connection.getConnection().prepareStatement(query)) {
@@ -122,9 +122,6 @@ public class ServerRegistry implements Module {
      * Reads and removes the pending action for a player on the given server.
      * Call this in {@code PlayerJoinEvent} on the target server.
      * Returns empty if no action exists or it has expired.
-     *
-     * @param playerName the joining player
-     * @param serverName the BungeeCord server they joined
      */
     public Optional<PendingServerAction> consumePendingAction(String playerName, String serverName) {
         if (useRedisForServerData()) {
@@ -142,44 +139,43 @@ public class ServerRegistry implements Module {
                 return Optional.empty();
             }
         }
+
+        String selectQuery = "SELECT action_type, action_data FROM player_pending_actions " +
+                "WHERE player = ? AND server = ? AND expires_at > NOW()";
+        String deleteQuery = "DELETE FROM player_pending_actions WHERE player = ? AND server = ?";
+
         try (SQLDatabaseConnection connection = serverDataMySQL.getConnection()) {
-            if (connection == null){
+            if (connection == null) {
                 Logger.log("consumePendingAction: database connection is null!", Logger.LogType.ERROR);
                 return Optional.empty();
             }
-            String query = "SELECT action_type, action_data FROM player_pending_actions " +
-                    "WHERE player = ? AND server = ? AND expires_at > NOW()";
-            try (PreparedStatement stmt = connection.getConnection().prepareStatement(query)) {
+
+            PendingServerAction result = null;
+
+            try (PreparedStatement stmt = connection.getConnection().prepareStatement(selectQuery)) {
                 stmt.setString(1, playerName);
                 stmt.setString(2, serverName);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
                         PendingActionType type = PendingActionType.valueOf(rs.getString("action_type"));
                         String data = rs.getString("action_data");
-                        deletePendingAction(playerName, serverName);
-                        return Optional.of(new PendingServerAction(type, data));
+                        result = new PendingServerAction(type, data);
                     }
                 }
             }
+
+            if (result != null) {
+                try (PreparedStatement deleteStmt = connection.getConnection().prepareStatement(deleteQuery)) {
+                    deleteStmt.setString(1, playerName);
+                    deleteStmt.setString(2, serverName);
+                    deleteStmt.executeUpdate();
+                }
+                return Optional.of(result);
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return Optional.empty();
-    }
-
-    private void deletePendingAction(String playerName, String serverName) {
-        new Thread(() -> {
-            String query = "DELETE FROM player_pending_actions WHERE player = ? AND server = ?";
-            try (SQLDatabaseConnection connection = serverDataMySQL.getConnection()) {
-                if (connection == null) return;
-                try (PreparedStatement stmt = connection.getConnection().prepareStatement(query)) {
-                    stmt.setString(1, playerName);
-                    stmt.setString(2, serverName);
-                    stmt.executeUpdate();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }).start();
     }
 }

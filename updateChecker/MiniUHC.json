@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.3.2",
-  "update_message": "Bug Fixes",
+  "latest_version": "2.3.3",
+  "update_message": "Bug Fixes and Improvements",
   "update_messages": {
     "2.1": "LevelSystem, Changes and Bug Fixes",
     "2.1.1": "Bug Fixes",
@@ -9,6 +9,7 @@
     "2.2.1": "Bug Fixes",
     "2.3": "New Settings, Improvements, Bug Fixes, and more...",
     "2.3.1": "Optimization, Server Health Monitoring, and Bug Fixes",
-    "2.3.2": "Bug Fixes"
+    "2.3.2": "Bug Fixes",
+    "2.3.3": "Bug Fixes and Improvements"
   }
 }

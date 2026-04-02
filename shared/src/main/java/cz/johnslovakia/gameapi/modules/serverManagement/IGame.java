@@ -4,6 +4,8 @@ import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
+import cz.johnslovakia.gameapi.modules.serverManagement.PendingServerAction;
+import cz.johnslovakia.gameapi.modules.serverManagement.PendingActionType;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.Utils;
 import lombok.AccessLevel;
@@ -18,7 +20,7 @@ public class IGame {
     private final IMinigame minigame;
     private final String name;
 
-    @Setter (AccessLevel.PACKAGE)
+    @Setter(AccessLevel.PACKAGE)
     private GameData data;
 
     public IGame(IMinigame minigame, String name) {
@@ -53,7 +55,9 @@ public class IGame {
         GameData data = minigame.getGameDataByGame(this);
         if (data == null) return false;
         if (data.getMaxPlayers() > 0 && data.getPlayers() >= data.getMaxPlayers()) {
-            return playerIdentity.getOnlinePlayer().hasPermission("game.joinfullarena");
+            Player onlinePlayer = playerIdentity.getOnlinePlayer();
+            if (onlinePlayer == null) return false;
+            return onlinePlayer.hasPermission("game.joinfullarena");
         }
         return true;
     }
@@ -77,19 +81,21 @@ public class IGame {
         return String.valueOf(name.charAt(name.length() - 1));
     }
 
-    public GameData getGameData(){
+    public GameData getGameData() {
         return minigame.getGameDataByGame(this);
     }
 
-    public GameState getGameState(){
-        return getGameData().getGameState();
+    public GameState getGameState() {
+        GameData gd = getGameData();
+        return gd != null ? gd.getGameState() : GameState.LOADING;
     }
 
-    public int getPlayers(){
-        return getGameData().getPlayers();
+    public int getPlayers() {
+        GameData gd = getGameData();
+        return gd != null ? gd.getPlayers() : 0;
     }
 
-    public void spectateGame(Player player){
+    public void spectateGame(Player player) {
         sendPlayerToServer(player, new PendingServerAction(PendingActionType.SPECTATE, "game:" + getName()));
     }
 
@@ -130,9 +136,10 @@ public class IGame {
 
                     Utils.sendToServer(player, server);
                 } catch (Exception e) {
-                    ModuleManager.getModule(MessageModule.class)
-                            .get(player, "chat.something_wrong.new_game")
-                            .send();
+                    MessageModule messageModule = ModuleManager.getModule(MessageModule.class);
+                    if (messageModule != null) {
+                        messageModule.get(player, "chat.something_wrong.new_game").send();
+                    }
                     e.printStackTrace();
                 }
             }

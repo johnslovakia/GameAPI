@@ -83,7 +83,7 @@ public class GameStartHandler {
 
         for (GamePlayer gamePlayer : gameInstance.getPlayers()) {
             preparePlayer(gamePlayer);
-            ModuleManager.getModule(StatsModule.class).getStatsHolograms().remove(gamePlayer);
+            ModuleManager.getModule(StatsModule.class).removeHolograms(gamePlayer);
         }
         gameInstance.getCurrentMap().teleport();
 
@@ -108,7 +108,7 @@ public class GameStartHandler {
             player.sendMessage("");
             if (gameInstance.getSettings().isSendMinigameDescription()) {
                 ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.description")
-                        .replace("%minigame%", Minigame.getInstance().getName())
+                        .replace("%minigame%", Minigame.getInstance().getFullName())
                         .replace("%description%", ModuleManager.getModule(MessageModule.class).get(gamePlayer, Minigame.getInstance().getDescriptionTranslateKey()).getTranslated())
                         .replace("%map%",
                                 ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.description.map")

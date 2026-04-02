@@ -41,6 +41,7 @@ public abstract class Minigame {
 
     private final JavaPlugin plugin;
     private final String name;
+    private String fullName;
     private final ModuleManager moduleManager;
 
     private UpdateChecker updateChecker;
@@ -136,6 +137,11 @@ public abstract class Minigame {
     public Minigame setServerDataRedis(RedisManager serverDataRedis) {
         moduleManager.registerModule(new ServerRegistry(serverDataRedis));
         return this;
+    }
+
+
+    public String getFullName(){
+        return fullName == null ? name : fullName;
     }
 
     public abstract void setupPlayerScores();

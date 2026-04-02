@@ -11,15 +11,24 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.LocalTime;
+import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
 public class IMinigame {
 
     private final ServerRegistry serverRegistry;
     private final String name;
-    private final Map<String, IGame> games = new HashMap<>();
+    private final Map<String, IGame> games = new ConcurrentHashMap<>();
+
+    /** How many seconds without a heartbeat before a game server is considered dead. */
+    private static final int STALE_THRESHOLD_SECONDS = 90;
+
+    /** How many seconds between full game-list refreshes from the data source. */
+    private static final int GAME_LIST_REFRESH_INTERVAL_SECONDS = 30;
+
+    private Instant lastGameListRefresh;
 
     public IMinigame(ServerRegistry serverRegistry, String name) {
         this.serverRegistry = serverRegistry;
@@ -33,6 +42,18 @@ public class IMinigame {
         } else {
             loadFromMySQL();
         }
+        lastGameListRefresh = Instant.now();
+    }
+
+    /**
+     * Checks if the game list needs refreshing (new arenas added to DB/Redis)
+     * and refreshes if enough time has passed. Called automatically from getServersData().
+     */
+    public void refreshIfNeeded() {
+        if (lastGameListRefresh == null ||
+                java.time.Duration.between(lastGameListRefresh, Instant.now()).getSeconds() >= GAME_LIST_REFRESH_INTERVAL_SECONDS) {
+            load();
+        }
     }
 
     private void loadFromRedis() {
@@ -40,7 +61,7 @@ public class IMinigame {
         for (String key : keys) {
             String[] parts = key.split("\\.");
             if (parts.length >= 3) {
-                games.put(parts[2], new IGame(this, parts[2]));
+                games.putIfAbsent(parts[2], new IGame(this, parts[2]));
             }
         }
     }
@@ -54,9 +75,7 @@ public class IMinigame {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         String arenaName = resultSet.getString("name");
-                        if (!games.containsKey(arenaName)) {
-                            games.put(arenaName, new IGame(this, arenaName));
-                        }
+                        games.putIfAbsent(arenaName, new IGame(this, arenaName));
                     }
                 }
             }
@@ -101,6 +120,7 @@ public class IMinigame {
     }
 
     public List<GameData> getServersData() {
+        refreshIfNeeded();
         List<GameData> list = new ArrayList<>();
         for (IGame arena : games.values()) {
             GameData data = getGameDataByGame(arena);
@@ -147,9 +167,6 @@ public class IMinigame {
         }
     }
 
-    /** How many seconds without a heartbeat before a game server is considered dead. */
-    private static final int STALE_THRESHOLD_SECONDS = 90;
-
     private GameData fetchGameDataFromMySQL(IGame server) {
         String query = "SELECT * FROM games WHERE name = ? LIMIT 1";
         try (SQLDatabaseConnection connection = serverRegistry.getServerDataMySQL().getConnection()) {
@@ -159,13 +176,14 @@ public class IMinigame {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         Timestamp lastUpdated = resultSet.getTimestamp("last_updated");
+                        if (lastUpdated == null) return createDefaultGameData(server);
                         long diffSeconds = (System.currentTimeMillis() - lastUpdated.getTime()) / 1000;
-                        // Server missed its heartbeat — treat as dead (LOADING).
                         if (diffSeconds >= STALE_THRESHOLD_SECONDS) {
                             return createDefaultGameData(server);
                         }
                         int maxPlayers = resultSet.getInt("max_players");
                         String data = resultSet.getString("data");
+                        if (data == null) return createDefaultGameData(server);
                         JsonObject jsonData = JsonParser.parseString(data).getAsJsonObject();
                         return parseGameData(server, jsonData, jsonData, maxPlayers);
                     }
@@ -185,12 +203,19 @@ public class IMinigame {
     private GameData parseGameData(IGame server, JsonObject jsonData, JsonObject fullData, int maxPlayers) {
         GameData newData = new GameData(server);
         try {
+            if (!jsonData.has("GameState") || !jsonData.has("Players")) {
+                return createDefaultGameData(server);
+            }
             newData.setGameState(GameState.valueOf(jsonData.get("GameState").getAsString()));
             newData.setPlayers(jsonData.get("Players").getAsInt());
             newData.setMaxPlayers(maxPlayers);
             newData.setJsonObject(fullData);
-            newData.setLastUpdate(LocalTime.now());
+            newData.setLastUpdate(Instant.now());
             server.setData(newData);
+        } catch (IllegalArgumentException e) {
+            // Invalid GameState enum value
+            e.printStackTrace();
+            return createDefaultGameData(server);
         } catch (Exception e) {
             e.printStackTrace();
             return createDefaultGameData(server);
@@ -203,7 +228,8 @@ public class IMinigame {
         data.setGameState(GameState.LOADING);
         data.setPlayers(0);
         data.setMaxPlayers(-1);
-        data.setLastUpdate(LocalTime.now());
+        data.setLastUpdate(Instant.now());
+        server.setData(data);
         return data;
     }
 }

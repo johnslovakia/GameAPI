@@ -76,10 +76,10 @@ public class GameService implements Module {
             boolean bungeecord = dataManager != null &&
                     (dataManager.getServerDataMySQL() != null || dataManager.getServerDataRedis() != null);
             if (bungeecord) {
-                Optional<IMinigame> iMinigame = dataManager.getMinigame(Minigame.getInstance().getName());
+                Optional<IMinigame> iMinigame = dataManager.getMinigame(Minigame.getInstance().getFullName());
                 if (iMinigame.isPresent()) {
                     IGame bestServer = iMinigame.get().getBestServer(gamePlayer);
-                    if (!bestServer.getBungeecordServerName()
+                    if (bestServer != null && !bestServer.getBungeecordServerName()
                             .equalsIgnoreCase(Minigame.getInstance().getSettings().getServerName())) {
                         bestServer.sendPlayerToServer(player);
                         return;
@@ -101,11 +101,11 @@ public class GameService implements Module {
                 (dataManager.getServerDataMySQL() != null
                         || dataManager.getServerDataRedis() != null);
         if (includeOtherServers && bungeecord){
-            Optional<IMinigame> iMinigame = dataManager.getMinigame(Minigame.getInstance().getName());
+            Optional<IMinigame> iMinigame = dataManager.getMinigame(Minigame.getInstance().getFullName());
             if (iMinigame.isPresent()){
                 IGame bestServer = iMinigame.get().getBestServer(gamePlayer);
 
-                if (!bestServer.getBungeecordServerName().equalsIgnoreCase(Minigame.getInstance().getSettings().getServerName())){
+                if (bestServer != null && !bestServer.getBungeecordServerName().equalsIgnoreCase(Minigame.getInstance().getSettings().getServerName())){
                     bestServer.sendPlayerToServer(player);
                     Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
                         if (player.isOnline())
@@ -130,8 +130,8 @@ public class GameService implements Module {
             game.joinPlayer(player);
             return;
         }else if (bungeecord && includeOtherServers){
-            if (dataManager.getMinigame(Minigame.getInstance().getName()).isPresent()) {
-                IGame bestArena = dataManager.getMinigame(Minigame.getInstance().getName()).get().getBestServer(gamePlayer);
+            if (dataManager.getMinigame(Minigame.getInstance().getFullName()).isPresent()) {
+                IGame bestArena = dataManager.getMinigame(Minigame.getInstance().getFullName()).get().getBestServer(gamePlayer);
                 if ((dataManager.getServerDataMySQL() != null || dataManager.getServerDataRedis() != null) && bestArena != null) {
                     bestArena.sendPlayerToServer(player);
                     return;
@@ -179,13 +179,15 @@ public class GameService implements Module {
                     (dataManager.getServerDataMySQL() != null
                             || dataManager.getServerDataRedis() != null);
             if (bungeecord) {
-                Optional<IMinigame> iMinigame = dataManager.getMinigame(Minigame.getInstance().getName());
+                Optional<IMinigame> iMinigame = dataManager.getMinigame(Minigame.getInstance().getFullName());
                 if (iMinigame.isPresent()) {
                     for (GamePlayer gamePlayer : toResetGame.getParticipants()) {
                         IGame bestServer = iMinigame.get().getBestServer(gamePlayer);
 
-                        if (!bestServer.getBungeecordServerName().equalsIgnoreCase(Minigame.getInstance().getSettings().getServerName())) {
+                        if (bestServer != null && !bestServer.getBungeecordServerName().equalsIgnoreCase(Minigame.getInstance().getSettings().getServerName())) {
                             bestServer.sendPlayerToServer(gamePlayer.getOnlinePlayer());
+                        }else{
+                            GameUtils.sendToLobby(gamePlayer.getOnlinePlayer());
                         }
                     }
                 }

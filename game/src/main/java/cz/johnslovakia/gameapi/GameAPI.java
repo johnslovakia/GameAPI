@@ -194,7 +194,7 @@ public class GameAPI{
                                                     .into("TestServer", "Nickname", "Minigame", "Stars", "Version")
                                                     .values(
                                                             player.getName(),
-                                                            Minigame.getInstance().getName(),
+                                                            Minigame.getInstance().getFullName(),
                                                             rating,
                                                             Minigame.getInstance().getPlugin().getDescription().getVersion()
                                                     )
@@ -249,7 +249,7 @@ public class GameAPI{
                                                     .into("TestServer", "Nickname", "Minigame", "Feedback", "Version")
                                                     .values(
                                                             player.getName(),
-                                                            Minigame.getInstance().getName(),
+                                                            Minigame.getInstance().getFullName(),
                                                             feedback,
                                                             Minigame.getInstance().getPlugin().getDescription().getVersion()
                                                     )
@@ -470,10 +470,10 @@ public class GameAPI{
             int gamesPerServer = minigame.getSettings().getGamesPerServer();
             for (int i = 0; i < gamesPerServer; i++) {
                 if (bungeecord) {
-                    minigame.setupGame((minigame.getSettings().getServerName() != "" ? minigame.getSettings().getServerName() : minigame.getName() + "-1")
+                    minigame.setupGame((minigame.getSettings().getServerName() != "" ? minigame.getSettings().getServerName() : minigame.getFullName() + "-1")
                             + (gamesPerServer > 1 ? StringUtils.getLetter(i) : ""));
                 } else {
-                    minigame.setupGame(minigame.getName() + "-" + (i + 1));
+                    minigame.setupGame(minigame.getFullName() + "-" + (i + 1));
                 }
             }
             Logger.log("Games successfully loaded!", Logger.LogType.INFO);

@@ -15,12 +15,18 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Manages reading and writing game state data for a single game server.
  * Register properties via {@link #addProperty} and call {@link #updateGame} to push data.
  */
 public class GameDataManager<T> {
+    
+    private static final Pattern SAFE_PROPERTY_NAME = Pattern.compile("^[a-zA-Z0-9_]+$");
+
+    /** Redis TTL for game data keys. Should be longer than the heartbeat interval. */
+    private static final int REDIS_GAME_DATA_TTL_SECONDS = 120;
 
     @Getter
     private final String minigameName;
@@ -57,6 +63,7 @@ public class GameDataManager<T> {
 
     /** Creates the games table if it doesn't already exist. Called during {@link ServerRegistry#initialize()}. */
     public static void createTableIfNotExists(Database serverDataMySQL) {
+        if (serverDataMySQL == null) return;
         String query = "CREATE TABLE IF NOT EXISTS games (" +
                 "name VARCHAR(64) NOT NULL PRIMARY KEY, " +
                 "minigame VARCHAR(64) NOT NULL, " +
@@ -82,21 +89,26 @@ public class GameDataManager<T> {
 
     /** Pushes all registered properties to the database/Redis asynchronously. */
     public void updateGame() {
-        if (ModuleManager.getModule(ServerRegistry.class).useRedisForServerData()) {
-            updateGameRedis();
+        ServerRegistry registry = ModuleManager.getModule(ServerRegistry.class);
+        if (registry == null) {
+            Logger.log("ServerRegistry module not found, cannot update game: " + gameName, Logger.LogType.ERROR);
+            return;
+        }
+        if (registry.useRedisForServerData()) {
+            updateGameRedis(registry);
         } else {
-            updateGameMySQL();
+            updateGameMySQL(registry);
         }
     }
 
-    private void updateGameRedis() {
+    private void updateGameRedis(ServerRegistry registry) {
         new BukkitRunnable() {
             @Override
             public void run() {
                 try {
                     JsonObject jsonData = buildGameDataJson();
                     String key = "minigame." + minigameName + "." + gameName;
-                    ModuleManager.getModule(ServerRegistry.class).getServerDataRedis().set(key, jsonData.toString(), 60);
+                    registry.getServerDataRedis().set(key, jsonData.toString(), REDIS_GAME_DATA_TTL_SECONDS);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -104,14 +116,14 @@ public class GameDataManager<T> {
         }.runTaskAsynchronously(Shared.getInstance().getPlugin());
     }
 
-    private void updateGameMySQL() {
+    private void updateGameMySQL(ServerRegistry registry) {
         new BukkitRunnable() {
             @Override
             public void run() {
                 JsonObject jsonData = buildGameDataJson();
                 String query = "INSERT INTO games (name, minigame, max_players, data) VALUES (?, ?, ?, ?) " +
                         "ON DUPLICATE KEY UPDATE minigame=?, max_players=?, data=?, last_updated=CURRENT_TIMESTAMP";
-                try (SQLDatabaseConnection connection = ModuleManager.getModule(ServerRegistry.class).getServerDataMySQL().getConnection()) {
+                try (SQLDatabaseConnection connection = registry.getServerDataMySQL().getConnection()) {
                     if (connection == null) {
                         Logger.log("Failed to get connection for updating game: " + gameName, Logger.LogType.ERROR);
                         return;
@@ -164,16 +176,28 @@ public class GameDataManager<T> {
      * For Redis, falls back to a full {@link #updateGame()} call.
      */
     public void updateProperty(String propertyName, Object value) {
-        if (ModuleManager.getModule(ServerRegistry.class).useRedisForServerData()) {
+        if (!SAFE_PROPERTY_NAME.matcher(propertyName).matches()) {
+            Logger.log("Rejected unsafe property name: " + propertyName, Logger.LogType.ERROR);
+            return;
+        }
+
+        ServerRegistry registry = ModuleManager.getModule(ServerRegistry.class);
+        if (registry == null) {
+            Logger.log("ServerRegistry module not found, cannot update property: " + propertyName, Logger.LogType.ERROR);
+            return;
+        }
+
+        if (registry.useRedisForServerData()) {
             updateGame();
             return;
         }
+
         new BukkitRunnable() {
             @Override
             public void run() {
                 String query = "UPDATE games SET data = JSON_SET(data, '$." + propertyName + "', ?), " +
                         "last_updated = CURRENT_TIMESTAMP WHERE name = ?";
-                try (SQLDatabaseConnection connection = ModuleManager.getModule(ServerRegistry.class).getServerDataMySQL().getConnection()) {
+                try (SQLDatabaseConnection connection = registry.getServerDataMySQL().getConnection()) {
                     if (connection == null) {
                         Logger.log("Failed to get connection for updating property: " + propertyName, Logger.LogType.ERROR);
                         return;

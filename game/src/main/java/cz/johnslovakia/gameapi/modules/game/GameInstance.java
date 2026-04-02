@@ -181,7 +181,7 @@ public class GameInstance implements Terminate{
 
         Minigame minigame = Minigame.getInstance();
         if (ModuleManager.getModule(ServerRegistry.class) != null){
-            serverDataManager = new GameDataManager<>(Minigame.getInstance().getName(), this, getName(), getSettings().getMaxPlayers());
+            serverDataManager = new GameDataManager<>(Minigame.getInstance().getFullName(), this, getName(), getSettings().getMaxPlayers());
 
             serverDataManager.addProperty("GameState", new GameStateValueImple());
             serverDataManager.addProperty("MaxPlayers", new MaxPlayersValueImple());

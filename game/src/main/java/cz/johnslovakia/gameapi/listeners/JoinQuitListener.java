@@ -159,7 +159,6 @@ public class JoinQuitListener implements Listener {
             currentInventory.unloadInventory(gamePlayer);
         }
 
-        ModuleManager.getModule(StatsModule.class).getStatsHolograms().remove(gamePlayer);
         Utils.clearHeadCache(gamePlayer.getUniqueId());
 
         if (game.getState().equals(GameState.INGAME) && !game.getSettings().isUseTeams() && !gamePlayer.isRespawning()){ //TODO: check

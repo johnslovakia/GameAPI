@@ -6,12 +6,12 @@ import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.database.DatabaseMigrationHelper;
 import cz.johnslovakia.gameapi.database.Type;
 import cz.johnslovakia.gameapi.events.GameJoinEvent;
+import cz.johnslovakia.gameapi.events.GameQuitEvent;
 import cz.johnslovakia.gameapi.modules.Module;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.modules.game.lobby.LobbyLocation;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
-import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 
 import cz.johnslovakia.gameapi.utils.BatchConfig;
 import cz.johnslovakia.gameapi.utils.CachedBatchStorage;
@@ -37,14 +37,15 @@ public class StatsModule implements Module, Listener {
     @Getter
     private List<Stat> stats = new ArrayList<>();
 
-    // Klíč je String nickname — spolehlivější než PlayerIdentity na offline serverech (žádné UUID)
     private CachedBatchStorage<String, Map<String, Integer>> storage;
 
     @Getter
-    private StatsHolograms statsHolograms;
+    private LifetimeStatsHologram lifetimeStatsHologram;
+    @Getter
+    private TopStatsHologram topStatsHologram;
     @Getter
     private StatsTable statsTable;
-    @Getter (AccessLevel.PACKAGE)
+    @Getter(AccessLevel.PACKAGE)
     private boolean fixedBillboardDisplay = true;
 
     public StatsModule(boolean fixedBillboardDisplay) {
@@ -67,17 +68,18 @@ public class StatsModule implements Module, Listener {
                 this::mergeStatsMaps
         );
 
-        this.statsHolograms = new StatsHolograms(this);
         this.statsTable = new StatsTable(this);
+        this.lifetimeStatsHologram = new LifetimeStatsHologram(this);
+        this.topStatsHologram = new TopStatsHologram(this);
 
-        DatabaseMigrationHelper.ensureNicknameUnique(Minigame.getInstance().getName() + "_stats");
+        DatabaseMigrationHelper.ensureNicknameUnique(Minigame.getInstance().getFullName() + "_stats");
     }
 
     @Override
     public void terminate() {
-        if (storage != null) {
-            storage.shutdown();
-        }
+        if (topStatsHologram != null) topStatsHologram.shutdown();
+        if (lifetimeStatsHologram != null) lifetimeStatsHologram.removeAll();
+        if (storage != null) storage.shutdown();
         stats = null;
     }
 
@@ -88,30 +90,46 @@ public class StatsModule implements Module, Listener {
     }
 
     @EventHandler
-    public void onPlayerJoin(GameJoinEvent e) {
-        if (e.getGame().getState().equals(GameState.STARTING) || e.getGame().getState().equals(GameState.WAITING)) {
-            String nickname = e.getGamePlayer().getName();
-            storage.get(nickname).thenAccept(playerStats -> {
-                ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", Minigame.getInstance().getPlugin());
-                GameInstance game = e.getGame();
-
-                LobbyLocation statsHologram = GameUtils.getLobbyLocation(config.getConfig(), game, "statsHologram");
-                if (statsHologram != null) {
-                    Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task -> {
-                        statsHolograms.createPlayerStatisticsHologram(e.getGamePlayer(), statsHologram.getLocation());
-                    });
-                }
-                LobbyLocation topStatsHologram = GameUtils.getLobbyLocation(config.getConfig(), game, "topStatsHologram");
-                if (topStatsHologram != null) {
-                    Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task -> {
-                        statsHolograms.getTopStatsHologram().createTopStatisticsHologram(e.getGamePlayer(), topStatsHologram.getLocation());
-                    });
-                }
-            });
-        }
+    public void onPlayerQuit(GameQuitEvent e) {
+        removeHolograms(e.getGamePlayer());
     }
 
-    //TODO: .
+    @EventHandler
+    public void onPlayerJoin(GameJoinEvent e) {
+        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
+            if (!e.getGamePlayer().isOnline()) {
+                task.cancel();
+                return;
+            }
+
+            if (e.getGame().getState().equals(GameState.STARTING) || e.getGame().getState().equals(GameState.WAITING)) {
+                String nickname = e.getGamePlayer().getName();
+                storage.get(nickname).thenAccept(playerStats -> {
+                    ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", Minigame.getInstance().getPlugin());
+                    GameInstance game = e.getGame();
+
+                    LobbyLocation statsHologramLoc = GameUtils.getLobbyLocation(config.getConfig(), game, "statsHologram");
+                    if (statsHologramLoc != null) {
+                        Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), t -> {
+                            lifetimeStatsHologram.create(e.getGamePlayer(), statsHologramLoc.getLocation());
+                        });
+                    }
+                    LobbyLocation topStatsHologramLoc = GameUtils.getLobbyLocation(config.getConfig(), game, "topStatsHologram");
+                    if (topStatsHologramLoc != null) {
+                        Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), t -> {
+                            topStatsHologram.create(e.getGamePlayer(), topStatsHologramLoc.getLocation());
+                        });
+                    }
+                });
+            }
+        }, 30L);
+    }
+
+    public void removeHolograms(PlayerIdentity playerIdentity) {
+        lifetimeStatsHologram.remove(playerIdentity);
+        topStatsHologram.remove(playerIdentity);
+    }
+
     public void createDatabaseTable() {
         statsTable.createTable();
 
@@ -119,6 +137,8 @@ public class StatsModule implements Module, Listener {
         for (Stat stat : stats) {
             statsTable.createNewColumn(Type.INT, stat.getName().replace(" ", "_"));
         }
+
+        topStatsHologram.registerStats();
     }
 
     public void registerStat(Stat... stats) {
@@ -139,12 +159,12 @@ public class StatsModule implements Module, Listener {
         }
 
         String placeholders = String.join(",", Collections.nCopies(nicknames.size(), "?"));
-        StringBuilder sqlBuilder = new StringBuilder("SELECT Nickname");
+        StringBuilder sqlBuilder = new StringBuilder("SELECT `Nickname`");
         for (Stat stat : stats) {
-            sqlBuilder.append(", ").append(stat.getName().replace(" ", "_"));
+            sqlBuilder.append(", `").append(stat.getName().replace(" ", "_")).append("`");
         }
-        sqlBuilder.append(" FROM ").append(Minigame.getInstance().getName()).append("_stats");
-        sqlBuilder.append(" WHERE Nickname IN (").append(placeholders).append(")");
+        sqlBuilder.append(" FROM ").append(statsTable.quotedTableName());
+        sqlBuilder.append(" WHERE `Nickname` IN (").append(placeholders).append(")");
 
         try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection();
              PreparedStatement stmt = dbConn.getConnection().prepareStatement(sqlBuilder.toString())) {
@@ -199,12 +219,8 @@ public class StatsModule implements Module, Listener {
             conn.setAutoCommit(false);
 
             try {
-                if (!deltaChanges.isEmpty()) {
-                    executeBatch(conn, deltaChanges, false);
-                }
-                if (!setChanges.isEmpty()) {
-                    executeBatch(conn, setChanges, true);
-                }
+                if (!deltaChanges.isEmpty()) executeBatch(conn, deltaChanges, false);
+                if (!setChanges.isEmpty()) executeBatch(conn, setChanges, true);
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -215,12 +231,7 @@ public class StatsModule implements Module, Listener {
         }
     }
 
-    private void executeBatch(
-            Connection conn,
-            Map<String, CachedBatchStorage.PendingChange<String, Map<String, Integer>>> changes,
-            boolean isSet
-    ) throws SQLException {
-
+    private void executeBatch(Connection conn, Map<String, CachedBatchStorage.PendingChange<String, Map<String, Integer>>> changes, boolean isSet) throws SQLException {
         Set<String> allStatNames = new HashSet<>();
         for (CachedBatchStorage.PendingChange<String, Map<String, Integer>> change : changes.values()) {
             allStatNames.addAll(change.getDelta().keySet());
@@ -228,22 +239,21 @@ public class StatsModule implements Module, Listener {
         if (allStatNames.isEmpty()) return;
 
         List<String> statNamesList = new ArrayList<>(allStatNames);
-        String tableName = Minigame.getInstance().getName() + "_stats";
 
-        StringBuilder sql = new StringBuilder("INSERT INTO ").append(tableName).append(" (Nickname");
+        StringBuilder sql = new StringBuilder("INSERT INTO ").append(statsTable.quotedTableName()).append(" (`Nickname`");
         StringBuilder values = new StringBuilder(" VALUES (?");
         StringBuilder onDuplicate = new StringBuilder(" ON DUPLICATE KEY UPDATE ");
 
         for (int i = 0; i < statNamesList.size(); i++) {
             String col = statNamesList.get(i).replace(" ", "_");
-            sql.append(", ").append(col);
+            sql.append(", `").append(col).append("`");
             values.append(", ?");
             if (i > 0) onDuplicate.append(", ");
 
             if (isSet) {
-                onDuplicate.append(col).append(" = VALUES(").append(col).append(")");
+                onDuplicate.append("`").append(col).append("` = VALUES(`").append(col).append("`)");
             } else {
-                onDuplicate.append(col).append(" = ").append(col).append(" + VALUES(").append(col).append(")");
+                onDuplicate.append("`").append(col).append("` = `").append(col).append("` + VALUES(`").append(col).append("`)");
             }
         }
         sql.append(")").append(values).append(")").append(onDuplicate);
@@ -252,7 +262,7 @@ public class StatsModule implements Module, Listener {
             for (CachedBatchStorage.PendingChange<String, Map<String, Integer>> change : changes.values()) {
                 Map<String, Integer> statsMap = change.getDelta();
                 int paramIndex = 1;
-                stmt.setString(paramIndex++, change.getKey()); // nickname
+                stmt.setString(paramIndex++, change.getKey());
                 for (String statName : statNamesList) {
                     stmt.setInt(paramIndex++, statsMap.getOrDefault(statName, 0));
                 }
@@ -303,7 +313,6 @@ public class StatsModule implements Module, Listener {
     public int getPlayerStat(String nickname, Stat stat) {
         return getPlayerStat(nickname, stat.getName());
     }
-
 
     public void increasePlayerStat(PlayerIdentity playerIdentity, String statName, int amount) {
         increasePlayerStat(playerIdentity.getName(), statName, amount);
