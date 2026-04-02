@@ -11,6 +11,7 @@ import cz.johnslovakia.gameapi.utils.StringUtils;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Display;
@@ -57,54 +58,55 @@ public class StatsHolograms {
 
 
         int finalMaxLength = maxLength;
-        TextDisplay display = location.getWorld().spawn(location, TextDisplay.class, entity -> {
-           Component component = title
-                    .appendNewline();
+        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
+            TextDisplay display = location.getWorld().spawn(location, TextDisplay.class, entity -> {
+                Component component = title
+                        .appendNewline();
 
-            for (int i = 0; i < stats.size(); i++) {
-                Stat stat = stats.get(i);
-                int playerStat = statsModule.getPlayerStat(playerIdentity, stat.getName());
+                for (int i = 0; i < stats.size(); i++) {
+                    Stat stat = stats.get(i);
+                    int playerStat = statsModule.getPlayerStat(playerIdentity, stat.getName());
 
-                int dotCharWidth = StringUtils.DefaultFontInfo.getDefaultFontInfo('.').getLength();
-                int dotCount = Math.max(0,
-                        (finalMaxLength
-                                - getLength(stat.getTranslated(playerIdentity))
-                                - getLength(Component.text(playerStat)))
-                                / dotCharWidth
-                );
-
-                if (ModuleManager.getModule(MessageModule.class).existMessage("hologram.lifetime_stats.score_line")) {
-                    component = component.append(
-                            ModuleManager.getModule(MessageModule.class).get(playerIdentity, "hologram.lifetime_stats.score_line")
-                                    .replace("%stat_name%", stat.getTranslated(playerIdentity))
-                                    .replace("%value%", StringUtils.betterNumberFormat(playerStat))
-                                    .replace("%space_pad%", Component.text(StringUtils.calculateNegativeSpaces(dotCount)))
-                                    .getTranslated()
+                    int dotCharWidth = StringUtils.DefaultFontInfo.getDefaultFontInfo('.').getLength();
+                    int dotCount = Math.max(0,
+                            (finalMaxLength
+                                    - getLength(stat.getTranslated(playerIdentity))
+                                    - getLength(Component.text(playerStat)))
+                                    / dotCharWidth
                     );
-                } else {
-                    component = component
-                            .append(Component.text("§f"))
-                            .append(stat.getTranslated(playerIdentity))
-                            .append(Component.text(StringUtils.calculateNegativeSpaces(dotCount))
-                                    .font(Key.key("jsplugins", "gameapi")))
-                            .append(Component.text(" §a" + playerStat));
+
+                    if (ModuleManager.getModule(MessageModule.class).existMessage("hologram.lifetime_stats.score_line")) {
+                        component = component.append(
+                                ModuleManager.getModule(MessageModule.class).get(playerIdentity, "hologram.lifetime_stats.score_line")
+                                        .replace("%stat_name%", stat.getTranslated(playerIdentity))
+                                        .replace("%value%", StringUtils.betterNumberFormat(playerStat))
+                                        .replace("%space_pad%", Component.text(StringUtils.calculateNegativeSpaces(dotCount)))
+                                        .getTranslated()
+                        );
+                    } else {
+                        component = component
+                                .append(Component.text("§f"))
+                                .append(stat.getTranslated(playerIdentity))
+                                .append(Component.text(StringUtils.calculateNegativeSpaces(dotCount))
+                                        .font(Key.key("jsplugins", "gameapi")))
+                                .append(Component.text(" §a" + playerStat));
+                    }
+
+                    if (i < stats.size() - 1) {
+                        component = component.appendNewline();
+                    }
                 }
 
-                if (i < stats.size() - 1) {
-                    component = component.appendNewline();
-                }
-            }
 
+                entity.text(component);
+                entity.setBillboard(statsModule.isFixedBillboardDisplay() ? Display.Billboard.FIXED : Display.Billboard.VERTICAL);
+                entity.setVisibleByDefault(false);
+                entity.setPersistent(false);
+            });
 
-            entity.text(component);
-            entity.setBillboard(Display.Billboard.FIXED);
-            //entity.set
-            entity.setVisibleByDefault(false);
-            entity.setPersistent(false);
-        });
-
-        playerIdentity.getOnlinePlayer().showEntity(Minigame.getInstance().getPlugin(), display);
-        textDisplayMap.put(playerIdentity, display);
+            playerIdentity.getOnlinePlayer().showEntity(Minigame.getInstance().getPlugin(), display);
+            textDisplayMap.put(playerIdentity, display);
+        }, 20L);
     }
 
     private int getLength(Component component){

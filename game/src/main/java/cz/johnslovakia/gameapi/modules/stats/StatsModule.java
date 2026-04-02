@@ -17,6 +17,7 @@ import cz.johnslovakia.gameapi.utils.BatchConfig;
 import cz.johnslovakia.gameapi.utils.CachedBatchStorage;
 import cz.johnslovakia.gameapi.utils.ConfigAPI;
 import cz.johnslovakia.gameapi.utils.GameUtils;
+import lombok.AccessLevel;
 import lombok.Getter;
 
 import me.zort.sqllib.SQLDatabaseConnection;
@@ -43,7 +44,15 @@ public class StatsModule implements Module, Listener {
     private StatsHolograms statsHolograms;
     @Getter
     private StatsTable statsTable;
+    @Getter (AccessLevel.PACKAGE)
+    private boolean fixedBillboardDisplay = true;
 
+    public StatsModule(boolean fixedBillboardDisplay) {
+        this.fixedBillboardDisplay = fixedBillboardDisplay;
+    }
+
+    public StatsModule() {
+    }
 
     @Override
     public void initialize() {

@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.modules.stats;
 
+import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
@@ -126,33 +127,35 @@ public class TopStatsHologram implements Listener {
         Component content = buildComponent(playerIdentity, stat, topPlayers,
                 playerRank, playerStatValue, currentIndex, totalStats);
 
-        TextDisplay display = location.getWorld().spawn(location, TextDisplay.class, entity -> {
-            entity.text(content);
-            entity.setBillboard(Display.Billboard.FIXED);
-            entity.setVisibleByDefault(false);
-            entity.setPersistent(false);
-            entity.setSeeThrough(false);
-            entity.setViewRange(0.5f);
-            entity.setLineWidth(10000);
-        });
+        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
+            TextDisplay display = location.getWorld().spawn(location, TextDisplay.class, entity -> {
+                entity.text(content);
+                entity.setBillboard(statsModule.isFixedBillboardDisplay() ? Display.Billboard.FIXED : Display.Billboard.VERTICAL);
+                entity.setVisibleByDefault(false);
+                entity.setPersistent(false);
+                entity.setSeeThrough(false);
+                entity.setViewRange(0.5f);
+                entity.setLineWidth(10000);
+            });
 
-        if (!clickZoneMap.containsKey(playerIdentity)) {
-            Interaction clickZone = location.getWorld().spawn(
-                    location.clone().add(0, -1.0, 0),
-                    Interaction.class,
-                    entity -> {
-                        entity.setInteractionWidth(2.5f);
-                        entity.setInteractionHeight(4.0f);
-                        entity.setVisibleByDefault(false);
-                        entity.setPersistent(false);
-                    }
-            );
-            clickZoneMap.put(playerIdentity, clickZone);
-            playerIdentity.getOnlinePlayer().showEntity(Minigame.getInstance().getPlugin(), clickZone);
-        }
+            if (!clickZoneMap.containsKey(playerIdentity)) {
+                Interaction clickZone = location.getWorld().spawn(
+                        location.clone().add(0, -1.0, 0),
+                        Interaction.class,
+                        entity -> {
+                            entity.setInteractionWidth(2.5f);
+                            entity.setInteractionHeight(4.0f);
+                            entity.setVisibleByDefault(false);
+                            entity.setPersistent(false);
+                        }
+                );
+                clickZoneMap.put(playerIdentity, clickZone);
+                playerIdentity.getOnlinePlayer().showEntity(Minigame.getInstance().getPlugin(), clickZone);
+            }
 
-        playerIdentity.getOnlinePlayer().showEntity(Minigame.getInstance().getPlugin(), display);
-        displayMap.put(playerIdentity, display);
+            playerIdentity.getOnlinePlayer().showEntity(Minigame.getInstance().getPlugin(), display);
+            displayMap.put(playerIdentity, display);
+        }, 20L);
     }
 
     private Component buildComponent(PlayerIdentity playerIdentity, Stat stat,

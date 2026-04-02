@@ -101,7 +101,7 @@ public class WorldManager {
 
         World bukkitWorld = Bukkit.getWorld(worldName);
         if (bukkitWorld != null){
-            bukkitWorld.setGameRule(GameRules.ADVANCE_TIME, false);
+            bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
         }
 
     }

@@ -14,10 +14,7 @@ import cz.johnslovakia.gameapi.modules.scores.Score;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 @Getter @Setter
 public class PlayerGameSession {
@@ -31,6 +28,7 @@ public class PlayerGameSession {
     private final Map<Score, List<PlayerRewardRecord>> earnedScoreRewards = new HashMap<>();
 
     private Kit selectedKit;
+    private List<Kit> purchasedKitsThisGame = new ArrayList<>();
     private GameTeam team;
     private GamePlayerState state = GamePlayerState.UNKNOWN;
 
@@ -88,6 +86,11 @@ public class PlayerGameSession {
     public int getRewardCount(Score score) {
         List<PlayerRewardRecord> records = earnedScoreRewards.get(score);
         return records != null ? records.size() : 0;
+    }
+
+    public void addPurchasedKitThisGame(Kit kit){
+        if (purchasedKitsThisGame.contains(kit)) return;
+        purchasedKitsThisGame.add(kit);
     }
 
 

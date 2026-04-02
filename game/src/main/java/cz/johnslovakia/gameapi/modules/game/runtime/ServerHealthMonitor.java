@@ -17,19 +17,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Setter
 public class ServerHealthMonitor implements Module {
 
-    /** RAM % that triggers breach counting (soft threshold). */
+    /** RAM % that triggers breach counting (soft threshold).  */
     private double ramSoftThresholdPercent = 85.0;
 
-    /** RAM % that triggers hard-deadline mode (arenas WILL be interrupted). */
+
+    /** RAM % that triggers hard-deadline mode (arenas will be interrupted). */
     private double ramHardThresholdPercent = 92.0;
 
     /** RAM % that triggers an immediate forced restart. */
     private double ramCriticalPercent = 96.0;
 
-    /** TPS (1-min avg) below which a breach is counted. */
+    /** TPS below which a breach is counted. */
     private double tpsSoftThreshold = 12.0;
 
-    /** TPS (1-min avg) below which hard-deadline mode activates. */
+    /** TPS below which hard-deadline mode activates. */
     private double tpsHardThreshold = 6.0;
 
 
@@ -38,7 +39,7 @@ public class ServerHealthMonitor implements Module {
     private long checkIntervalTicks = 20L * 45; // 45 s
 
     /** Consecutive soft breaches needed before entering restart-pending. */
-    private int requiredConsecutiveBreaches = 4; // ~2 min at 30 s
+    private int requiredConsecutiveBreaches = 4; // ~ 2 min at 30 s
 
 
     private BukkitTask healthCheckTask;

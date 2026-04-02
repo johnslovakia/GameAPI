@@ -152,7 +152,7 @@ public class KitInventory implements Listener {
                                                     .replace("%price%", "" + StringUtils.betterNumberFormat(kit.getPrice()))
                                                     .replace("%economy_name%", resource.getDisplayName())
                                                     .addToItemLore(item);
-                                        } else if ((gamePlayer.getGame().getSettings().isEnabledChangingKitAfterStart() && playerData.getPurchasedKitsThisGame().contains(kit))
+                                        } else if ((gamePlayer.getGame().getSettings().isEnabledChangingKitAfterStart() && gamePlayer.getGameSession().getPurchasedKitsThisGame().contains(kit))
                                                 || (kitManager.isPurchaseKitForever() && kitManager.hasKitPermission(gamePlayer, kit))) {
                                             ModuleManager.getModule(MessageModule.class).get(player, "inventory.kit.purchased_for")
                                                     .replace("%price%", StringUtils.betterNumberFormat(kit.getPrice()))
@@ -180,7 +180,7 @@ public class KitInventory implements Listener {
                                         item.addEnchant(Enchantment.INFINITY, 1);
                                         ModuleManager.getModule(MessageModule.class).get(player, "inventory.kit.selected")
                                                 .addToItemLore(item);
-                                    } else if ((gamePlayer.getGame().getSettings().isEnabledChangingKitAfterStart() && playerData.getPurchasedKitsThisGame().contains(kit))
+                                    } else if ((gamePlayer.getGame().getSettings().isEnabledChangingKitAfterStart() && gamePlayer.getGameSession().getPurchasedKitsThisGame().contains(kit))
                                             || (kitManager.isPurchaseKitForever() && kitManager.hasKitPermission(gamePlayer, kit))
                                             || player.hasPermission("kits.free")) {
                                         ModuleManager.getModule(MessageModule.class).get(player, "inventory.kit.select")

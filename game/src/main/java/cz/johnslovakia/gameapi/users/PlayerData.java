@@ -40,7 +40,6 @@ public class PlayerData {
 
     private final GamePlayer gamePlayer;
 
-    private List<Kit> purchasedKitsThisGame = new ArrayList<>();
     private Map<Kit, Inventory> kitInventories = new HashMap<>();
     private Kit defaultKit;
 
@@ -425,17 +424,6 @@ public class PlayerData {
                     + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
             e.printStackTrace();
         }
-    }
-
-    public void addPurchasedKitThisGame(Kit kit){
-        if (purchasedKitsThisGame == null)
-            purchasedKitsThisGame = new ArrayList<>();
-
-
-        if (purchasedKitsThisGame.contains(kit)){
-            return;
-        }
-        purchasedKitsThisGame.add(kit);
     }
 
     public void saveAll(){

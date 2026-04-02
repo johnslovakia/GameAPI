@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.guis;
 
+import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.cosmetics.Cosmetic;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsCategory;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
@@ -31,6 +32,7 @@ import me.zort.containr.GUI;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.enchantments.Enchantment;
@@ -370,10 +372,20 @@ public class ProfileInventory {
         inventory.open(gamePlayer.getOnlinePlayer());
 
         if (ModuleManager.getInstance().hasModule(DailyRewardTrackModule.class)){
-            inventory.onClose(GUI.CloseReason.BY_PLAYER, player ->
-                    ModuleManager.getModule(DailyRewardTrackModule.class).savePlayerDailyRewardsClaim(gamePlayer));
-            inventory.onClose(GUI.CloseReason.BY_METHOD, player ->
-                    ModuleManager.getModule(DailyRewardTrackModule.class).savePlayerDailyRewardsClaim(gamePlayer));
+            DailyRewardTrackModule module = ModuleManager.getModule(DailyRewardTrackModule.class);
+
+            inventory.onClose(GUI.CloseReason.BY_PLAYER, player -> {
+                int claims = module.getPlayerDailyClaims(gamePlayer);
+                Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
+                    module.savePlayerDailyRewardsClaim(gamePlayer, claims);
+                });
+            });
+            inventory.onClose(GUI.CloseReason.BY_METHOD, player -> {
+                int claims = module.getPlayerDailyClaims(gamePlayer);
+                Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
+                    module.savePlayerDailyRewardsClaim(gamePlayer, claims);
+                });
+            });
         }
     }
 

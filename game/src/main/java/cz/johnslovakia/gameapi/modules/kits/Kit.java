@@ -82,7 +82,7 @@ public class Kit implements Listener{
         giveContent(gamePlayer);
 
 
-        if ((gamePlayer.getPlayerData().getPurchasedKitsThisGame() != null && gamePlayer.getPlayerData().getPurchasedKitsThisGame().contains(this))
+        if ((gamePlayer.getGameSession().getPurchasedKitsThisGame() != null && gamePlayer.getGameSession().getPurchasedKitsThisGame().contains(this))
                 || getPrice() == 0 || (kitManager.getDefaultKit() != null && kitManager.getDefaultKit().equals(this))){
             return;
         }
@@ -95,6 +95,8 @@ public class Kit implements Listener{
                     .replace("%economy_name%", resource.getDisplayName())
                     .send();
         }else{
+            resourcesModule.withdraw(gamePlayer.getOnlinePlayer(), resource, getPrice());
+
             int balance = resourcesModule.getPlayerBalanceCached(player, resource);
             ModuleManager.getModule(MessageModule.class).get(player, "chat.kit.activated")
                     .replace("%kit%", getName())
@@ -106,15 +108,9 @@ public class Kit implements Listener{
                     .replace("%balance%", StringUtils.betterNumberFormat(balance))
                     .replace("%economy_name%", resource.getDisplayName())
                     .send();
-            new BukkitRunnable(){
-                @Override
-                public void run() {
-                    resourcesModule.withdraw(gamePlayer.getOnlinePlayer(), resource, getPrice());
-                }
-            }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
         }
 
-        gamePlayer.getPlayerData().addPurchasedKitThisGame(this);
+        gamePlayer.getGameSession().addPurchasedKitThisGame(this);
     }
 
     public void unselect(GamePlayer gamePlayer) {
@@ -140,7 +136,7 @@ public class Kit implements Listener{
         boolean alreadyHasPermission = (kitManager.getDefaultKit() != null && kitManager.getDefaultKit().equals(this))
                 || player.hasPermission("kits.free")
                 || kitManager.hasKitPermission(gamePlayer, this)
-                || (gamePlayer.getPlayerData().getPurchasedKitsThisGame() != null && gamePlayer.getPlayerData().getPurchasedKitsThisGame().contains(this));
+                || (gamePlayer.getGameSession().getPurchasedKitsThisGame() != null && gamePlayer.getGameSession().getPurchasedKitsThisGame().contains(this));
 
         if (alreadyHasPermission) {
             handleKitSelection(gamePlayer, kitManager, player, resource, 0);
@@ -154,7 +150,7 @@ public class Kit implements Listener{
 
     private void handleKitSelection(GamePlayer gamePlayer, KitManager kitManager, Player player, Resource resource, double balance) {
         if ((balance >= getPrice()) || kitManager.hasKitPermission(gamePlayer, this)
-                || (gamePlayer.getPlayerData().getPurchasedKitsThisGame() != null && gamePlayer.getPlayerData().getPurchasedKitsThisGame().contains(this))) {
+                || (gamePlayer.getGameSession().getPurchasedKitsThisGame() != null && gamePlayer.getGameSession().getPurchasedKitsThisGame().contains(this))) {
 
             if (gamePlayer.hasKit() && gamePlayer.getGameSession().getSelectedKit().equals(this)) {
                 if (kitManager.getDefaultKit() != null && !kitManager.getDefaultKit().equals(this))
@@ -167,8 +163,8 @@ public class Kit implements Listener{
             if (((gamePlayer.getGame().getState() == GameState.WAITING
                     || gamePlayer.getGame().getState() == GameState.STARTING) && !isKitManagerDefaultKit)
                     || (gamePlayer.getGame().getState() == GameState.INGAME
-                    && gamePlayer.getPlayerData().getPurchasedKitsThisGame() != null
-                    && gamePlayer.getPlayerData().getPurchasedKitsThisGame().contains(this))) {
+                    && gamePlayer.getGameSession().getPurchasedKitsThisGame() != null
+                    && gamePlayer.getGameSession().getPurchasedKitsThisGame().contains(this))) {
                 ModuleManager.getModule(MessageModule.class).get(player, "chat.kit.selected")
                         .replace("%kit%", getName())
                         .send();

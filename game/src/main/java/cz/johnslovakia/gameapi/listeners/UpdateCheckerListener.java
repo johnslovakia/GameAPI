@@ -62,7 +62,7 @@ public class UpdateCheckerListener implements Listener {
         player.sendMessage(message);
 
         if (updateChecker.getAnnouncement() != null) {
-            player.sendMessage(" §7↳ §r" + StringUtils.colorizer(updateChecker.getAnnouncement()));
+            player.sendMessage("  §7↳ §7" + StringUtils.colorizer(updateChecker.getAnnouncement()));
         }
     }
 
@@ -82,7 +82,7 @@ public class UpdateCheckerListener implements Listener {
         player.sendMessage(message);
 
         if (updateChecker.getAnnouncement() != null) {
-            player.sendMessage(" §7↳ §r" + StringUtils.colorizer(updateChecker.getAnnouncement()));
+            player.sendMessage("  §7↳ §7" + StringUtils.colorizer(updateChecker.getAnnouncement()));
         }
     }
 

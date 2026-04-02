@@ -63,6 +63,7 @@ public class UnclaimedRewardsModule implements Listener, Module {
             cache.remove(player.getName());
         }
     }
+
     public List<UnclaimedReward> getPlayerUnclaimedRewards(OfflinePlayer player) {
         List<UnclaimedReward> rewards = cache.get(player.getName());
         return rewards != null ? new ArrayList<>(rewards) : new ArrayList<>();
@@ -131,22 +132,23 @@ public class UnclaimedRewardsModule implements Listener, Module {
 
                 for (Row row : result) {
                     try {
-                        Object timestampObj = row.get("created_at");
-                        if (!(timestampObj instanceof Timestamp)) {
-                            Logger.log("Missing created_at for reward of player " + player.getName(), Logger.LogType.WARNING);
-                            continue;
-                        }
-
-                        LocalDateTime createdAt = ((Timestamp) timestampObj).toLocalDateTime();
                         String rewardJson = row.getString("reward_json");
                         JsonObject dataJson = JsonParser.parseString(row.getString("data_json")).getAsJsonObject();
                         UnclaimedRewardType type = UnclaimedRewardType.valueOf(row.getString("type"));
 
+                        Object timestampObj = row.get("created_at");
+                        if (!(timestampObj instanceof Timestamp)) {
+                            Logger.log("Missing created_at for reward of player " + player.getName() + " (" + type.name() + ", " + rewardJson + ", " + dataJson + ")", Logger.LogType.WARNING);
+                            continue;
+                        }
+
+                        LocalDateTime createdAt = ((Timestamp) timestampObj).toLocalDateTime();
+
                         UnclaimedReward unclaimedReward = switch (type) {
-                            case QUEST      -> new QuestUnclaimedReward(player, createdAt, rewardJson, dataJson, type);
+                            case QUEST -> new QuestUnclaimedReward(player, createdAt, rewardJson, dataJson, type);
                             case DAILYMETER -> new DailyMeterUnclaimedReward(player, createdAt, rewardJson, dataJson, type);
-                            case LEVELUP    -> new LevelUpUnclaimedReward(player, createdAt, rewardJson, dataJson, type);
-                            default         -> throw new IllegalArgumentException("Unknown reward type: " + type);
+                            case LEVELUP -> new LevelUpUnclaimedReward(player, createdAt, rewardJson, dataJson, type);
+                            default -> throw new IllegalArgumentException("Unknown reward type: " + type);
                         };
 
                         unclaimedRewards.add(unclaimedReward);

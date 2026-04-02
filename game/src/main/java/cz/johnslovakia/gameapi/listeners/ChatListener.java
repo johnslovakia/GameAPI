@@ -9,6 +9,7 @@ import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.StringUtils;
 
 import net.kyori.adventure.text.Component;
@@ -26,8 +27,10 @@ public class ChatListener implements Listener {
     public void onAsyncPlayerChat(AsyncPlayerChatEvent e) {
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (gamePlayer == null || !gamePlayer.isInGame() || gamePlayer.getGameSession() == null) return;
         GameInstance game = gamePlayer.getGame();
         GameTeam team = gamePlayer.getGameSession().getTeam();
+        LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
         
 
         Component word_all = ModuleManager.getModule(MessageModule.class).get(gamePlayer, "word.all_chat").getTranslated();
@@ -36,10 +39,12 @@ public class ChatListener implements Listener {
         String prefix = gamePlayer.getPrefix();
 
         e.setMessage(ChatColor.stripColor(e.getMessage()));
-
-        LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
         
         if (game != null) {
+
+            Bukkit.getConsoleSender().sendMessage("[Game: " + game.getID() + "] " + (gamePlayer.isSpectator() ? "[Spectator] " : "") + player.getName() + ": " + e.getMessage());
+
+
             if (gamePlayer.isSpectator() && game.getState() == GameState.INGAME) {
                 e.setCancelled(true);
                 if (!ModuleManager.getModule(MessageModule.class).existMessage("chat.format.spectator")) {

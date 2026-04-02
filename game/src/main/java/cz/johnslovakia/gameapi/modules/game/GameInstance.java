@@ -191,7 +191,6 @@ public class GameInstance implements Terminate{
 
             if (minigame.getProperties() != null && !minigame.getProperties().isEmpty()) {
                 serverDataManager.addProperties(minigame.getProperties());
-                return;
             }
 
             serverDataManager.updateGame();

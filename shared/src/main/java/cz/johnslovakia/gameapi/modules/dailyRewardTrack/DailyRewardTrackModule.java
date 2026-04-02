@@ -49,6 +49,9 @@ public class DailyRewardTrackModule implements Module, Listener {
     @Getter(AccessLevel.PACKAGE)
     private transient Map<String, Integer> dailyRewardsClaims = new ConcurrentHashMap<>();
 
+    private final Map<String, Integer> pendingDailyXP = new ConcurrentHashMap<>();
+    private final Set<String> processingDailyXP = ConcurrentHashMap.newKeySet();
+
     @Setter
     private Reward afterMaxTierReward;
     @Setter
@@ -70,24 +73,41 @@ public class DailyRewardTrackModule implements Module, Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent e) {
-        savePlayerDailyRewardsClaim(e.getPlayer());
+        int claims = getPlayerDailyClaims(e.getPlayer());
         dailyRewardsClaims.remove(e.getPlayer().getName());
-    }
+
+        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
+            savePlayerDailyRewardsClaim(e.getPlayer(), claims);
+        });}
+
 
     @EventHandler
     public void onDailyXPGain(DailyXPGainEvent e) {
         OfflinePlayer offlinePlayer = e.getOfflinePlayer();
-        UnclaimedRewardsModule unclaimedRewardsModule = ModuleManager.getModule(UnclaimedRewardsModule.class);
+        String playerName = offlinePlayer.getName();
         int dailyXP = e.getNewXP();
+
+        pendingDailyXP.put(playerName, dailyXP);
+        if (!processingDailyXP.add(playerName)) return;
+
+        processNextDailyXP(offlinePlayer, playerName);
+    }
+
+    private void processNextDailyXP(OfflinePlayer offlinePlayer, String playerName) {
+        Integer dailyXP = pendingDailyXP.remove(playerName);
+        if (dailyXP == null) {
+            processingDailyXP.remove(playerName);
+            return;
+        }
+
+        UnclaimedRewardsModule unclaimedRewardsModule = ModuleManager.getModule(UnclaimedRewardsModule.class);
 
         unclaimedRewardsModule.getOrLoadUnclaimedRewardsByType(offlinePlayer, UnclaimedRewardType.DAILYMETER)
                 .thenAccept(dailyMeterRewards -> {
-
                     int accumulatedXP = 0;
 
                     for (DailyRewardTier tier : getTiers()) {
                         accumulatedXP += tier.neededXP();
-
                         if (dailyXP < accumulatedXP) break;
 
                         boolean alreadyHasReward = dailyMeterRewards.stream()
@@ -104,6 +124,18 @@ public class DailyRewardTrackModule implements Module, Listener {
                             reward.setAsClaimable(offlinePlayer, UnclaimedRewardType.DAILYMETER, json);
                         }
                     }
+
+                    if (pendingDailyXP.containsKey(playerName)) {
+                        processNextDailyXP(offlinePlayer, playerName);
+                    } else {
+                        processingDailyXP.remove(playerName);
+                    }
+                })
+                .exceptionally(ex -> {
+                    processingDailyXP.remove(playerName);
+                    pendingDailyXP.remove(playerName);
+                    Logger.log("Error processing daily XP for " + playerName + ": " + ex.getMessage(), Logger.LogType.ERROR);
+                    return null;
                 });
     }
 
@@ -179,28 +211,26 @@ public class DailyRewardTrackModule implements Module, Listener {
         dailyRewardsClaims.put(player.getName(), claims);
     }
 
-    public void savePlayerDailyRewardsClaim(PlayerIdentity playerIdentity) {
-        savePlayerDailyRewardsClaim(playerIdentity.getOfflinePlayer());
+    public void savePlayerDailyRewardsClaim(PlayerIdentity playerIdentity, int playerClaims) {
+        savePlayerDailyRewardsClaim(playerIdentity.getOfflinePlayer(), playerClaims);
     }
 
-    public void savePlayerDailyRewardsClaim(OfflinePlayer player) {
-        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
-            if (Shared.getInstance().getDatabase() == null) return;
+    public void savePlayerDailyRewardsClaim(OfflinePlayer player, int playerClaims) {
+        if (Shared.getInstance().getDatabase() == null) return;
 
-            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
-                if (connection == null) return;
+        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+            if (connection == null) return;
 
-                connection.update()
-                        .table(PlayerTable.TABLE_NAME)
-                        .set("DailyRewards_claims", getPlayerDailyClaims(player))
-                        .where().isEqual("Nickname", player.getName())
-                        .execute();
+            connection.update()
+                    .table(PlayerTable.TABLE_NAME)
+                    .set("DailyRewards_claims", playerClaims)
+                    .where().isEqual("Nickname", player.getName())
+                    .execute();
 
-            } catch (Exception e) {
-                Logger.log("Failed to save daily rewards claims for " + player.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
-                e.printStackTrace();
-            }
-        });
+        } catch (Exception e) {
+            Logger.log("Failed to save daily rewards claims for " + player.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+            e.printStackTrace();
+        }
     }
 
     public int getPlayerDailyClaims(PlayerIdentity playerIdentity) {
