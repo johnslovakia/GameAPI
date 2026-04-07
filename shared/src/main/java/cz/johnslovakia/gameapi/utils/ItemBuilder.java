@@ -115,16 +115,57 @@ public class ItemBuilder {
     public ItemBuilder clone(){
         return new ItemBuilder(is);
     }
+
     /**
-     * Change the durability of the item.
-     * @param damage The durability to set it to.
+     * Damages the item by a specific amount.
+     * @param amount How much durability to remove.
      */
-    public ItemBuilder damageItem(int damage){
+    public ItemBuilder damageItem(int amount){
+        Damageable meta = (Damageable) is.getItemMeta();
+        int max = is.getType().getMaxDurability();
+        int newDamage = meta.getDamage() + amount;
+
+        if(newDamage > max) newDamage = max;
+        if(newDamage < 0) newDamage = 0;
+
+        meta.setDamage(newDamage);
+        is.setItemMeta(meta);
+        return this;
+    }
+
+    /**
+     * Change item durability by percentage.
+     * @param percent Percentage to change (positive to damage, negative to repair)
+     */
+    public ItemBuilder damageItemPercent(double percent){
         Damageable d = (Damageable) is.getItemMeta();
-        d.setDamage((is.getType().getMaxDurability() - d.getDamage()) - damage);
+        int max = is.getType().getMaxDurability();
+        int change = (int) (max * (percent / 100.0));
+        int newDamage = d.getDamage() + change;
+        if(newDamage < 0) newDamage = 0;
+        if(newDamage > max) newDamage = max;
+        d.setDamage(newDamage);
         is.setItemMeta(d);
         return this;
     }
+
+    /**
+     * Sets the item durability to a fixed amount.
+     * @param amount The durability you want the item to have.
+     */
+    public ItemBuilder setDurability(int amount){
+        Damageable meta = (Damageable) is.getItemMeta();
+        int max = is.getType().getMaxDurability();
+        int damage = max - amount;
+
+        if(damage < 0) damage = 0;
+        if(damage > max) damage = max;
+
+        meta.setDamage(damage);
+        is.setItemMeta(meta);
+        return this;
+    }
+
     /**
      * Set the displayname of the item.
      * @param name The name to change it to.

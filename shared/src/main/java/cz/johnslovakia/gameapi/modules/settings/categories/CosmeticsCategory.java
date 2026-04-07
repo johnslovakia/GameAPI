@@ -1,11 +1,10 @@
 package cz.johnslovakia.gameapi.modules.settings.categories;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.guis.ConfirmInventory;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticPrices;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
-import cz.johnslovakia.gameapi.modules.levels.LevelModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.settings.SettingCategory;
 import cz.johnslovakia.gameapi.modules.settings.SettingItem;
@@ -121,7 +120,7 @@ public class CosmeticsCategory implements SettingCategory {
                 CosmeticPrices.PriceSet current = ModuleManager.getModule(CosmeticsModule.class).getPrices().getByKey(type.key());
                 if (current == null) return;
                 current.setByRarity(rarity, Math.max(0, current.getByRarity(rarity) + ctx.delta(+50, -50, +500, -500)));
-                Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(),
+                Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(),
                         () -> ModuleManager.getModule(CosmeticsModule.class).savePrices());
                 openRarityEditor(ctx.player, type);
             }));

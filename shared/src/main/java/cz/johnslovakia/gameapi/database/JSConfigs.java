@@ -1,10 +1,9 @@
 package cz.johnslovakia.gameapi.database;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.utils.Logger;
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
-import me.zort.sqllib.pool.SQLConnectionPool;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -14,9 +13,9 @@ import java.sql.SQLException;
 public class JSConfigs {
 
     public static void createTable() {
-        if (Shared.getInstance().getDatabase() == null) return;
+        if (Core.getInstance().getDatabase() == null) return;
 
-        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getPool().getResource()) {
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getPool().getResource()) {
 
             QueryResult result = connection.exec(() ->
                     "CREATE TABLE IF NOT EXISTS jsConfigs (" +
@@ -42,7 +41,7 @@ public class JSConfigs {
     }
 
     public void saveConfig(String key, String json) {
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getPool().getResource()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getPool().getResource()) {
             Connection conn = dbConn.getConnection();
 
             try (PreparedStatement ps = conn.prepareStatement(
@@ -60,7 +59,7 @@ public class JSConfigs {
     }
 
     public String loadConfig(String key) {
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getPool().getResource()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getPool().getResource()) {
             Connection conn = dbConn.getConnection();
 
             try (PreparedStatement ps = conn.prepareStatement(

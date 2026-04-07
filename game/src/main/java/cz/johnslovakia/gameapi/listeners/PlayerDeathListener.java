@@ -21,6 +21,7 @@ import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.scores.Score;
 import cz.johnslovakia.gameapi.users.GamePlayer;
+import cz.johnslovakia.gameapi.users.GamePlayerState;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.utils.CharRepo;
 import cz.johnslovakia.gameapi.utils.GameUtils;
@@ -226,101 +227,107 @@ public class PlayerDeathListener implements Listener {
 
             messageModule.get(game.getParticipants(), key)
                     .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
-                    .replace("%player_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
-                    .replace("%dead_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
+                    .replace("%player_color%", useTeams && gamePlayer.getGameSession().getTeam() != null ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
+                    .replace("%dead_color%", useTeams && gamePlayer.getGameSession().getTeam() != null ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
                     .send();
         }
 
-        if (gamePlayer.isOnline() && !gamePlayer.isRespawning()) {
+        if (!gamePlayer.isRespawning() || (gamePlayer.getGameSession().getState().equals(GamePlayerState.DISCONNECTED) && !game.getSettings().isEnabledReJoin())) {
             int placement = game.getPlayers().size();
             game.getPlacements().add(new Placement<>(gamePlayer, placement));
 
-            messageModule.get(gamePlayer, "title.spectator")
-                    .send();
-            gamePlayer.setSpectator(true);
+            if (gamePlayer.isOnline()){
+                messageModule.get(gamePlayer, "title.spectator")
+                        .send();
+                gamePlayer.setSpectator(true);
+            }
 
             PlayerEliminationEvent ev = new PlayerEliminationEvent(gamePlayer, e.getKiller(), e.getAssists(), placement);
             Bukkit.getPluginManager().callEvent(ev);
 
 
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    if (!game.getState().equals(GameState.INGAME)) return;
+            if (gamePlayer.isOnline()) {
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (!game.getState().equals(GameState.INGAME) || !gamePlayer.isOnline()) return;
 
-                    player.sendMessage(Component.empty());
+                        player.sendMessage(Component.empty());
 
-                    Component message = messageModule
-                            .get(gamePlayer, "chat.view_summary")
-                            .getTranslated();
+                        Component message = messageModule
+                                .get(gamePlayer, "chat.view_summary")
+                                .getTranslated();
 
-                    Component hoverText = messageModule.get(gamePlayer, "chat.view_statistic.survived_for")
-                            .replace("%time%", StringUtils.getDurationString(
-                                    game.getRunningMainTask().getStartCounter() - game.getRunningMainTask().getCounter()))
-                            .getTranslated()
-                            .appendNewline();
-                    hoverText = hoverText.append(messageModule.get(gamePlayer, "chat.view_statistic.outlived")
-                            .replace("%outlived%", String.valueOf((int) game.getMetadata().get("players_at_start") - (game.getPlayers().size() + 1)))
-                            .getTranslated());
+                        Component hoverText = messageModule.get(gamePlayer, "chat.view_statistic.survived_for")
+                                .replace("%time%", StringUtils.getDurationString(
+                                        game.getRunningMainTask().getStartCounter() - game.getRunningMainTask().getCounter()))
+                                .getTranslated()
+                                .appendNewline();
+                        hoverText = hoverText.append(messageModule.get(gamePlayer, "chat.view_statistic.outlived")
+                                .replace("%outlived%", String.valueOf((int) game.getMetadata().get("players_at_start") - (game.getPlayers().size() + 1)))
+                                .getTranslated());
 
-                    Map<Score, Integer> stats = session.getScores().entrySet()
-                            .stream().filter(entry -> entry.getKey().getLinkedStat() != null)
-                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                        Map<Score, Integer> stats = session.getScores().entrySet()
+                                .stream().filter(entry -> entry.getKey().getLinkedStat() != null)
+                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-                    if (!stats.isEmpty()) {
-                        hoverText = hoverText.appendNewline();
+                        if (!stats.isEmpty()) {
+                            hoverText = hoverText.appendNewline();
 
-                        List<Component> lines = stats.entrySet().stream()
-                                .map(entry -> Component.text()
-                                        .append(Component.text(entry.getKey().getDisplayName(gamePlayer) + ": ").color(NamedTextColor.GRAY))
-                                        .append(Component.text(entry.getValue()).color(NamedTextColor.GREEN))
-                                        .asComponent()
-                                )
-                                .toList();
-                        Component statsComponent = Component.join(JoinConfiguration.newlines(), lines);
+                            List<Component> lines = stats.entrySet().stream()
+                                    .map(entry -> Component.text()
+                                            .append(Component.text(entry.getKey().getDisplayName(gamePlayer) + ": ").color(NamedTextColor.GRAY))
+                                            .append(Component.text(entry.getValue()).color(NamedTextColor.GREEN))
+                                            .asComponent()
+                                    )
+                                    .toList();
+                            Component statsComponent = Component.join(JoinConfiguration.newlines(), lines);
 
-                        hoverText = hoverText.appendNewline().append(statsComponent);
-                    }
-
-                    if (session.earnedSomething()) {
-                        hoverText = hoverText.appendNewline().appendNewline()
-                                .append(messageModule.get(gamePlayer, "chat.view_statistic.rewards_earned").getTranslated());
-
-                        for (Map.Entry<Resource, Integer> entry : session.getTotalEarned().entrySet()) {
-                            Resource resource = entry.getKey();
-                            String imgChar = resource.getImgChar() != null ? resource.getImgChar() + " " : "";
-
-                            hoverText = hoverText.appendNewline()
-                                    .append(Component.text(
-                                            " §7• " + imgChar + resource.getColor()
-                                                    + entry.getValue() + " §7" + resource.getDisplayName()
-                                    ));
+                            hoverText = hoverText.appendNewline().append(statsComponent);
                         }
-                    }
 
-                    player.sendMessage(message.hoverEvent(hoverText));
-                    player.sendMessage(Component.empty());
-                }
-            }.runTaskLater(Minigame.getInstance().getPlugin(), 30L);
+                        if (session.earnedSomething()) {
+                            hoverText = hoverText.appendNewline().appendNewline()
+                                    .append(messageModule.get(gamePlayer, "chat.view_statistic.rewards_earned").getTranslated());
+
+                            for (Map.Entry<Resource, Integer> entry : session.getTotalEarned().entrySet()) {
+                                Resource resource = entry.getKey();
+                                String imgChar = resource.getImgChar() != null ? resource.getImgChar() + " " : "";
+
+                                hoverText = hoverText.appendNewline()
+                                        .append(Component.text(
+                                                " §7• " + imgChar + resource.getColor()
+                                                        + entry.getValue() + " §7" + resource.getDisplayName()
+                                        ));
+                            }
+                        }
+
+                        player.sendMessage(message.hoverEvent(hoverText));
+                        player.sendMessage(Component.empty());
+                    }
+                }.runTaskLater(Minigame.getInstance().getPlugin(), 30L);
+            }
         }
 
         if (game.hasModule(TeamModule.class)) {
             GameTeam gameTeam = session.getTeam();
-            if (gameTeam.getAliveMembers().isEmpty()) {
-                messageModule.get(game.getParticipants(), "chat.team_eliminated")
-                        .replace("%team%", Component.text(gameTeam.getName()).color(gameTeam.getTeamColor().getTextColor()))
-                        .send();
+            if (gameTeam != null) {
+                if (gameTeam.getAliveMembers().isEmpty()) {
+                    messageModule.get(game.getParticipants(), "chat.team_eliminated")
+                            .replace("%team%", Component.text(gameTeam.getName()).color(gameTeam.getTeamColor().getTextColor()))
+                            .send();
 
-                TeamModule teamModule = game.getModule(TeamModule.class);
-                int totalActiveTeams = (int) teamModule.getTeams().values().stream()
-                        .filter(team -> !team.getAliveMembers().isEmpty())
-                        .count();
+                    TeamModule teamModule = game.getModule(TeamModule.class);
+                    int totalActiveTeams = (int) teamModule.getTeams().values().stream()
+                            .filter(team -> !team.getAliveMembers().isEmpty())
+                            .count();
 
-                int placement = totalActiveTeams - game.getPlacements().size();
-                game.getPlacements().add(new Placement<>(gameTeam, placement));
+                    int placement = totalActiveTeams - game.getPlacements().size();
+                    game.getPlacements().add(new Placement<>(gameTeam, placement));
 
-                TeamEliminationEvent ev = new TeamEliminationEvent(gameTeam, e.getKiller(), e.getAssists(), placement);
-                Bukkit.getPluginManager().callEvent(ev);
+                    TeamEliminationEvent ev = new TeamEliminationEvent(gameTeam, e.getKiller(), e.getAssists(), placement);
+                    Bukkit.getPluginManager().callEvent(ev);
+                }
             }
         }
 

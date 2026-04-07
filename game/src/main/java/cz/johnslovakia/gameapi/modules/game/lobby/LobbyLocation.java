@@ -11,7 +11,7 @@ import org.bukkit.World;
 @Setter @Getter
 public class LobbyLocation {
 
-    private final GameInstance game;
+    private GameInstance game;
     private final String worldName;
 
     private final double x;
@@ -31,10 +31,20 @@ public class LobbyLocation {
         this.pitch = pitch;
     }
 
+    public LobbyLocation(String worldName, double x, double y, double z, float yaw, float pitch) {
+        this.worldName = worldName;
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.yaw = yaw;
+        this.pitch = pitch;
+    }
+
     public World getWorld(){
-        World world = Bukkit.getWorld(worldName + "_" + game.getID());
+        String name = worldName + (game != null ? "_" + game.getID() : "");
+        World world = Bukkit.getWorld(name);
         if (world == null){
-            Logger.log("LobbyLocation (getLocation): World is null!", Logger.LogType.ERROR);
+            Logger.log("LobbyLocation: World '" + name + "' is null!", Logger.LogType.ERROR);
             return null;
         }
         return world;

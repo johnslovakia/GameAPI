@@ -1,12 +1,11 @@
 package cz.johnslovakia.gameapi.modules.resources.storage;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.utils.BatchConfig;
 import cz.johnslovakia.gameapi.utils.CachedBatchStorage;
 import me.zort.sqllib.SQLDatabaseConnection;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
@@ -46,19 +45,19 @@ public class BatchedStorage implements ResourceStorage {
                 storage.flushAndInvalidate(event.getPlayer().getName());
             }
         };
-        Bukkit.getPluginManager().registerEvents(playerQuitListener, Shared.getInstance().getPlugin());
+        Bukkit.getPluginManager().registerEvents(playerQuitListener, Core.getInstance().getPlugin());
     }
 
     @Override
     public void onEnable() {
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) return;
 
             Connection conn = dbConn.getConnection();
             String checkSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?";
 
             try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-                checkStmt.setString(1, Shared.getInstance().getDatabase().getDatabase());
+                checkStmt.setString(1, Core.getInstance().getDatabase().getDatabase());
                 checkStmt.setString(2, tableName);
                 checkStmt.setString(3, resourceName);
 
@@ -87,7 +86,7 @@ public class BatchedStorage implements ResourceStorage {
                 " FROM " + tableName +
                 " WHERE Nickname IN (" + placeholders + ")";
 
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) return results;
 
             try (PreparedStatement stmt = dbConn.getConnection().prepareStatement(sql)) {
@@ -114,7 +113,7 @@ public class BatchedStorage implements ResourceStorage {
             throws SQLException {
         if (changes.isEmpty()) return;
 
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) return;
 
             Connection conn = dbConn.getConnection();

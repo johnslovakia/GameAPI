@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.worldManagement;
 
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
+import cz.johnslovakia.gameapi.modules.game.map.Area;
 import cz.johnslovakia.gameapi.modules.game.map.GameMap;
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
@@ -16,143 +17,156 @@ import java.nio.file.Files;
 
 public class ClassicWorldLoader {
 
-    public static World loadClassicWorld(String worldName){
-        return loadClassicWorld(worldName, null);
+    public static World loadClassicWorld(String worldName) {
+        return loadClassicWorld(worldName, (Player) null);
     }
 
-    public static World loadClassicWorld(String worldName, Player player){
-        File sourceWorldFolder = new File(GameAPI.getInstance().getMinigameDataFolder() + "/maps/", worldName);
-        File activeWorldFolder = new File(Bukkit.getWorldContainer().getParentFile(), worldName);
+    public static World loadClassicWorld(String worldName, Player player) {
+        File source = new File(GameAPI.getInstance().getMinigameDataFolder() + "/maps/", worldName);
+        File active = new File(Bukkit.getWorldContainer(), worldName);
 
-        World world = loadClassicWorld(worldName, sourceWorldFolder, activeWorldFolder, true);
-        if (player != null && world != null){
-            Location location = new Location(world, 0, 90, 0);
-            player.teleport(location);
+        World world = loadClassicWorld(worldName, source, active, true);
+
+        if (player != null && world != null) {
+            player.teleport(new Location(world, 0, 90, 0));
         }
 
         return world;
     }
 
-    public static World loadClassicWorld(String worldName, File source, File active, boolean canLoadWithoutSource){
-
+    public static World loadClassicWorld(String worldName, File source, File active, boolean canLoadWithoutSource) {
         try {
-
             if (!source.exists() && source.getName().contains(" ")) {
-                String parent = source.getParent();
-                String fixedName = source.getName().replace(" ", "_");
-                source = new File(parent, fixedName);
+                source = new File(source.getParent(), source.getName().replace(" ", "_"));
             }
 
+            World existing = Bukkit.getWorld(active.getName());
+            if (existing != null) {
+                applyDefaultGameRules(existing);
+                return existing;
+            }
 
             if (!source.exists()) {
-                File fallbackFolder = new File(Bukkit.getWorldContainer(), worldName);
-                if (fallbackFolder.exists() && !canLoadWithoutSource) {
-                    source = fallbackFolder;
-                } else if (canLoadWithoutSource){
-                    Logger.log("Can't load Classic Arena World — no map file found! I'm trying to find another way.", Logger.LogType.ERROR);
-                    Logger.log(source.getAbsolutePath() + " (" + worldName + ")", Logger.LogType.INFO);
+                File fallback = new File(Bukkit.getWorldContainer(), worldName);
 
-                    World bukkitWorld = new WorldCreator(worldName).createWorld();
-                    bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-                    bukkitWorld.setGameRule(GameRule.LOCATOR_BAR, false);
-                    bukkitWorld.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
-                    bukkitWorld.setAutoSave(false);
-                    return bukkitWorld;
-                }else {
-                    Logger.log("Can't load Classic Arena World — no map file found!", Logger.LogType.ERROR);
-                    Logger.log(source.getAbsolutePath() + " (" + worldName + ")", Logger.LogType.INFO);
-                    return null;
+                if (fallback.exists() && !canLoadWithoutSource) {
+                    return loadClassicWorld(worldName, fallback, active, false);
                 }
+
+                if (canLoadWithoutSource) {
+                    Logger.log("Cannot load Classic World — no map file found, attempting Bukkit fallback. Path: "
+                            + source.getAbsolutePath() + " (" + worldName + ")", Logger.LogType.INFO);
+                    World world = new WorldCreator(worldName).createWorld();
+                    if (world != null) applyDefaultGameRules(world);
+                    return world;
+                }
+
+                Logger.log("Cannot load Classic World — no map file found. Path: "
+                        + source.getAbsolutePath() + " (" + worldName + ")", Logger.LogType.ERROR);
+                return null;
             }
 
+            boolean isSchem = source.getName().contains("schem");
 
-            boolean schem = source.getName().contains("schem");
-            /*if (active.exists()){
-                new WorldCreator(active.getName()).createWorld();
-                return Bukkit.getWorld(active.getName());
-            }*/
-            try {
-                Files.deleteIfExists(new File(source, "uid.dat").toPath());
-            } catch (IOException ignored) {}
+            try { Files.deleteIfExists(new File(source, "uid.dat").toPath()); } catch (IOException ignored) {}
 
-            if (!schem) {
+            if (!isSchem) {
+                WorldFileUtils.deleteFolder(active);
                 FileManager.copyFolder(source, active);
             }
-            if (Bukkit.getWorld(active.getName()) != null){
-                WorldManager.unload(Bukkit.getWorld(active.getName()));
+
+            World stale = Bukkit.getWorld(active.getName());
+            if (stale != null) {
+                if (!stale.getPlayers().isEmpty()) {
+                    Logger.log("Cannot reload world '" + active.getName() + "' — players are still inside.", Logger.LogType.ERROR);
+                    return null;
+                }
+                boolean unloaded = Bukkit.unloadWorld(stale, false);
+                if (!unloaded) {
+                    Logger.log("Failed to synchronously unload stale world: " + active.getName(), Logger.LogType.ERROR);
+                    return null;
+                }
+                WorldManager.loadedWorlds.remove(active.getName());
             }
 
+            WorldCreator creator = new WorldCreator(active.getName());
+            if (isSchem) creator.generator(new EmptyChunkGenerator());
 
-            //World bukkitWorld = Bukkit.createWorld(new WorldCreator(active.getName()));
-            WorldCreator worldCreator = new WorldCreator(active.getName());
-            if (schem) worldCreator.generator(new EmptyChunkGenerator());
-            World bukkitWorld = Bukkit.createWorld(worldCreator);
-
-            if (bukkitWorld == null)
+            World world = Bukkit.createWorld(creator);
+            if (world == null) {
+                Logger.log("Bukkit.createWorld returned null for: " + active.getName(), Logger.LogType.ERROR);
                 return null;
-
-            if (schem){
-                Location location = new Location(bukkitWorld, 0, 70, 0);
-                SchematicUtils.pasteSchematic(Minigame.getInstance().getPlugin(), location, worldName, "maps");
             }
 
-            bukkitWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-            bukkitWorld.setGameRule(GameRule.LOCATOR_BAR, false);
-            bukkitWorld.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
-            bukkitWorld.setAutoSave(false);
+            if (isSchem) {
+                SchematicUtils.pasteSchematic(
+                        Minigame.getInstance().getPlugin(),
+                        new Location(world, 0, 70, 0),
+                        worldName,
+                        "maps"
+                );
+            }
+
+            applyDefaultGameRules(world);
             WorldManager.addLoadedWorld(active.getName());
 
-            return bukkitWorld;
+            return world;
+
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("IOException while loading world: " + worldName, e);
         }
     }
 
-    public static World loadClassicArenaWorld(GameMap arena, GameInstance game){
-        File sourceWorldFolder = new File(GameAPI.getInstance().getMinigameDataFolder() + "/maps/", arena.getName());
+    public static World loadClassicArenaWorld(GameMap gameMap, GameInstance game) {
+        File source = new File(GameAPI.getInstance().getMinigameDataFolder() + "/maps/", gameMap.getName());
 
-        if (!sourceWorldFolder.exists() && sourceWorldFolder.getName().contains(" ")) {
-            String parent = sourceWorldFolder.getParent();
-            String fixedName = sourceWorldFolder.getName().replace(" ", "_");
-            sourceWorldFolder = new File(parent, fixedName);
+        if (!source.exists() && source.getName().contains(" ")) {
+            source = new File(source.getParent(), source.getName().replace(" ", "_"));
         }
 
-        if (!sourceWorldFolder.exists()) {
-            File fallbackFolder = new File(Bukkit.getWorldContainer(), arena.getName());
-            if (fallbackFolder.exists()) {
-                sourceWorldFolder = fallbackFolder;
+        if (!source.exists()) {
+            File fallback = new File(Bukkit.getWorldContainer(), gameMap.getName());
+            if (fallback.exists()) {
+                source = fallback;
             } else {
-                Logger.log("Can't load Classic Arena World — no map file found!", Logger.LogType.ERROR);
-                Logger.log(sourceWorldFolder.getAbsolutePath() + " (" + arena.getName() + ")", Logger.LogType.INFO);
+                Logger.log("Cannot load Classic Arena World — no map file found. Path: "
+                        + source.getAbsolutePath() + " (" + gameMap.getName() + ")", Logger.LogType.ERROR);
                 return null;
             }
         }
 
-        String worldName = sourceWorldFolder.getName() + "_" + game.getID();
-        File activeWorldFolder = new File(Bukkit.getWorldContainer().getParentFile(), worldName);
+        String worldName = source.getName() + "_" + game.getID();
+        File active = new File(Bukkit.getWorldContainer(), worldName);
 
-        if (WorldManager.isLoaded(worldName)){
+        if (WorldManager.isLoaded(worldName)) {
             return Bukkit.getWorld(worldName);
         }
 
-        try {
-            Files.deleteIfExists(new File(sourceWorldFolder, "uid.dat").toPath());
-        } catch (IOException ignored) {}
+        try { Files.deleteIfExists(new File(source, "uid.dat").toPath()); } catch (IOException ignored) {}
 
+        World world = loadClassicWorld(gameMap.getName(), source, active, false);
+        if (world == null) return null;
 
-        World world = loadClassicWorld(arena.getName(), sourceWorldFolder, activeWorldFolder, false);
+        applyDefaultGameRules(world);
+        world.setVoidDamageEnabled(true);
+        gameMap.setWorld(world);
 
-        if (world == null)
-            return null;
-
-        world.setAutoSave(false);
-        if (!arena.getSettings().isAllowTimeChange()) {
-            world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
-            world.setGameRule(GameRule.LOCATOR_BAR, false);
-            world.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
+        Area borderArea = gameMap.getMainArea();
+        if (borderArea != null) {
+            double lowestY = Math.min(borderArea.getLocation1().getY(), borderArea.getLocation2().getY());
+            world.setVoidDamageMinBuildHeightOffset((lowestY - 20) - world.getMinHeight());
         }
-        arena.setWorld(world);
+        world.setVoidDamageAmount(gameMap.getSettings().isAllowedInstantVoidKill() ? 50.0f : 4.0f);
+
         WorldManager.addLoadedWorld(worldName);
         return world;
+    }
+
+    static void applyDefaultGameRules(World world) {
+        world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+        world.setGameRule(GameRule.LOCATOR_BAR, false);
+        world.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
+        world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+        world.setAutoSave(false);
     }
 }

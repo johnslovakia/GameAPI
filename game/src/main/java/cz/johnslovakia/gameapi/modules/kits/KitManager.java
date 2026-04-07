@@ -140,5 +140,4 @@ public class KitManager implements Listener {
                 .findFirst()
                 .orElse(null);
     }
-
 }

@@ -1,6 +1,6 @@
 package cz.johnslovakia.gameapi.modules.game;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.game.gameData.implementations.*;
 import cz.johnslovakia.gameapi.modules.game.handlers.GameEndHandler;
 import cz.johnslovakia.gameapi.modules.game.handlers.GameStartHandler;
@@ -127,9 +127,9 @@ public class GameInstance implements Terminate{
     public <T extends GameModule> T registerModule(T module) {
         Class<? extends GameModule> clazz = module.getClass();
 
-        if (modules.containsKey(clazz)) {
+        /*if (modules.containsKey(clazz)) {
             throw new IllegalArgumentException("Module already registered: " + clazz.getSimpleName());
-        }
+        }*/
 
         module.setGame(this);
 
@@ -138,7 +138,7 @@ public class GameInstance implements Terminate{
             module.initialize();
 
             if (module instanceof Listener listener)
-                Bukkit.getPluginManager().registerEvents(listener, Shared.getInstance().getPlugin());
+                Bukkit.getPluginManager().registerEvents(listener, Core.getInstance().getPlugin());
         }
         return module;
     }
@@ -270,7 +270,7 @@ public class GameInstance implements Terminate{
         if (!automaticStart && !getParticipants().isEmpty()) return;
 
         MinigameSettings settings = getSettings();
-        boolean notEnough = (getParticipants().isEmpty() || getParticipants().size() < Math.max(settings.getMinPlayers() , 5));
+        boolean notEnough = (getParticipants().isEmpty() || getParticipants().size() < settings.getMinPlayers());
         if (notEnough) {
             setState(GameState.WAITING);
 
@@ -363,7 +363,10 @@ public class GameInstance implements Terminate{
     }
 
     public GameMap getCurrentMap() {
-        if (getModule(MapModule.class) == null) return null;
+        if (getModule(MapModule.class) == null) {
+            Logger.log("getCurrentMap(): MapModule is not registered!", Logger.LogType.WARNING);
+            return null;
+        }
         for (GameMap map : getModule(MapModule.class).getMaps()) {
             if (map.isWinned() && !map.isPlayed()) return map;
         }
@@ -372,6 +375,10 @@ public class GameInstance implements Terminate{
 
     @Deprecated
     public GameMap getPlayingMap() {
+        if (getModule(MapModule.class) == null) {
+            Logger.log("getCurrentMap(): MapModule is not registered!", Logger.LogType.WARNING);
+            return null;
+        }
         for (GameMap map : getModule(MapModule.class).getMaps()) {
             if (map.isPlaying()) return map;
         }
@@ -389,7 +396,7 @@ public class GameInstance implements Terminate{
                 module.initialize();
 
                 if (module instanceof Listener listener)
-                    Bukkit.getPluginManager().registerEvents(listener, Shared.getInstance().getPlugin());
+                    Bukkit.getPluginManager().registerEvents(listener, Core.getInstance().getPlugin());
             }
         }
 

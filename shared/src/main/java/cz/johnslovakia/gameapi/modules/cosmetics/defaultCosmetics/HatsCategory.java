@@ -1,14 +1,11 @@
 package cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics;
 
-import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.*;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
-import cz.johnslovakia.gameapi.utils.Utils;
 
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.Listener;
 
 public class HatsCategory extends CosmeticsCategory implements Listener {

@@ -134,8 +134,9 @@ public class JoinQuitListener implements Listener {
 
         PlayerBossBar.removeBossBar(player.getUniqueId());
 
-        Optional.ofNullable(gamePlayer.getGame())
-                .ifPresent(game -> game.quitPlayer(player));
+        if (gamePlayer.isInGame()){
+            gamePlayer.getGame().quitPlayer(player);
+        }
 
 
         LevelModule levelModule = ModuleManager.getModule(LevelModule.class);

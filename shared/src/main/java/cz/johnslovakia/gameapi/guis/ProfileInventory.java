@@ -1,6 +1,6 @@
 package cz.johnslovakia.gameapi.guis;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.cosmetics.Cosmetic;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsCategory;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
@@ -129,10 +129,14 @@ public class ProfileInventory {
                                 .findFirst();
                         LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
                         PlayerLevelData levelProgress = levelModule.getPlayerData(gamePlayer);
+                        boolean isMaxLevel = levelProgress.getLevel() >= levelModule.getLevelRanges().getLast().endLevel() && levelUpUnclaimedReward.isEmpty();
+
+
                         ItemBuilder level = new ItemBuilder(Material.ECHO_SHARD);
                         level.setCustomModelData(levelUpUnclaimedReward
                                 .map(r -> levelModule.getLevelEvolution(r.getLevel()).blinkingItemCustomModelData())
                                 .orElseGet(() -> levelModule.getLevelEvolution(levelProgress.getLevel()).itemCustomModelData()));
+
                         level.hideAllFlags();
                         level.setName(messageModule.get(gamePlayer, "inventory.profile_menu.your_level.name")
                                 .replace("%level%", "" + levelProgress.getLevel()).getTranslated());
@@ -143,51 +147,59 @@ public class ProfileInventory {
                                         .map(r -> levelModule.getLevelEvolution(r.getLevel()).getIcon())
                                         .orElseGet(() -> levelModule.getLevelEvolution(levelProgress.getLevel()).getIcon()))
                                 .getTranslated());
-                        level.addLoreLine("");
-                        if (levelUpUnclaimedReward.isEmpty()) {
-                            level.addLoreLine(Utils.getStringProgressBar(levelProgress.getXpOnCurrentLevel(), levelProgress.getXpToNextLevel()));
-                            level.addLoreLine(messageModule.get(player, "inventory.profile_menu.your_level.progress")
-                                    .replace("%level%", "" + (levelProgress.getLevel() + 1))
-                                    .replace("%xp%", StringUtils.betterNumberFormat(levelProgress.getXpOnCurrentLevel()))
-                                    .replace("%needed_xp%", StringUtils.betterNumberFormat(levelProgress.getXpToNextLevel()))
-                                    .getTranslated());
-                        } else {
-                            int neededXP = levelModule.getLevelRange(levelUpUnclaimedReward.get().getLevel()).getXPForLevel(levelUpUnclaimedReward.get().getLevel());
-                            level.addLoreLine(Utils.getStringProgressBar(neededXP, neededXP));
-                            level.addLoreLine(messageModule.get(player, "inventory.profile_menu.your_level.progress")
-                                    .replace("%level%", "" + (levelProgress.getLevel() + 1))
-                                    .replace("%xp%", "§a" + StringUtils.betterNumberFormat(neededXP))
-                                    .replace("%needed_xp%", StringUtils.betterNumberFormat(neededXP))
-                                    .getTranslated());
-                        }
-                        level.addLoreLine("");
-                        level.addLoreLine(messageModule.get(gamePlayer, "inventory.profile_menu.your_level.rewards").getTranslated());
-                        if (levelUpUnclaimedReward.isEmpty()) {
-                            for (RewardItem rewardItem : levelModule.getRewardForLevel(levelProgress.getLevel() + 1).getRewardItems()) {
-                                Resource resource = rewardItem.getResource();
-                                level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
-                                if (bonus != 0 && resource.isApplicableBonus())
-                                    level.addLoreLine(messageModule.get(gamePlayer, "inventory.profile_menu.your_level.bonus").replace("%bonus%", "" + bonus).getTranslated());
-                            }
-                        } else {
-                            for (RewardItem rewardItem : levelUpUnclaimedReward.get().getReward().getRewardItems()) {
-                                Resource resource = rewardItem.getResource();
-                                level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
-                                if (bonus != 0 && resource.isApplicableBonus())
-                                    level.addLoreLine(messageModule.get(gamePlayer, "inventory.profile_menu.your_level.bonus").replace("%bonus%", "" + bonus).getTranslated());
-                            }
-                        }
-                        LevelEvolution nextEvolution = levelModule.getNextLevelEvolution(levelUpUnclaimedReward.map(LevelUpUnclaimedReward::getLevel).orElseGet(levelProgress::getLevel));
-                        if (nextEvolution != null) {
+                        if (!isMaxLevel) {
                             level.addLoreLine("");
-                            level.addLoreLine(messageModule.get(player, "inventory.profile_menu.your_level.next_evolution")
-                                    .replace("%next_evolution%", levelModule.getLevelColored(nextEvolution.startLevel()).append(nextEvolution.getIcon()))
-                                    .getTranslated());
+                            if (levelUpUnclaimedReward.isEmpty()) {
+                                level.addLoreLine(Utils.getStringProgressBar(levelProgress.getXpOnCurrentLevel(), levelProgress.getXpToNextLevel()));
+                                level.addLoreLine(messageModule.get(player, "inventory.profile_menu.your_level.progress")
+                                        .replace("%level%", "" + (levelProgress.getLevel() + 1))
+                                        .replace("%xp%", StringUtils.betterNumberFormat(levelProgress.getXpOnCurrentLevel()))
+                                        .replace("%needed_xp%", StringUtils.betterNumberFormat(levelProgress.getXpToNextLevel()))
+                                        .getTranslated());
+                            } else {
+                                int rewardLevel = levelUpUnclaimedReward.get().getLevel();
+                                int completedLevel = rewardLevel - 1;
+                                int neededXP = levelModule.getLevelRange(completedLevel).getXPForLevel(completedLevel);
+                                level.addLoreLine(Utils.getStringProgressBar(neededXP, neededXP));
+                                level.addLoreLine(messageModule.get(player, "inventory.profile_menu.your_level.progress")
+                                        .replace("%level%", "" + (levelUpUnclaimedReward.get().getLevel()))
+                                        .replace("%xp%", "§a" + StringUtils.betterNumberFormat(neededXP))
+                                        .replace("%needed_xp%", StringUtils.betterNumberFormat(neededXP))
+                                        .getTranslated());
+                            }
+                            level.addLoreLine("");
+                            level.addLoreLine(messageModule.get(gamePlayer, "inventory.profile_menu.your_level.rewards").getTranslated());
+                            if (levelUpUnclaimedReward.isEmpty()) {
+                                for (RewardItem rewardItem : levelModule.getRewardForLevel(levelProgress.getLevel() + 1).getRewardItems()) {
+                                    Resource resource = rewardItem.getResource();
+                                    level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
+                                    if (bonus != 0 && resource.isApplicableBonus())
+                                        level.addLoreLine(messageModule.get(gamePlayer, "inventory.profile_menu.your_level.bonus").replace("%bonus%", "" + bonus).getTranslated());
+                                }
+                            } else {
+                                for (RewardItem rewardItem : levelUpUnclaimedReward.get().getReward().getRewardItems()) {
+                                    Resource resource = rewardItem.getResource();
+                                    level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
+                                    if (bonus != 0 && resource.isApplicableBonus())
+                                        level.addLoreLine(messageModule.get(gamePlayer, "inventory.profile_menu.your_level.bonus").replace("%bonus%", "" + bonus).getTranslated());
+                                }
+                            }
+                            LevelEvolution nextEvolution = levelModule.getNextLevelEvolution(levelUpUnclaimedReward.map(LevelUpUnclaimedReward::getLevel).orElseGet(levelProgress::getLevel));
+                            if (nextEvolution != null) {
+                                level.addLoreLine("");
+                                level.addLoreLine(messageModule.get(player, "inventory.profile_menu.your_level.next_evolution")
+                                        .replace("%next_evolution%", levelModule.getLevelColored(nextEvolution.startLevel()).append(nextEvolution.getIcon()))
+                                        .getTranslated());
+                            }
                         }
                         if (levelUpUnclaimedReward.isPresent()) {
                             level.addLoreLine("");
                             level.addLoreLine(messageModule.get(gamePlayer, "inventory.unclaimed_rewards.click_to_claim").getTranslated());
+                        }else if (isMaxLevel){
+                            level.addLoreLine("");
+                            level.addLoreLine(messageModule.get(player, "inventory.profile_menu.your_level.max_level").getTranslated());
                         }
+
                         gui.appendElement(ModuleManager.getInstance().hasModule(DailyRewardTrackModule.class) ? 13 : 14,
                                 Component.element(level.toItemStack()).addClick(i -> {
                                     levelUpUnclaimedReward.ifPresent(unclaimedReward -> {
@@ -376,13 +388,13 @@ public class ProfileInventory {
 
             inventory.onClose(GUI.CloseReason.BY_PLAYER, player -> {
                 int claims = module.getPlayerDailyClaims(gamePlayer);
-                Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
+                Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(), task -> {
                     module.savePlayerDailyRewardsClaim(gamePlayer, claims);
                 });
             });
             inventory.onClose(GUI.CloseReason.BY_METHOD, player -> {
                 int claims = module.getPlayerDailyClaims(gamePlayer);
-                Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
+                Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(), task -> {
                     module.savePlayerDailyRewardsClaim(gamePlayer, claims);
                 });
             });

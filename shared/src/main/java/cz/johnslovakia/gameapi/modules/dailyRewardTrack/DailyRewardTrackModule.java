@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.database.JSConfigs;
 import cz.johnslovakia.gameapi.database.PlayerTable;
 import cz.johnslovakia.gameapi.events.DailyXPGainEvent;
@@ -18,7 +18,6 @@ import cz.johnslovakia.gameapi.rewards.unclaimed.DailyMeterUnclaimedReward;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardType;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardsModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
-import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.utils.Logger;
 
 import lombok.AccessLevel;
@@ -28,7 +27,6 @@ import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.Row;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -76,7 +74,7 @@ public class DailyRewardTrackModule implements Module, Listener {
         int claims = getPlayerDailyClaims(e.getPlayer());
         dailyRewardsClaims.remove(e.getPlayer().getName());
 
-        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
+        Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(), task -> {
             savePlayerDailyRewardsClaim(e.getPlayer(), claims);
         });}
 
@@ -141,9 +139,9 @@ public class DailyRewardTrackModule implements Module, Listener {
 
     private void loadPlayerData(OfflinePlayer player) {
         CompletableFuture.runAsync(() -> {
-            if (Shared.getInstance().getDatabase() == null) return;
+            if (Core.getInstance().getDatabase() == null) return;
 
-            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+            try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
                 if (connection == null) return;
 
                 String tableName = PlayerTable.TABLE_NAME;
@@ -216,9 +214,9 @@ public class DailyRewardTrackModule implements Module, Listener {
     }
 
     public void savePlayerDailyRewardsClaim(OfflinePlayer player, int playerClaims) {
-        if (Shared.getInstance().getDatabase() == null) return;
+        if (Core.getInstance().getDatabase() == null) return;
 
-        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
             if (connection == null) return;
 
             connection.update()

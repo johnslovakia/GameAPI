@@ -2,7 +2,7 @@ package cz.johnslovakia.gameapi.utils;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.game.lobby.LobbyLocation;
@@ -12,7 +12,6 @@ import cz.johnslovakia.gameapi.modules.game.session.GameSessionModule;
 import cz.johnslovakia.gameapi.modules.game.session.PlayerGameSession;
 import cz.johnslovakia.gameapi.modules.game.team.GameTeam;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
-import cz.johnslovakia.gameapi.modules.scores.ScoreModule;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import org.bukkit.*;
@@ -90,15 +89,15 @@ public class GameUtils {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         if (gamePlayer == null) return;
         for (Player serverPlayer : Bukkit.getOnlinePlayers()){
-            player.hidePlayer(Shared.getInstance().getPlugin(), serverPlayer);
-            serverPlayer.hidePlayer(Shared.getInstance().getPlugin(), player);
+            player.hidePlayer(Core.getInstance().getPlugin(), serverPlayer);
+            serverPlayer.hidePlayer(Core.getInstance().getPlugin(), player);
 
             for (GamePlayer targetGamePlayer : game.getParticipants()){
                 Player target = targetGamePlayer.getOnlinePlayer();
                 if (!gamePlayer.isSpectator()) {
-                    target.showPlayer(Shared.getInstance().getPlugin(), player);
+                    target.showPlayer(Core.getInstance().getPlugin(), player);
                 }
-                player.showPlayer(Shared.getInstance().getPlugin(), target);
+                player.showPlayer(Core.getInstance().getPlugin(), target);
             }
         }
     }

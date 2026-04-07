@@ -26,7 +26,6 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion {
         this.minigame = minigame;
     }
 
-
     @Override
     public String getAuthor() {
         return "Hunzek_";
@@ -39,7 +38,7 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion {
 
     @Override
     public String getVersion() {
-        return "1.0.0";
+        return "1.2.1";
     }
 
     @Override
@@ -52,82 +51,168 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion {
         if (player == null) {
             return "";
         }
+
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        GameInstance game = gamePlayer.getGame();
-
-        StatsModule statsModule = ModuleManager.getModule(StatsModule.class);
-        for (Stat stat : statsModule.getStats()) {
-            String statKey = stat.getName().replace(" ", "").toLowerCase() + "_stat";
-            if (identifier.equalsIgnoreCase(statKey)) {
-                return String.valueOf(statsModule.getPlayerStat(gamePlayer, stat.getName()));
-            }
-
-            if (identifier.toLowerCase().contains("rankings")) {
-                List<Map.Entry<String, Integer>> topList = statsModule.getStatsTable()
-                        .topStats(stat.getName(), 15)
-                        .entrySet()
-                        .stream()
-                        .sorted((o1, o2) -> -Integer.compare(o1.getValue(), o2.getValue()))
-                        .limit(15)
-                        .toList();
-
-                for (int i = 0; i < topList.size(); i++) {
-                    String topKey = stat.getName().replace(" ", "") + "_top" + (i + 1);
-                    if (identifier.equalsIgnoreCase(topKey)) {
-                        return topList.get(i).getKey();
-                    }
-                }
-            }
+        if (gamePlayer == null) {
+            return "";
         }
 
-        ResourcesModule resourcesModule = ModuleManager.getModule(ResourcesModule.class);
-        for (Resource resource : resourcesModule.getResources()){
-            if (identifier.equalsIgnoreCase("balance_" + resource.getName())){
-                return "" + resourcesModule.getPlayerBalanceCached(player, resource);
-            }
-        }
+        String id = identifier.toLowerCase();
 
-        if (minigame.getSettings().isUseTeams()){
-            if (identifier.equalsIgnoreCase("teamcolor")){
-                return "" + gamePlayer.getGameSession().getTeam().getChatColor();
-            }
-        }
+        String result = handleStats(gamePlayer, id);
+        if (result != null) return result;
 
-        if (game != null){
-            if (identifier.contains("gamerankings")) {
-                String rankingScore = "kills";
-                for (Score score : ModuleManager.getModule(ScoreModule.class).getScores().values()) {
-                    if (score.isScoreRanking()){
-                        rankingScore = score.getName();
-                        break;
-                    }
-                }
-                Map<GamePlayer, Integer> ranking = GameUtils.getTopPlayers(game, rankingScore, 3, 3);
+        result = handleResources(player, id);
+        if (result != null) return result;
 
-                if (identifier.equalsIgnoreCase("gamerankings_top1")) {
-                    return ranking.entrySet().stream()
-                            .sorted(Map.Entry.comparingByValue())
-                            .findFirst()
-                            .map(entry -> entry.getKey().getOnlinePlayer().getName())
-                            .orElse("");
-                }else if (identifier.equalsIgnoreCase("gamerankings_top2")) {
-                    return ranking.entrySet().stream()
-                            .sorted(Map.Entry.comparingByValue())
-                            .skip(1)
-                            .findFirst()
-                            .map(entry -> entry.getKey().getOnlinePlayer().getName())
-                            .orElse("-");
-                }else if (identifier.equalsIgnoreCase("gamerankings_top3")) {
-                    return ranking.entrySet().stream()
-                            .sorted(Map.Entry.comparingByValue())
-                            .skip(2)
-                            .findFirst()
-                            .map(entry -> entry.getKey().getOnlinePlayer().getName())
-                            .orElse("-");
-                }
-            }
-        }
+        result = handleTeamColor(gamePlayer, id);
+        if (result != null) return result;
+
+        result = handleGameRankings(gamePlayer, id);
+        if (result != null) return result;
 
         return null;
     }
+
+
+    private String handleStats(GamePlayer gamePlayer, String id) {
+        StatsModule statsModule = ModuleManager.getModule(StatsModule.class);
+        if (statsModule == null) return null;
+
+        for (Stat stat : statsModule.getStats()) {
+            String normalizedName = stat.getName().replace(" ", "").toLowerCase();
+
+            if (id.equals(normalizedName + "_stat")) {
+                return String.valueOf(statsModule.getPlayerStat(gamePlayer, stat.getName()));
+            }
+
+            if (id.equals(normalizedName + "_rank")) {
+                int rank = statsModule.getStatsTable().getPlayerRank(gamePlayer.getName(), stat.getName());
+                return rank > 0 ? String.valueOf(rank) : "-";
+            }
+
+            String topPrefix = normalizedName + "_top";
+            if (id.startsWith(topPrefix)) {
+                String suffix = id.substring(topPrefix.length());
+
+                TopRequest request = parseTopRequest(suffix);
+                if (request == null) return null;
+
+                int rank = request.rank;
+                if (rank < 0 || rank >= 15) return null;
+
+                List<Map.Entry<String, Integer>> topList = statsModule.getStatsTable()
+                        .topStats(stat.getName(), 15)
+                        .entrySet().stream()
+                        .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                        .limit(15)
+                        .toList();
+
+                if (rank >= topList.size()) {
+                    return "-";
+                }
+
+                return switch (request.type) {
+                    case NAME -> topList.get(rank).getKey();
+                    case VALUE -> String.valueOf(topList.get(rank).getValue());
+                };
+            }
+        }
+        return null;
+    }
+
+    private String handleResources(Player player, String id) {
+        ResourcesModule resourcesModule = ModuleManager.getModule(ResourcesModule.class);
+        if (resourcesModule == null) return null;
+
+        for (Resource resource : resourcesModule.getResources()) {
+            if (id.equals("balance_" + resource.getName().toLowerCase())) {
+                return String.valueOf(resourcesModule.getPlayerBalanceCached(player, resource));
+            }
+        }
+        return null;
+    }
+
+    private String handleTeamColor(GamePlayer gamePlayer, String id) {
+        if (!minigame.getSettings().isUseTeams()) return null;
+        if (!id.equals("teamcolor")) return null;
+
+        if (gamePlayer.getGameSession() == null) return "";
+        if (gamePlayer.getGameSession().getTeam() == null) return "";
+
+        return String.valueOf(gamePlayer.getGameSession().getTeam().getChatColor());
+    }
+
+    private String handleGameRankings(GamePlayer gamePlayer, String id) {
+        GameInstance game = gamePlayer.getGame();
+        if (game == null) return null;
+        if (!id.startsWith("gamerankings_top")) return null;
+
+        int rank = parseRank(id, "gamerankings_top");
+        if (rank < 0 || rank >= 3) return null;
+
+        String rankingScore = findRankingScoreName();
+
+        Map<GamePlayer, Integer> ranking = GameUtils.getTopPlayers(game, rankingScore, 3, 3);
+
+        List<Map.Entry<GamePlayer, Integer>> sorted = ranking.entrySet().stream()
+                .sorted(Map.Entry.<GamePlayer, Integer>comparingByValue().reversed())
+                .toList();
+
+        if (rank < sorted.size()) {
+            Player onlinePlayer = sorted.get(rank).getKey().getOnlinePlayer();
+            return onlinePlayer != null ? onlinePlayer.getName() : "-";
+        }
+        return rank == 0 ? "" : "-";
+    }
+
+    private String findRankingScoreName() {
+        ScoreModule scoreModule = ModuleManager.getModule(ScoreModule.class);
+        if (scoreModule == null) return "kills";
+
+        for (Score score : scoreModule.getScores().values()) {
+            if (score.isScoreRanking()) {
+                return score.getName();
+            }
+        }
+        return "kills";
+    }
+
+    private int parseRank(String id, String prefix) {
+        try {
+            int rank = Integer.parseInt(id.substring(prefix.length()));
+            return rank - 1;
+        } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+            return -1;
+        }
+    }
+
+    private TopRequest parseTopRequest(String suffix) {
+        TopType type;
+        String rankPart;
+
+        if (suffix.endsWith("_name")) {
+            type = TopType.NAME;
+            rankPart = suffix.substring(0, suffix.length() - "_name".length());
+        } else if (suffix.endsWith("_value")) {
+            type = TopType.VALUE;
+            rankPart = suffix.substring(0, suffix.length() - "_value".length());
+        } else {
+            type = TopType.NAME;
+            rankPart = suffix;
+        }
+
+        try {
+            int rank = Integer.parseInt(rankPart) - 1;
+            return new TopRequest(rank, type);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private enum TopType {
+        NAME, VALUE
+    }
+
+    private record TopRequest(int rank, TopType type) {}
 }

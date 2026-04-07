@@ -22,15 +22,17 @@ public class InteractListener implements Listener {
     public void onPlayerInteract(PlayerInteractEvent e) {
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (gamePlayer == null) return;
+
         Block block = e.getClickedBlock();
 
         if (!gamePlayer.isInGame()) return;
-        if (!gamePlayer.isSpectator() || block == null)
-            return;
-        if (block.getType() == Material.CHEST){
+        if (!gamePlayer.isSpectator() || block == null) return;
+
+        if (block.getType() == Material.CHEST) {
             Chest chest = (Chest) block.getState();
             player.openInventory(copyInventory(chest.getBlockInventory()));
-        }else if (block.getType() == Material.BARREL){
+        } else if (block.getType() == Material.BARREL) {
             Barrel barrel = (Barrel) block.getState();
             player.openInventory(copyInventory(barrel.getInventory()));
         }

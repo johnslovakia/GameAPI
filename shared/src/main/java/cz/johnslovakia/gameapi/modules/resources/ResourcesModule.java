@@ -1,6 +1,5 @@
 package cz.johnslovakia.gameapi.modules.resources;
 
-import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.Module;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
@@ -13,7 +12,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;

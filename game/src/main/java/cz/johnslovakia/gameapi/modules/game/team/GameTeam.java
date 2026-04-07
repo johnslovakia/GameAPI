@@ -117,13 +117,14 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
                             || game.getState() == GameState.STARTING){
                         ItemStack[] contents = player.getInventory().getContents();
                         for (ItemStack item : contents) {
-                            if (item == null) continue;
+                            if (item == null || item.getType().equals(Material.AIR)) continue;
 
                             if (item.getType().toString().toLowerCase().contains("banner")) {
-                                BannerMeta bannerMeta = (BannerMeta) item.getItemMeta();
-                                bannerMeta.addPattern(new Pattern(getDyeColor(), PatternType.BASE));
-                                item.setItemMeta(bannerMeta);
-                                break;
+                                Material newBanner = Material.valueOf(getDyeColor().name() + "_BANNER");
+                                if (newBanner != null) {
+                                    item.setType(newBanner);
+                                    break;
+                                }
                             }else if (item.getType().toString().toLowerCase().contains("wool")) {
                                 Material colorfulWool = Material.valueOf(getDyeColor().name() + "_WOOL");
                                 if (colorfulWool != null){

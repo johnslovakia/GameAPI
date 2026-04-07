@@ -2,7 +2,7 @@ package cz.johnslovakia.gameapi.modules.cosmetics;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.database.CosmeticsStorage;
 import cz.johnslovakia.gameapi.database.JSConfigs;
 import cz.johnslovakia.gameapi.database.PlayerTable;
@@ -13,18 +13,17 @@ import cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics.*;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
-import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
 
 import lombok.Getter;
+import lombok.Setter;
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.*;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.json.JSONObject;
 
@@ -40,6 +39,10 @@ public class CosmeticsModule implements Listener, Module {
     private Map<PlayerIdentity, List<Cosmetic>> purchasedCosmetics = new HashMap<>();
 
     private CosmeticPrices prices;
+    @Setter
+    private boolean showHats = true;
+
+
 
     @Override
     public void initialize() {
@@ -53,7 +56,7 @@ public class CosmeticsModule implements Listener, Module {
         addCategory(new TrailsCategory(this));
         addCategory(new HatsCategory(this));
 
-        Bukkit.getPluginManager().registerEvents(this, Shared.getInstance().getPlugin());
+        Bukkit.getPluginManager().registerEvents(this, Core.getInstance().getPlugin());
     }
 
     @Override
@@ -98,7 +101,7 @@ public class CosmeticsModule implements Listener, Module {
 
         Map<CosmeticsCategory, Cosmetic> map = selectedCosmetics.get(playerIdentity);
         if (map != null) map.remove(category);
-        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> savePlayerCosmetics(playerIdentity));
+        Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(), task -> savePlayerCosmetics(playerIdentity));
     }
 
     public void setPlayerSelectedCosmetic(PlayerIdentity playerIdentity, Cosmetic cosmetic){
@@ -108,7 +111,7 @@ public class CosmeticsModule implements Listener, Module {
         selectedCosmetics
                 .computeIfAbsent(playerIdentity, k -> new HashMap<>())
                 .put(category, cosmetic);
-        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> savePlayerCosmetics(playerIdentity));
+        Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(), task -> savePlayerCosmetics(playerIdentity));
     }
 
     public Cosmetic getPlayerSelectedCosmetic(PlayerIdentity playerIdentity, CosmeticsCategory category){
@@ -121,11 +124,11 @@ public class CosmeticsModule implements Listener, Module {
         purchasedCosmetics
                 .computeIfAbsent(playerIdentity, k -> new ArrayList<>())
                 .add(cosmetic);
-        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> savePlayerCosmetics(playerIdentity));
+        Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(), task -> savePlayerCosmetics(playerIdentity));
     }
 
     public void savePlayerCosmetics(PlayerIdentity playerIdentity) {
-        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
             if (connection == null) {
                 Logger.log("Database connection is null when saving cosmetics for " + playerIdentity.getOnlinePlayer().getName(), Logger.LogType.ERROR);
                 return;
@@ -157,7 +160,7 @@ public class CosmeticsModule implements Listener, Module {
 
 
     public void loadPlayerCosmetics(PlayerIdentity playerIdentity) {
-        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
             if (connection == null) {
                 Logger.log("Database connection is null when loading cosmetics for " + playerIdentity.getOnlinePlayer().getName(), Logger.LogType.ERROR);
                 playerIdentity.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (0)");
@@ -256,8 +259,8 @@ public class CosmeticsModule implements Listener, Module {
         category.setCosmeticsModule(this);
         if (category.getTriggers() != null) {
             for (CTrigger<?> t : category.getTriggers()) {
-                Shared.getInstance().getPlugin().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() {
-                }, EventPriority.NORMAL, (listener, event) -> onEventCall(category, event), Shared.getInstance().getPlugin());
+                Core.getInstance().getPlugin().getServer().getPluginManager().registerEvent(t.getEventClass(), new Listener() {
+                }, EventPriority.NORMAL, (listener, event) -> onEventCall(category, event), Core.getInstance().getPlugin());
             }
         }
     }

@@ -1,31 +1,26 @@
 package cz.johnslovakia.gameapi.modules.messages;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.database.PlayerTable;
 import cz.johnslovakia.gameapi.modules.Module;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
-import cz.johnslovakia.gameapi.utils.InputStreamWithName;
 import cz.johnslovakia.gameapi.utils.Logger;
 
-import lombok.Getter;
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -99,10 +94,10 @@ public class MessageModule implements Module, Listener {
     }
 
     public void setPlayerLanguage(PlayerIdentity playerIdentity, Language language, boolean message) {
-        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
-            if (Shared.getInstance().getDatabase() == null) return;
+        Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(), task -> {
+            if (Core.getInstance().getDatabase() == null) return;
 
-            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+            try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
                 if (connection == null) return;
 
                 QueryResult result = connection.update()
@@ -134,7 +129,7 @@ public class MessageModule implements Module, Listener {
 
     public Language getPlayerLanguage(PlayerIdentity playerIdentity) {
         return playerLanguages.computeIfAbsent(playerIdentity, player -> {
-            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+            try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
                 if (connection == null) return Language.getDefaultLanguage();
 
                 Optional<Row> result = connection.select()

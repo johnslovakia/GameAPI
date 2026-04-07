@@ -33,8 +33,9 @@ public class ModuleManager {
 
     public <T extends Module> T registerModule(T module) {
         Class<? extends Module> moduleClass = module.getClass();
-        if (modules.containsKey(moduleClass))
-            throw new IllegalArgumentException("Module " + moduleClass.getSimpleName() + " is already registered!");
+        /*if (modules.containsKey(moduleClass))
+            throw new IllegalArgumentException("Module " + moduleClass.getSimpleName() + " is already registered!");*/
+
 
         modules.put(moduleClass, module);
         module.initialize();
@@ -46,6 +47,9 @@ public class ModuleManager {
     }
 
     public void registerModule(Module... modules) {
+        if (modules == null || modules.length == 0) {
+            throw new IllegalArgumentException("You must provide at least one Module!");
+        }
         Arrays.stream(modules).forEach(this::registerModule);
     }
 

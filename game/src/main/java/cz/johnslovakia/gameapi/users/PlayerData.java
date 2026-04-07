@@ -11,7 +11,7 @@ import cz.johnslovakia.gameapi.modules.quests.Quest;
 import cz.johnslovakia.gameapi.modules.quests.QuestType;
 import cz.johnslovakia.gameapi.modules.stats.StatsModule;
 import cz.johnslovakia.gameapi.utils.BukkitSerialization;
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.utils.Logger;
@@ -27,6 +27,7 @@ import me.zort.sqllib.api.data.Row;
 import org.bukkit.Bukkit;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -115,7 +116,7 @@ public class PlayerData {
         new BukkitRunnable() {
             @Override
             public void run() {
-                try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+                try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
                     if (connection == null) return;
 
                     String kitName = defaultKit != null ? defaultKit.getName() : null;

@@ -107,12 +107,15 @@ public class GameEndHandler {
             player.setGameMode(GameMode.ADVENTURE);
 
 
-            LevelModule levelManager = ModuleManager.getModule(LevelModule.class);
-            if (levelManager != null) {
-                PlayerLevelData levelProgress = levelManager.getPlayerData(gamePlayer);
+            LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
+            if (levelModule != null) {
+                PlayerLevelData levelProgress = levelModule.getPlayerData(gamePlayer);
                 if (levelProgress != null) {
                     float xpProgress = (float) levelProgress.getXpOnCurrentLevel() / levelProgress.getXpToNextLevel();
-                    player.setExp(Math.min(xpProgress, 1.0f));
+                    if (Float.isNaN(xpProgress) || Float.isInfinite(xpProgress)) {
+                        xpProgress = 0.0f;
+                    }
+                    player.setExp(Math.max(0.0f, Math.min(xpProgress, 1.0f)));
                     player.setLevel(levelProgress.getLevel());
                 }
             }
@@ -127,7 +130,7 @@ public class GameEndHandler {
 
 
             if (winner != null) {
-                if ((winner.getWinnerType().equals(Winner.WinnerType.PLAYER) && (winner.equals(gamePlayer)) || (winner.getWinnerType().equals(Winner.WinnerType.TEAM) && gamePlayer.getGameSession().getTeam().equals(winner)))) {
+                if ((winner.getWinnerType().equals(Winner.WinnerType.PLAYER) && (winner.equals(gamePlayer)) || (winner.getWinnerType().equals(Winner.WinnerType.TEAM) && (gamePlayer.getGameSession().getTeam() != null && gamePlayer.getGameSession().getTeam().equals(winner))))) {
                     ModuleManager.getModule(MessageModule.class).get(gamePlayer, "title.victory")
                             .send();
                     gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "jsplugins:victory1", 0.35F, 1F);
@@ -196,7 +199,7 @@ public class GameEndHandler {
                 Player player = gamePlayer.getOnlinePlayer();
                 player.sendMessage("");
                 if (winner != null) {
-                    if ((winner.getWinnerType().equals(Winner.WinnerType.PLAYER) && (winner.equals(gamePlayer)) || (winner.getWinnerType().equals(Winner.WinnerType.TEAM) && gamePlayer.getGameSession().getTeam().equals(winner)))) {
+                    if ((winner.getWinnerType().equals(Winner.WinnerType.PLAYER) && (winner.equals(gamePlayer)) || (winner.getWinnerType().equals(Winner.WinnerType.TEAM) && (gamePlayer.getGameSession().getTeam() != null && gamePlayer.getGameSession().getTeam().equals(winner))))) {
                         ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.you_won")
                                 .send();
                     } else {

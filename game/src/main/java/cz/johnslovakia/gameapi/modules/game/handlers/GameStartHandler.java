@@ -169,7 +169,9 @@ public class GameStartHandler {
         }
 
 
-        WorldManager.unload(gameInstance.getModule(LobbyModule.class).getLobbyLocation().getWorld());
+        if (gameInstance.getModule(LobbyModule.class).getLobbyLocation().getGame() != null) {
+            WorldManager.unload(gameInstance.getModule(LobbyModule.class).getLobbyLocation().getWorld());
+        }
 
 
         GameStartEvent ev = new GameStartEvent(gameInstance);

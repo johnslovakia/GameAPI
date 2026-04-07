@@ -24,7 +24,7 @@ public class ServerRegistry implements Module {
     private Database serverDataMySQL;
     private RedisManager serverDataRedis;
 
-    private final List<IMinigame> minigames = new ArrayList<>();
+    private List<IMinigame> minigames = new ArrayList<>();
 
     public ServerRegistry(Database serverDataMySQL) {
         this.serverDataMySQL = serverDataMySQL;
@@ -43,7 +43,11 @@ public class ServerRegistry implements Module {
     }
 
     @Override
-    public void terminate() {}
+    public void terminate() {
+        minigames = null;
+        if (serverDataMySQL != null) serverDataMySQL.getConnection().disconnect();
+        if (serverDataRedis != null) serverDataRedis.close();
+    }
 
     public void addMinigame(IMinigame iMinigame) {
         if (minigames.contains(iMinigame)) return;

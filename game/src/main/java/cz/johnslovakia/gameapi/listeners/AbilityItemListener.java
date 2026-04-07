@@ -82,7 +82,7 @@ public class AbilityItemListener implements Listener {
             if (abilityItem.getLoreTranslationKey() != null) {
                 ItemBuilder item = new ItemBuilder(itemStack);
                 item.setLore(ModuleManager.getModule(MessageModule.class).get(gamePlayer, abilityItem.getLoreTranslationKey()).getTranslated());
-                e.setCurrentItem(item.toItemStack());
+                itemStack.lore(item.toItemStack().lore());
             }
 
             Collection<Cooldown> cooldowns = abilityItem.getCooldowns().values();
@@ -256,6 +256,7 @@ public class AbilityItemListener implements Listener {
     private void onPlayerInteract(PlayerInteractEvent e) {
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (gamePlayer == null) return;
 
         GameInstance game = gamePlayer.getGame();
         if (game == null) return;
@@ -268,7 +269,7 @@ public class AbilityItemListener implements Listener {
         Optional<AbilityItem> abilityItemOptional = AbilityItem.getAbilityItem(item);
 
         abilityItemOptional.ifPresent(abilityItem -> {
-            if (gamePlayer.getGame().getState() != GameState.INGAME) {
+            if (gamePlayer.getGame() == null || gamePlayer.getGame().getState() != GameState.INGAME) {
                 e.setCancelled(true);
                 return;
             }

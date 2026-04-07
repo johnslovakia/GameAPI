@@ -1,6 +1,6 @@
 package cz.johnslovakia.gameapi.database;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.utils.Logger;
 import me.zort.sqllib.SQLDatabaseConnection;
 
@@ -9,7 +9,7 @@ import java.sql.*;
 public class DatabaseMigrationHelper {
 
     public static boolean ensureNicknameUnique(String tableName) {
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) {
                 Logger.log("Database connection is null!", Logger.LogType.ERROR);
                 return false;
@@ -47,7 +47,7 @@ public class DatabaseMigrationHelper {
     }
 
     private static boolean tableExists(Connection conn, String tableName) throws SQLException {
-        String database = Shared.getInstance().getDatabase().getDatabase();
+        String database = Core.getInstance().getDatabase().getDatabase();
 
         String query = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES " +
                 "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
@@ -66,7 +66,7 @@ public class DatabaseMigrationHelper {
     }
 
     private static boolean hasUniqueConstraint(Connection conn, String tableName, String columnName) throws SQLException {
-        String database = Shared.getInstance().getDatabase().getDatabase();
+        String database = Core.getInstance().getDatabase().getDatabase();
 
         String query = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS " +
                 "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? AND NON_UNIQUE = 0";

@@ -1,13 +1,12 @@
 package cz.johnslovakia.gameapi.database;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.Logger;
 
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
-import me.zort.sqllib.pool.SQLConnectionPool;
 
 import java.sql.*;
 import java.util.*;
@@ -51,14 +50,14 @@ public class MinigameTable {
     }
 
     public MinigameTable createNewColumn(Type type, String name) {
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) return this;
 
             Connection conn = dbConn.getConnection();
             String checkSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?";
 
             try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-                checkStmt.setString(1, Shared.getInstance().getDatabase().getDatabase());
+                checkStmt.setString(1, Core.getInstance().getDatabase().getDatabase());
                 checkStmt.setString(2, namespace);
                 checkStmt.setString(3, name);
 
@@ -86,7 +85,7 @@ public class MinigameTable {
     }
 
     public void newUser(PlayerIdentity playerIdentity) {
-        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getPool().getResource()) {
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getPool().getResource()) {
 
             Optional<Row> result = connection.select()
                     .from(namespace)
@@ -132,12 +131,12 @@ public class MinigameTable {
             }
         }
 
-        if (Shared.getInstance().getDatabase() == null) {
+        if (Core.getInstance().getDatabase() == null) {
             Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
             return;
         }
 
-        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getPool().getResource()) {
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getPool().getResource()) {
 
             QueryResult result = connection.exec(() ->
                     "CREATE TABLE IF NOT EXISTS " + namespace + " (" + rows_s + ")"

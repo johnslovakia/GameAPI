@@ -1,7 +1,7 @@
 package cz.johnslovakia.gameapi.modules.serverManagement.gameData;
 
 import com.google.gson.JsonObject;
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.database.Database;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.serverManagement.ServerRegistry;
@@ -61,7 +61,6 @@ public class GameDataManager<T> {
                 .orElse(null);
     }
 
-    /** Creates the games table if it doesn't already exist. Called during {@link ServerRegistry#initialize()}. */
     public static void createTableIfNotExists(Database serverDataMySQL) {
         if (serverDataMySQL == null) return;
         String query = "CREATE TABLE IF NOT EXISTS games (" +
@@ -87,7 +86,6 @@ public class GameDataManager<T> {
         }
     }
 
-    /** Pushes all registered properties to the database/Redis asynchronously. */
     public void updateGame() {
         ServerRegistry registry = ModuleManager.getModule(ServerRegistry.class);
         if (registry == null) {
@@ -113,7 +111,7 @@ public class GameDataManager<T> {
                     e.printStackTrace();
                 }
             }
-        }.runTaskAsynchronously(Shared.getInstance().getPlugin());
+        }.runTaskAsynchronously(Core.getInstance().getPlugin());
     }
 
     private void updateGameMySQL(ServerRegistry registry) {
@@ -142,7 +140,7 @@ public class GameDataManager<T> {
                     e.printStackTrace();
                 }
             }
-        }.runTaskAsynchronously(Shared.getInstance().getPlugin());
+        }.runTaskAsynchronously(Core.getInstance().getPlugin());
     }
 
     private JsonObject buildGameDataJson() {
@@ -215,6 +213,6 @@ public class GameDataManager<T> {
                     e.printStackTrace();
                 }
             }
-        }.runTaskAsynchronously(Shared.getInstance().getPlugin());
+        }.runTaskAsynchronously(Core.getInstance().getPlugin());
     }
 }

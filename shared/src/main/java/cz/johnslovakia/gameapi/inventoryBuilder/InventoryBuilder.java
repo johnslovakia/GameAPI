@@ -1,6 +1,6 @@
 package cz.johnslovakia.gameapi.inventoryBuilder;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
@@ -32,7 +32,7 @@ import java.util.*;
 @Getter
 public class InventoryBuilder implements Listener, Initialize, Terminate {
 
-    public static final NamespacedKey ITEM_KEY = new NamespacedKey(Shared.getInstance().getPlugin(), "inventory_item_id");
+    public static final NamespacedKey ITEM_KEY = new NamespacedKey(Core.getInstance().getPlugin(), "inventory_item_id");
     private static final Map<PlayerIdentity, InventoryBuilder> playerInventories = new HashMap<>();
 
     public static InventoryBuilder getPlayerCurrentInventory(PlayerIdentity playerIdentity) {
@@ -56,7 +56,7 @@ public class InventoryBuilder implements Listener, Initialize, Terminate {
 
     @Override
     public void initialize() {
-        Bukkit.getPluginManager().registerEvents(this, Shared.getInstance().getPlugin());
+        Bukkit.getPluginManager().registerEvents(this, Core.getInstance().getPlugin());
     }
 
     @Override

@@ -16,6 +16,7 @@ import cz.johnslovakia.gameapi.utils.GameUtils;
 import cz.johnslovakia.gameapi.utils.Logger;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.damage.DamageType;
@@ -60,12 +61,15 @@ public class MapSettingsListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
-    public void playerInteract(PlayerInteractEvent e){
+    public void playerInteract(PlayerInteractEvent e) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
+        if (gamePlayer == null) return;
         if (!gamePlayer.isInGame()) return;
-        GameInstance game = gamePlayer.getGame();
 
-        if (gamePlayer.isSpectator()){
+        GameInstance game = gamePlayer.getGame();
+        if (game == null) return;
+
+        if (gamePlayer.isSpectator()) {
             if (e.getAction().equals(Action.RIGHT_CLICK_BLOCK) || e.getAction().equals(Action.LEFT_CLICK_BLOCK)) {
                 if (e.getClickedBlock() != null) {
                     if (e.getClickedBlock().getType().equals(Material.FURNACE)
@@ -80,26 +84,31 @@ public class MapSettingsListener implements Listener {
         }
 
         AreaSettings settings = AreaManager.getActiveSettings(gamePlayer);
-        if(settings != null){
-            if(game != null){
-                if(!settings.canPlayerInteract()){
+        if (settings == null) return;
+
+        if (!settings.canPlayerInteract()) {
+            e.setCancelled(true);
+            return;
+        }
+
+        if (e.getAction().equals(Action.RIGHT_CLICK_BLOCK)) {
+            Block clickedBlock = e.getClickedBlock();
+            if (clickedBlock == null) return;
+
+            // CHEST ACCESS
+            if (clickedBlock.getType().equals(Material.CHEST)
+                    || clickedBlock.getType().equals(Material.TRAPPED_CHEST)
+                    || clickedBlock.getType().equals(Material.ENDER_CHEST)) {
+                if (!settings.canChestAccess()) {
                     e.setCancelled(true);
-                    return;
                 }
-                if(e.getAction().equals(Action.RIGHT_CLICK_BLOCK)){
-                    //CHEST ACCESS
-                    if(e.getClickedBlock().getType().equals(Material.CHEST) || e.getClickedBlock().getType().equals(Material.TRAPPED_CHEST) || e.getClickedBlock().getType().equals(Material.ENDER_CHEST) ){
-                        if(!settings.canChestAccess()){
-                            e.setCancelled(true);
-                        }
-                    }
-                    //FLINT & STEEL
-                    if(e.getItem() != null){
-                        if(e.getItem().getType().equals(Material.FLINT_AND_STEEL)){
-                            if(!settings.canFlintAndSteel()) {
-                                e.setCancelled(true);
-                            }
-                        }
+            }
+
+            // FLINT & STEEL
+            if (e.getItem() != null) {
+                if (e.getItem().getType().equals(Material.FLINT_AND_STEEL)) {
+                    if (!settings.canFlintAndSteel()) {
+                        e.setCancelled(true);
                     }
                 }
             }
@@ -543,13 +552,13 @@ public class MapSettingsListener implements Listener {
                 if (!settings.isAllowFallDamage() && e.getCause().equals(EntityDamageEvent.DamageCause.FALL)) {
                     e.setCancelled(true);
                 }
-                if (settings.isAllowedInstantVoidKill() && (e.getCause().equals(EntityDamageEvent.DamageCause.VOID) || e.getDamageSource().getDamageType().equals(DamageType.OUT_OF_WORLD))){
+                /*if (settings.isAllowedInstantVoidKill() && (e.getCause().equals(EntityDamageEvent.DamageCause.VOID) || e.getDamageSource().getDamageType().equals(DamageType.OUT_OF_WORLD))){
                     e.setCancelled(true);
                     gamePlayer.getMetadata().put("diedInVoid", true);
                     //player.damage(player.getHealth());
-                    player.setHealth(Double.MIN_VALUE);
+                    //player.setHealth(0.0f);
 
-                }
+                }*/
                 if(settings.canPlayerInvincibility()) {
                     e.setCancelled(true);
                 }
@@ -557,20 +566,26 @@ public class MapSettingsListener implements Listener {
         }
     }
 
-    private final Set<UUID> processingVoidKill = new HashSet<>();
+    /*private final Set<UUID> processingVoidKill = new HashSet<>();
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerMove(PlayerMoveEvent e) {
-        if (e.getFrom().getBlockX() == e.getTo().getBlockX()
-                && e.getFrom().getBlockY() == e.getTo().getBlockY()
-                && e.getFrom().getBlockZ() == e.getTo().getBlockZ()) return;
+        Location to = e.getTo();
+        if (to == null) return;
+
+        if (e.getFrom().getBlockX() == to.getBlockX()
+                && e.getFrom().getBlockY() == to.getBlockY()
+                && e.getFrom().getBlockZ() == to.getBlockZ()) return;
 
         Player player = e.getPlayer();
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (gamePlayer == null) return;
         if (!gamePlayer.isInGame()) return;
+
         GameInstance game = gamePlayer.getGame();
         if (game == null || game.getState() != GameState.INGAME) return;
 
+        if (game.getCurrentMap() == null) return;
         Area borderArea = game.getCurrentMap().getMainArea();
         if (borderArea == null) return;
 
@@ -580,8 +595,12 @@ public class MapSettingsListener implements Listener {
         boolean shouldCheck = settings.isAllowedInstantVoidKill() || gamePlayer.isSpectator();
         if (!shouldCheck) return;
 
-        double lowestAreaY = Math.min(borderArea.getLocation1().getY(), borderArea.getLocation2().getY());
-        if (e.getTo().getY() >= lowestAreaY - 20) return;
+        Location loc1 = borderArea.getLocation1();
+        Location loc2 = borderArea.getLocation2();
+        if (loc1 == null || loc2 == null) return;
+
+        double lowestAreaY = Math.min(loc1.getY(), loc2.getY());
+        if (to.getY() >= lowestAreaY - 20) return;
 
         if (gamePlayer.isSpectator()) {
             player.teleport(GameUtils.getNonRespawnLocation(game));
@@ -596,6 +615,18 @@ public class MapSettingsListener implements Listener {
             gamePlayer.getMetadata().put("diedInVoid", true);
             player.damage(player.getHealth());
         }, 1L);
+    }*/
+
+    @EventHandler
+    public void onDamage(EntityDamageEvent e) {
+        if (e.getCause() != EntityDamageEvent.DamageCause.VOID) return;
+        if (!(e.getEntity() instanceof Player player)) return;
+
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        if (gamePlayer == null || !gamePlayer.isInGame()) return;
+        if (gamePlayer.getGame().getState() != GameState.INGAME) return;
+
+        gamePlayer.getMetadata().put("diedInVoid", true);
     }
 
     @EventHandler

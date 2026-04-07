@@ -38,7 +38,7 @@ public class Kit implements Listener{
     private final int price;
 
     @Setter
-    private KitContent content;
+    private KitContent content = new KitContent();
 
     private boolean giveAfterDead = false;
 
@@ -50,8 +50,6 @@ public class Kit implements Listener{
     }
 
     public void addItem(ItemStack... items){
-        if (content == null) content = new KitContent();
-
         for (ItemStack item : items){
             content.addItem(item);
         }
@@ -224,6 +222,6 @@ public class Kit implements Listener{
     }
 
     public String getTranslationKey(){
-        return "perk." + getName().toLowerCase().replace(" ", "_");
+        return "kit." + getName().toLowerCase().replace(" ", "_");
     }
 }

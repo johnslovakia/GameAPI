@@ -1,6 +1,6 @@
 package cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.*;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
@@ -13,7 +13,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.inventory.ItemStack;
@@ -76,7 +75,7 @@ public class TrailsCategory extends CosmeticsCategory {
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
 
                     Item item = location.getWorld().dropItem(location, itemStack);
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> item.remove(), 10L);
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
         Cosmetic pumpkins = new Cosmetic("Pumpkins", new ItemStack(Material.PUMPKIN), CosmeticRarity.RARE)
                 .addCost(manager.getMainResource(), RARE_COINS_PRICE)
@@ -86,7 +85,7 @@ public class TrailsCategory extends CosmeticsCategory {
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
 
                     Item item = location.getWorld().dropItem(location, itemStack);
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> item.remove(), 10L);
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
         Cosmetic presents = new Cosmetic("Presents", Utils.getCustomHead("12919c67317c7678438ff520c98dde0e3b4d68769c8938a5a3de2968edfc7314"), CosmeticRarity.EPIC)
                 .addCost(manager.getMainResource(), EPIC_COINS_PRICE)
@@ -96,7 +95,7 @@ public class TrailsCategory extends CosmeticsCategory {
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
 
                     Item item = location.getWorld().dropItem(location, itemStack);
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> item.remove(), 10L);
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
         Cosmetic usaFlag = new Cosmetic("USA Flag", Utils.getCustomHead("46c9923bebd9ad90a80a0731c3f3b9db729b0785015e18e3ec07e4e91099be06"), CosmeticRarity.EPIC)
                 .addCost(manager.getMainResource(), EPIC_COINS_PRICE)
@@ -106,7 +105,7 @@ public class TrailsCategory extends CosmeticsCategory {
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
 
                     Item item = location.getWorld().dropItem(location, itemStack);
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> item.remove(), 10L);
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
         Cosmetic czechFlag = new Cosmetic("Czech Flag", Utils.getCustomHead("48152b7334d7ecf335e47a4f35defbd2eb6957fc7bfe94212642d62f46e61e"), CosmeticRarity.EPIC)
                 .addCost(manager.getMainResource(), EPIC_COINS_PRICE)
@@ -116,7 +115,7 @@ public class TrailsCategory extends CosmeticsCategory {
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
 
                     Item item = location.getWorld().dropItem(location, itemStack);
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> item.remove(), 10L);
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
         Cosmetic ukFlag = new Cosmetic("UK Flag", Utils.getCustomHead("8831c73f5468e888c3019e2847e442dfaa88898d50ccf01fd2f914af544d5368"), CosmeticRarity.EPIC)
                 .addCost(manager.getMainResource(), EPIC_COINS_PRICE)
@@ -126,7 +125,7 @@ public class TrailsCategory extends CosmeticsCategory {
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
 
                     Item item = location.getWorld().dropItem(location, itemStack);
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> item.remove(), 10L);
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
         Cosmetic roses = new Cosmetic("Roses", new ItemStack(Material.POPPY), CosmeticRarity.COMMON)
                 .addCost(manager.getMainResource(), COMMON_COINS_PRICE)
@@ -137,7 +136,7 @@ public class TrailsCategory extends CosmeticsCategory {
                     ItemUtils.getInstance().markAsNoPickup(itemStack);
 
                     Item item = location.getWorld().dropItem(location, itemStack);
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> item.remove(), 10L);
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> item.remove(), 10L);
                 });
 
 
@@ -162,7 +161,7 @@ public class TrailsCategory extends CosmeticsCategory {
                         return;
                     }
 
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> {
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> {
                         new BukkitRunnable() {
                             @Override
                             public void run() {
@@ -174,7 +173,7 @@ public class TrailsCategory extends CosmeticsCategory {
                                 Location location = projectileLaunchEvent.getEntity().getLocation();
                                 cosmetic.getLocationConsumer().accept(location);
                             }
-                        }.runTaskTimer(Shared.getInstance().getPlugin(), 0L, 1L);
+                        }.runTaskTimer(Core.getInstance().getPlugin(), 0L, 1L);
                     }, 2L);
                     //cosmetic.getLocationConsumer().accept(projectileLaunchEvent.getLocation());
 

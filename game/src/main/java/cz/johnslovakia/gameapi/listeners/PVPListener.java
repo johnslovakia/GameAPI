@@ -35,6 +35,8 @@ public class PVPListener implements Listener {
     private final static List<LastDamager> lastDamager = new ArrayList<>();
     private final static List<Damager> damagers = new ArrayList<>();
 
+    public static final int KILL_CREDIT_TIMEOUT_MS = 12_000;
+
     public static LastDamager getLastDamager(GamePlayer killed){
         for (LastDamager damagerClass : lastDamager){
             if (damagerClass.getDamaged().equals(killed)){
@@ -68,9 +70,14 @@ public class PVPListener implements Listener {
         }
     }
 
+    public static void cleanupPlayer(GamePlayer gamePlayer) {
+        lastDamager.removeIf(d -> d.getDamaged().equals(gamePlayer));
+        damagers.removeIf(d -> d.getDamaged().equals(gamePlayer));
+    }
 
 
-    public Damager getDamagers(GamePlayer killed){
+
+    public static Damager getDamagers(GamePlayer killed){
         for (Damager damagerClass : damagers){
             if (damagerClass.getDamaged().equals(killed)){
                 return damagerClass;
@@ -203,8 +210,8 @@ public class PVPListener implements Listener {
             GameInstance game = gamePlayer.getGame();
             if (game.getState() == GameState.INGAME) {
                 if (gamePlayer.isSpectator() && (e.getCause().equals(EntityDamageEvent.DamageCause.VOID)  || e.getDamageSource().getDamageType().equals(DamageType.OUT_OF_WORLD))){
-                    player.teleport(GameUtils.getNonRespawnLocation(game));
                     e.setCancelled(true);
+                    player.teleport(GameUtils.getNonRespawnLocation(game));
                     return;
                 }
                 PlayerDamageByPlayerEvent ev = new PlayerDamageByPlayerEvent(game, null, PlayerManager.getGamePlayer(player), e.getCause());
@@ -264,7 +271,7 @@ public class PVPListener implements Listener {
         if (hasLastDamager(gamePlayer)) {
             GamePlayer last = getLastDamager(gamePlayer).getLastDamager();
             if (last != null && last != gamePlayer) {
-                if (System.currentTimeMillis() - getLastDamager(gamePlayer).getMs() <= 12000){
+                if (System.currentTimeMillis() - getLastDamager(gamePlayer).getMs() <= KILL_CREDIT_TIMEOUT_MS){
                     killer = true;
                 }
             }
@@ -278,18 +285,7 @@ public class PVPListener implements Listener {
 
         if (killer){
             GamePlayer gamePlayerKiller = getLastDamager(gamePlayer).getLastDamager();
-
-            List<GamePlayer> assists = new ArrayList<>();
-            Damager d = getDamagers(gamePlayer);
-            for (GamePlayer dgp : d.getDamagers().keySet()){
-                if (System.currentTimeMillis() - getDamagers(gamePlayer).getLong(dgp) <= 12000){
-                    if (dgp.equals(gamePlayerKiller)){
-                        continue;
-                    }
-                    assists.add(dgp);
-                }
-            }
-
+            List<GamePlayer> assists = getAssists(gamePlayer, gamePlayerKiller);
 
             GamePlayerDeathEvent ev = new GamePlayerDeathEvent(game, gamePlayerKiller, PlayerManager.getGamePlayer(player), (!assists.isEmpty() ? assists : null), damageType, e.getDrops());
             if (game.isFirstGameKill()){
@@ -311,10 +307,21 @@ public class PVPListener implements Listener {
         }
 
 
-        lastDamager.removeIf(d -> d.getDamaged().equals(player));
-        damagers.removeIf(d -> d.getDamaged().equals(player));
+        cleanupPlayer(gamePlayer);
 
         e.setDeathMessage(null);
+    }
+
+    public static List<GamePlayer> getAssists(GamePlayer gamePlayer, GamePlayer killer){
+        List<GamePlayer> assists = new ArrayList<>();
+        Damager d = getDamagers(gamePlayer);
+        for (GamePlayer dgp : d.getDamagers().keySet()){
+            if (System.currentTimeMillis() - getDamagers(gamePlayer).getLong(dgp) <= KILL_CREDIT_TIMEOUT_MS){
+                if (dgp.equals(killer)) continue;
+                assists.add(dgp);
+            }
+        }
+        return assists;
     }
 
 

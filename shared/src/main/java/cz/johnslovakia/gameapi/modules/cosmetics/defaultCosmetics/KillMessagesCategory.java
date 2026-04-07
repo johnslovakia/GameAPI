@@ -1,6 +1,5 @@
 package cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics;
 
-import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.*;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
@@ -10,10 +9,8 @@ import cz.johnslovakia.gameapi.utils.Utils;
 import net.kyori.adventure.text.Component;
 
 import org.bukkit.Material;
-import org.bukkit.damage.DamageType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.configuration.file.FileConfiguration;
 
 public class KillMessagesCategory extends CosmeticsCategory {
 

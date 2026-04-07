@@ -1,6 +1,6 @@
 package cz.johnslovakia.gameapi.utils;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -37,7 +37,7 @@ public class Logger {
     }
 
     private static void logToFileAsync(String pluginName, String message) {
-        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), () -> {
+        Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(), () -> {
             try {
                 BufferedWriter writer = getWriterForPlugin(pluginName);
                 writer.write("[" + LocalDateTime.now() + "] " + message);
@@ -52,7 +52,7 @@ public class Logger {
     private static BufferedWriter getWriterForPlugin(String pluginName) throws IOException {
         if (writers.containsKey(pluginName)) return writers.get(pluginName);
 
-        Plugin plugin = Shared.getInstance().getPlugin();
+        Plugin plugin = Core.getInstance().getPlugin();
         if (plugin == null) throw new FileNotFoundException("Plugin " + pluginName + " nebyl nalezen");
 
         File logDir = new File(plugin.getDataFolder(), "logs");

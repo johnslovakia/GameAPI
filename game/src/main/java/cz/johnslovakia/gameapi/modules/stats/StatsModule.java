@@ -2,7 +2,7 @@ package cz.johnslovakia.gameapi.modules.stats;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.database.DatabaseMigrationHelper;
 import cz.johnslovakia.gameapi.database.Type;
 import cz.johnslovakia.gameapi.events.GameJoinEvent;
@@ -11,6 +11,7 @@ import cz.johnslovakia.gameapi.modules.Module;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.modules.game.lobby.LobbyLocation;
+import cz.johnslovakia.gameapi.modules.game.lobby.LobbyModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 
 import cz.johnslovakia.gameapi.utils.BatchConfig;
@@ -110,12 +111,14 @@ public class StatsModule implements Module, Listener {
 
                     LobbyLocation statsHologramLoc = GameUtils.getLobbyLocation(config.getConfig(), game, "statsHologram");
                     if (statsHologramLoc != null) {
+                        if (game.getModule(LobbyModule.class).getLobbyLocation().getGame() == null) statsHologramLoc.setGame(null); //
                         Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), t -> {
                             lifetimeStatsHologram.create(e.getGamePlayer(), statsHologramLoc.getLocation());
                         });
                     }
                     LobbyLocation topStatsHologramLoc = GameUtils.getLobbyLocation(config.getConfig(), game, "topStatsHologram");
                     if (topStatsHologramLoc != null) {
+                        if (game.getModule(LobbyModule.class).getLobbyLocation().getGame() == null) topStatsHologramLoc.setGame(null); //
                         Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), t -> {
                             topStatsHologram.create(e.getGamePlayer(), topStatsHologramLoc.getLocation());
                         });
@@ -166,7 +169,7 @@ public class StatsModule implements Module, Listener {
         sqlBuilder.append(" FROM ").append(statsTable.quotedTableName());
         sqlBuilder.append(" WHERE `Nickname` IN (").append(placeholders).append(")");
 
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection();
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection();
              PreparedStatement stmt = dbConn.getConnection().prepareStatement(sqlBuilder.toString())) {
 
             int i = 1;

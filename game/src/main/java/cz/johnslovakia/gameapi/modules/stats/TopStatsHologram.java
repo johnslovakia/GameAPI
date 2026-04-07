@@ -1,7 +1,7 @@
 package cz.johnslovakia.gameapi.modules.stats;
 
 import cz.johnslovakia.gameapi.Minigame;
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
@@ -187,7 +187,7 @@ public class TopStatsHologram implements Listener {
         Map<String, Integer> topPlayers = new LinkedHashMap<>();
         String columnName = statName.replace(" ", "_");
 
-        try (SQLDatabaseConnection conn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection conn = Core.getInstance().getDatabase().getConnection()) {
             if (conn == null) return topPlayers;
 
             String query = "SELECT `Nickname`, `" + columnName + "`" +
@@ -394,43 +394,8 @@ public class TopStatsHologram implements Listener {
     }
 
     private CompletableFuture<Integer> getPlayerRankFromDB(String playerName, String statName) {
-        return CompletableFuture.supplyAsync(() -> {
-            String columnName = statName.replace(" ", "_");
-            String tableName = statsModule.getStatsTable().quotedTableName();
-
-            String query = "SELECT COUNT(*) + 1 AS `rank` FROM " + tableName +
-                    " WHERE `" + columnName + "` > " +
-                    "COALESCE((SELECT `" + columnName + "` FROM " + tableName +
-                    " WHERE `Nickname` = ? LIMIT 1), 0)";
-
-            try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
-                if (dbConn == null) return -1;
-
-                try (PreparedStatement stmt = dbConn.getConnection().prepareStatement(query)) {
-                    stmt.setString(1, playerName);
-
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            int rank = rs.getInt("rank");
-
-                            String checkQuery = "SELECT `" + columnName + "` FROM " + tableName +
-                                    " WHERE `Nickname` = ? LIMIT 1";
-                            try (PreparedStatement checkStmt = dbConn.getConnection().prepareStatement(checkQuery)) {
-                                checkStmt.setString(1, playerName);
-                                try (ResultSet checkRs = checkStmt.executeQuery()) {
-                                    if (checkRs.next() && checkRs.getInt(columnName) > 0) {
-                                        return rank;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (SQLException e) {
-                Logger.log("Failed to get player rank: " + e.getMessage(), Logger.LogType.WARNING);
-            }
-
-            return -1;
-        });
+        return CompletableFuture.supplyAsync(() ->
+                statsModule.getStatsTable().getPlayerRank(playerName, statName)
+        );
     }
 }

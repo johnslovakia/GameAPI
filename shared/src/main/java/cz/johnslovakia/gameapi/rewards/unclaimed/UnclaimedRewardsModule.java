@@ -2,7 +2,7 @@ package cz.johnslovakia.gameapi.rewards.unclaimed;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.Module;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.Logger;
@@ -118,9 +118,9 @@ public class UnclaimedRewardsModule implements Listener, Module {
         return CompletableFuture.supplyAsync(() -> {
             List<UnclaimedReward> unclaimedRewards = new ArrayList<>();
 
-            if (Shared.getInstance().getDatabase() == null) return unclaimedRewards;
+            if (Core.getInstance().getDatabase() == null) return unclaimedRewards;
 
-            try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+            try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
                 if (connection == null) return unclaimedRewards;
 
                 QueryRowsResult<Row> result = connection.select()

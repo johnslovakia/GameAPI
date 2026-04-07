@@ -18,7 +18,11 @@ public class LobbyModule extends GameModule {
 
     @Override
     public void initialize() {
-        WorldManager.cloneWorld(lobbyLocation.getWorldName(), getGame().getID());
+        if (lobbyLocation.getGame() != null) {
+            WorldManager.cloneWorld(lobbyLocation.getWorldName(), getGame().getID());
+        }else{
+            WorldManager.loadWorld(lobbyLocation.getWorldName());
+        }
     }
 
     @Override

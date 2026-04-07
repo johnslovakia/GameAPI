@@ -1,18 +1,20 @@
 package cz.johnslovakia.gameapi.modules.serverManagement;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
-import cz.johnslovakia.gameapi.modules.serverManagement.PendingServerAction;
-import cz.johnslovakia.gameapi.modules.serverManagement.PendingActionType;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.Utils;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import java.util.concurrent.CompletableFuture;
 
 @Getter
 public class IGame {
@@ -21,40 +23,69 @@ public class IGame {
     private final String name;
 
     @Setter(AccessLevel.PACKAGE)
-    private GameData data;
+    private volatile GameData data;
 
     public IGame(IMinigame minigame, String name) {
         this.minigame = minigame;
         this.name = name;
     }
 
-    /** Returns true if the game is in a joinable state (waiting or starting), ignoring player count. */
-    public boolean isOpen() {
-        GameData data = minigame.getGameDataByGame(this);
-        if (data == null) return false;
+    public CompletableFuture<Boolean> isOpen() {
+        return minigame.getGameDataByGame(this).thenApply(data -> {
+            if (data == null) return false;
+
+            if (minigame.getName().toLowerCase().contains("minianni")) {
+                if (data.getGameState().equals(GameState.INGAME)) {
+                    if (data.getJsonObject() != null && data.getJsonObject().has("Phase")) {
+                        int phase = data.getJsonObject().get("Phase").getAsInt();
+                        return phase == 1 || phase == 2;
+                    }
+                }
+            }
+
+            return data.getGameState().equals(GameState.WAITING)
+                    || data.getGameState().equals(GameState.STARTING);
+        });
+    }
+
+    public CompletableFuture<Boolean> isAvailableFor(PlayerIdentity playerIdentity) {
+        return isOpen().thenCompose(open -> {
+            if (!open) return CompletableFuture.completedFuture(false);
+
+            return minigame.getGameDataByGame(this).thenApply(data -> {
+                if (data == null) return false;
+                if (data.getMaxPlayers() > 0 && data.getPlayers() >= data.getMaxPlayers()) {
+                    Player onlinePlayer = playerIdentity.getOnlinePlayer();
+                    if (onlinePlayer == null) return false;
+                    return onlinePlayer.hasPermission("game.joinfullarena");
+                }
+                return true;
+            });
+        });
+    }
+
+    boolean isOpenCached() {
+        GameData d = data;
+        if (d == null) return false;
 
         if (minigame.getName().toLowerCase().contains("minianni")) {
-            if (data.getGameState().equals(GameState.INGAME)) {
-                if (data.getJsonObject() != null && data.getJsonObject().has("Phase")) {
-                    int phase = data.getJsonObject().get("Phase").getAsInt();
+            if (d.getGameState().equals(GameState.INGAME)) {
+                if (d.getJsonObject() != null && d.getJsonObject().has("Phase")) {
+                    int phase = d.getJsonObject().get("Phase").getAsInt();
                     return phase == 1 || phase == 2;
                 }
             }
         }
 
-        return data.getGameState().equals(GameState.WAITING)
-                || data.getGameState().equals(GameState.STARTING);
+        return d.getGameState().equals(GameState.WAITING)
+                || d.getGameState().equals(GameState.STARTING);
     }
 
-    /**
-     * Returns true if this game is joinable for the given player.
-     * If the arena is full, requires the {@code game.joinfullarena} permission.
-     */
-    public boolean isAvailableFor(PlayerIdentity playerIdentity) {
-        if (!isOpen()) return false;
-        GameData data = minigame.getGameDataByGame(this);
-        if (data == null) return false;
-        if (data.getMaxPlayers() > 0 && data.getPlayers() >= data.getMaxPlayers()) {
+    boolean isAvailableForCached(PlayerIdentity playerIdentity) {
+        if (!isOpenCached()) return false;
+        GameData d = data;
+        if (d == null) return false;
+        if (d.getMaxPlayers() > 0 && d.getPlayers() >= d.getMaxPlayers()) {
             Player onlinePlayer = playerIdentity.getOnlinePlayer();
             if (onlinePlayer == null) return false;
             return onlinePlayer.hasPermission("game.joinfullarena");
@@ -81,37 +112,26 @@ public class IGame {
         return String.valueOf(name.charAt(name.length() - 1));
     }
 
-    public GameData getGameData() {
+    public CompletableFuture<GameData> getGameData() {
         return minigame.getGameDataByGame(this);
     }
 
-    public GameState getGameState() {
-        GameData gd = getGameData();
-        return gd != null ? gd.getGameState() : GameState.LOADING;
+    public CompletableFuture<GameState> getGameState() {
+        return getGameData().thenApply(gd -> gd != null ? gd.getGameState() : GameState.LOADING);
     }
 
-    public int getPlayers() {
-        GameData gd = getGameData();
-        return gd != null ? gd.getPlayers() : 0;
+    public CompletableFuture<Integer> getPlayers() {
+        return getGameData().thenApply(gd -> gd != null ? gd.getPlayers() : 0);
     }
 
     public void spectateGame(Player player) {
         sendPlayerToServer(player, new PendingServerAction(PendingActionType.SPECTATE, "game:" + getName()));
     }
 
-    /** Sends the player to this game's server with no pending action. */
     public void sendPlayerToServer(Player player) {
         sendPlayerToServer(player, null);
     }
 
-    /**
-     * Sends the player to this game's server, optionally with a pending action.
-     * For multi-arena servers a {@link PendingActionType#JOIN_ARENA} action is queued automatically
-     * so the target server knows which arena to put the player in.
-     * You can pass an additional action (e.g. {@link PendingActionType#SPECTATE}) that overrides this.
-     *
-     * @param pendingAction optional action to execute when the player connects. Can be null.
-     */
     public void sendPlayerToServer(Player player, PendingServerAction pendingAction) {
         String server = getBungeecordServerName();
 
@@ -135,6 +155,12 @@ public class IGame {
                     }
 
                     Utils.sendToServer(player, server);
+
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> {
+                        if (player.isOnline()) {
+                            Logger.log("sendPlayerToServer(): Transfer failed for " + player.getName(), Logger.LogType.WARNING);
+                        }
+                    }, 50L);
                 } catch (Exception e) {
                     MessageModule messageModule = ModuleManager.getModule(MessageModule.class);
                     if (messageModule != null) {
@@ -143,6 +169,6 @@ public class IGame {
                     e.printStackTrace();
                 }
             }
-        }.runTaskAsynchronously(Shared.getInstance().getPlugin());
+        }.runTaskAsynchronously(Core.getInstance().getPlugin());
     }
 }

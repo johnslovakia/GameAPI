@@ -1,6 +1,6 @@
 package cz.johnslovakia.gameapi.database;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.messages.Language;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.Logger;
@@ -41,14 +41,14 @@ public class PlayerTable {
     }
 
     public PlayerTable createNewColumn(Type type, String name, String def) {
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) return this;
 
             Connection conn = dbConn.getConnection();
             String checkSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?";
 
             try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-                checkStmt.setString(1, Shared.getInstance().getDatabase().getDatabase());
+                checkStmt.setString(1, Core.getInstance().getDatabase().getDatabase());
                 checkStmt.setString(2, TABLE_NAME);
                 checkStmt.setString(3, name);
 
@@ -75,12 +75,12 @@ public class PlayerTable {
     }
 
     public void newUser(PlayerIdentity playerIdentity) {
-        if (Shared.getInstance().getDatabase() == null) {
+        if (Core.getInstance().getDatabase() == null) {
             Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
             return;
         }
 
-        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
             if (connection == null) return;
 
             Optional<Row> result = connection.select()
@@ -131,9 +131,9 @@ public class PlayerTable {
             }
         }
 
-        if (Shared.getInstance().getDatabase() == null) return;
+        if (Core.getInstance().getDatabase() == null) return;
 
-        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
             if (connection == null) return;
 
             QueryResult result = connection.exec(() ->

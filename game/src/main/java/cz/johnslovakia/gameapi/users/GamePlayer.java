@@ -2,7 +2,7 @@ package cz.johnslovakia.gameapi.users;
 
 import cz.johnslovakia.gameapi.GameAPI;
 import cz.johnslovakia.gameapi.Minigame;
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.game.GameService;
 import cz.johnslovakia.gameapi.modules.game.GameState;
@@ -11,7 +11,6 @@ import cz.johnslovakia.gameapi.modules.game.map.Area;
 import cz.johnslovakia.gameapi.modules.game.map.GameMap;
 import cz.johnslovakia.gameapi.modules.game.session.GameSessionModule;
 import cz.johnslovakia.gameapi.modules.game.session.PlayerGameSession;
-import cz.johnslovakia.gameapi.modules.game.team.GameTeam;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.Message;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
@@ -22,16 +21,13 @@ import cz.johnslovakia.gameapi.users.parties.PartyInterface;
 import cz.johnslovakia.gameapi.users.parties.FriendSystemHook;
 import cz.johnslovakia.gameapi.users.parties.PartyAndFriendsHook;
 
-import cz.johnslovakia.gameapi.utils.GameUtils;
 import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.Getter;
 import lombok.Setter;
 
-import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffect;
@@ -130,7 +126,7 @@ public class GamePlayer extends Winner implements PlayerIdentity {
 
     public boolean isRespawning(){
         if (getGame().getSettings().isUseTeams() && getGame().getSettings().isEnabledRespawning()){
-            return !getGameSession().getTeam().isDead();
+            return getGameSession() != null && !getGameSession().getTeam().isDead();
         }else{
             return getGame().getSettings().isEnabledRespawning();
         }
@@ -154,10 +150,10 @@ public class GamePlayer extends Winner implements PlayerIdentity {
             getOnlinePlayer().addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
 
             for (GamePlayer alivePlayer : game.getPlayers()) {
-                alivePlayer.getOnlinePlayer().hidePlayer(Shared.getInstance().getPlugin(), getOnlinePlayer());
+                alivePlayer.getOnlinePlayer().hidePlayer(Core.getInstance().getPlugin(), getOnlinePlayer());
             }
             for (GamePlayer otherSpectator : game.getSpectators()) {
-                otherSpectator.getOnlinePlayer().hidePlayer(Shared.getInstance().getPlugin(), getOnlinePlayer());
+                otherSpectator.getOnlinePlayer().hidePlayer(Core.getInstance().getPlugin(), getOnlinePlayer());
             }
 
             GameMap currentMap = game.getCurrentMap();
@@ -182,11 +178,11 @@ public class GamePlayer extends Winner implements PlayerIdentity {
 
             for (GamePlayer gamePlayer : game.getPlayers()){
                 if (!gamePlayer.equals(this)){
-                    gamePlayer.getOnlinePlayer().showPlayer(Shared.getInstance().getPlugin(), getOnlinePlayer());
+                    gamePlayer.getOnlinePlayer().showPlayer(Core.getInstance().getPlugin(), getOnlinePlayer());
                 }
             }
             for (GamePlayer otherSpectator : game.getSpectators()) {
-                otherSpectator.getOnlinePlayer().hidePlayer(Shared.getInstance().getPlugin(), getOnlinePlayer());
+                otherSpectator.getOnlinePlayer().hidePlayer(Core.getInstance().getPlugin(), getOnlinePlayer());
             }
 
             if (getGame().getSpectatorManager().getInventoryManager().getPlayers().contains(getOnlinePlayer())){
@@ -254,7 +250,7 @@ public class GamePlayer extends Winner implements PlayerIdentity {
     }
 
     public boolean hasKit(){
-        return getGameSession().getSelectedKit() != null;
+        return getGameSession() != null && getGameSession().getSelectedKit() != null;
     }
 
     public boolean isInGame(){

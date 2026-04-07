@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
+import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.Getter;
 import me.zort.sqllib.SQLDatabaseConnection;
 
@@ -11,9 +12,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 @Getter
 public class IMinigame {
@@ -22,41 +27,79 @@ public class IMinigame {
     private final String name;
     private final Map<String, IGame> games = new ConcurrentHashMap<>();
 
-    /** How many seconds without a heartbeat before a game server is considered dead. */
     private static final int STALE_THRESHOLD_SECONDS = 90;
-
-    /** How many seconds between full game-list refreshes from the data source. */
     private static final int GAME_LIST_REFRESH_INTERVAL_SECONDS = 30;
+    private static final int DATA_REFRESH_INTERVAL_SECONDS = 3;
 
-    private Instant lastGameListRefresh;
+    private volatile Instant lastGameListRefresh;
+    private volatile Instant lastDataRefresh;
+
+    private final AtomicReference<CompletableFuture<Void>> activeDataRefresh = new AtomicReference<>();
+    private final AtomicReference<CompletableFuture<Void>> activeGameListRefresh = new AtomicReference<>();
+
+    @Getter
+    private volatile boolean initialized = false;
 
     public IMinigame(ServerRegistry serverRegistry, String name) {
         this.serverRegistry = serverRegistry;
         this.name = name;
-        load();
+
+        loadGameList()
+                .thenCompose(v -> refreshAllGameData())
+                .whenComplete((v, ex) -> {
+                    initialized = true;
+                    if (ex != null) {
+                        Logger.log("IMinigame: init failed for " + name + ": " + ex.getMessage(), Logger.LogType.ERROR);
+                    }
+                });
     }
 
-    public void load() {
-        if (serverRegistry.useRedisForServerData()) {
-            loadFromRedis();
-        } else {
-            loadFromMySQL();
+    private CompletableFuture<Void> tryRefresh(AtomicReference<CompletableFuture<Void>> slot, Supplier<CompletableFuture<Void>> refreshAction) {
+        CompletableFuture<Void> existing = slot.get();
+        if (existing != null && !existing.isDone()) return existing;
+
+        CompletableFuture<Void> future = new CompletableFuture<>();
+
+        if (!slot.compareAndSet(existing, future)) {
+            CompletableFuture<Void> winner = slot.get();
+            return winner != null ? winner : CompletableFuture.completedFuture(null);
         }
-        lastGameListRefresh = Instant.now();
+
+        refreshAction.get().whenComplete((result, ex) -> {
+            if (ex != null) {
+                future.completeExceptionally(ex);
+            } else {
+                future.complete(null);
+            }
+            slot.compareAndSet(future, null);
+        });
+
+        return future;
     }
 
-    /**
-     * Checks if the game list needs refreshing (new arenas added to DB/Redis)
-     * and refreshes if enough time has passed. Called automatically from getServersData().
-     */
-    public void refreshIfNeeded() {
-        if (lastGameListRefresh == null ||
-                java.time.Duration.between(lastGameListRefresh, Instant.now()).getSeconds() >= GAME_LIST_REFRESH_INTERVAL_SECONDS) {
-            load();
+    private CompletableFuture<Void> loadGameList() {
+        return CompletableFuture.runAsync(() -> {
+            if (serverRegistry.useRedisForServerData()) {
+                loadGameListFromRedis();
+            } else {
+                loadGameListFromMySQL();
+            }
+            lastGameListRefresh = Instant.now();
+        }).exceptionally(ex -> {
+            Logger.log("IMinigame: Failed to load game list for " + name + ": " + ex.getMessage(), Logger.LogType.ERROR);
+            return null;
+        });
+    }
+
+    public CompletableFuture<Void> refreshGameListIfNeeded() {
+        if (lastGameListRefresh != null &&
+                Duration.between(lastGameListRefresh, Instant.now()).getSeconds() < GAME_LIST_REFRESH_INTERVAL_SECONDS) {
+            return CompletableFuture.completedFuture(null);
         }
+        return tryRefresh(activeGameListRefresh, this::loadGameList);
     }
 
-    private void loadFromRedis() {
+    private void loadGameListFromRedis() {
         Set<String> keys = serverRegistry.getServerDataRedis().scanKeys("minigame." + name + ".*");
         for (String key : keys) {
             String[] parts = key.split("\\.");
@@ -64,11 +107,15 @@ public class IMinigame {
                 games.putIfAbsent(parts[2], new IGame(this, parts[2]));
             }
         }
+        //Logger.log("IMinigame: Loaded " + games.size() + " games for " + name + " (Redis)", Logger.LogType.DEBUG);
     }
 
-    private void loadFromMySQL() {
+    private void loadGameListFromMySQL() {
         try (SQLDatabaseConnection connection = serverRegistry.getServerDataMySQL().getConnection()) {
-            if (connection == null) return;
+            if (connection == null) {
+                Logger.log("loadGameListFromMySQL: connection is null for " + name, Logger.LogType.ERROR);
+                return;
+            }
             String query = "SELECT name FROM games WHERE minigame = ?";
             try (PreparedStatement statement = Objects.requireNonNull(connection.getConnection()).prepareStatement(query)) {
                 statement.setString(1, getName());
@@ -79,157 +126,217 @@ public class IMinigame {
                     }
                 }
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Returns the most populated open server, ignoring player limits.
-     * Prefer {@link #getBestServer(PlayerIdentity)} to respect full arena permissions.
-     */
-    public IGame getBestServer() {
-        return getServersData().stream()
-                .filter(data -> data.getServer().isOpen())
-                .max(Comparator.comparingInt(GameData::getPlayers))
-                .map(GameData::getServer)
-                .orElse(null);
-    }
-
-    /**
-     * Returns the best available server for the given player,
-     * taking full arena permission into account.
-     */
-    public IGame getBestServer(PlayerIdentity playerIdentity) {
-        return getServersData().stream()
-                .filter(data -> data.getServer().isAvailableFor(playerIdentity))
-                .max(Comparator.comparingInt(GameData::getPlayers))
-                .map(GameData::getServer)
-                .orElse(null);
-    }
-
-    /** Returns all games that the given player can join. */
-    public List<IGame> getAvailableGames(PlayerIdentity playerIdentity) {
-        List<IGame> available = new ArrayList<>();
-        for (IGame game : games.values()) {
-            if (game.isAvailableFor(playerIdentity)) {
-                available.add(game);
-            }
-        }
-        return available;
-    }
-
-    public List<GameData> getServersData() {
-        refreshIfNeeded();
-        List<GameData> list = new ArrayList<>();
-        for (IGame arena : games.values()) {
-            GameData data = getGameDataByGame(arena);
-            if (data != null) list.add(data);
-        }
-        return list;
-    }
-
-    /** Returns true if any game is currently in an open state, regardless of player count. */
-    public boolean isThereFreeGame() {
-        return games.values().stream().anyMatch(IGame::isOpen);
-    }
-
-    /**
-     * Returns true if there is a game available for this player specifically
-     * (respects full arena permission check).
-     */
-    public boolean isThereFreeGameFor(PlayerIdentity playerIdentity) {
-        return games.values().stream().anyMatch(game -> game.isAvailableFor(playerIdentity));
-    }
-
-    public GameData getGameDataByGame(IGame server) {
-        GameData arenaData = server.getData();
-        if (arenaData != null && !arenaData.shouldUpdate()) {
-            return arenaData;
-        }
-        if (serverRegistry.useRedisForServerData()) {
-            return fetchGameDataFromRedis(server);
-        } else {
-            return fetchGameDataFromMySQL(server);
-        }
-    }
-
-    private GameData fetchGameDataFromRedis(IGame server) {
-        try {
-            String key = "minigame." + name + "." + server.getName();
-            String data = serverRegistry.getServerDataRedis().get(key);
-            if (data == null) return createDefaultGameData(server);
-            JsonObject jsonData = JsonParser.parseString(data).getAsJsonObject();
-            return parseGameData(server, jsonData, jsonData);
         } catch (Exception e) {
             e.printStackTrace();
-            return server.getData() != null ? server.getData() : createDefaultGameData(server);
+        }
+        //Logger.log("IMinigame: Loaded " + games.size() + " games for " + name + " (MySQL)", Logger.LogType.DEBUG);
+    }
+
+    private CompletableFuture<Void> refreshAllGameData() {
+        return CompletableFuture.runAsync(() -> {
+            if (serverRegistry.useRedisForServerData()) {
+                refreshAllGameDataFromRedis();
+            } else {
+                refreshAllGameDataFromMySQL();
+            }
+            lastDataRefresh = Instant.now();
+        }).exceptionally(ex -> {
+            Logger.log("IMinigame: Failed to refresh game data for " + name + ": " + ex.getMessage(), Logger.LogType.ERROR);
+            return null;
+        });
+    }
+
+    public CompletableFuture<Void> refreshDataIfNeeded() {
+        if (lastDataRefresh != null && Duration.between(lastDataRefresh, Instant.now()).getSeconds() < DATA_REFRESH_INTERVAL_SECONDS)
+            return CompletableFuture.completedFuture(null);
+        return tryRefresh(activeDataRefresh, this::refreshAllGameData);
+    }
+
+    private void refreshAllGameDataFromRedis() {
+        for (IGame game : games.values()) {
+            try {
+                String key = "minigame." + name + "." + game.getName();
+                String raw = serverRegistry.getServerDataRedis().get(key);
+                if (raw == null) {
+                    applyDefaultGameData(game);
+                    continue;
+                }
+
+                JsonObject json = JsonParser.parseString(raw).getAsJsonObject();
+
+                if (json.has("LastUpdated")) {
+                    try {
+                        long lastUpdatedMs = json.get("LastUpdated").getAsLong();
+                        long diffSeconds = (System.currentTimeMillis() - lastUpdatedMs) / 1000;
+                        if (diffSeconds >= STALE_THRESHOLD_SECONDS) {
+                            applyDefaultGameData(game);
+                            continue;
+                        }
+                    } catch (Exception ignored) {}
+                }
+
+                applyParsedGameData(game, json, json);
+            } catch (Exception e) {
+                Logger.log("IMinigame: Redis fetch failed for " + game.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+                applyDefaultGameData(game);
+            }
         }
     }
 
-    private GameData fetchGameDataFromMySQL(IGame server) {
-        String query = "SELECT * FROM games WHERE name = ? LIMIT 1";
+    private void refreshAllGameDataFromMySQL() {
+        if (games.isEmpty()) return;
+
+        StringJoiner placeholders = new StringJoiner(", ");
+        List<String> names = new ArrayList<>();
+        for (IGame game : games.values()) {
+            placeholders.add("?");
+            names.add(game.getName());
+        }
+
+        String query = "SELECT * FROM games WHERE name IN (" + placeholders + ")";
+        Set<String> fetched = new HashSet<>();
+
         try (SQLDatabaseConnection connection = serverRegistry.getServerDataMySQL().getConnection()) {
-            if (connection == null) return createDefaultGameData(server);
-            try (PreparedStatement statement = Objects.requireNonNull(connection.getConnection()).prepareStatement(query)) {
-                statement.setString(1, server.getName());
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    if (resultSet.next()) {
-                        Timestamp lastUpdated = resultSet.getTimestamp("last_updated");
-                        if (lastUpdated == null) return createDefaultGameData(server);
+            if (connection == null) {
+                Logger.log("refreshAllGameDataFromMySQL: connection is null", Logger.LogType.ERROR);
+                games.values().forEach(this::applyDefaultGameData);
+                return;
+            }
+
+            try (PreparedStatement stmt = Objects.requireNonNull(connection.getConnection()).prepareStatement(query)) {
+                for (int i = 0; i < names.size(); i++) {
+                    stmt.setString(i + 1, names.get(i));
+                }
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String gameName = rs.getString("name");
+                        IGame game = games.get(gameName);
+                        if (game == null) continue;
+
+                        fetched.add(gameName);
+
+                        Timestamp lastUpdated = rs.getTimestamp("last_updated");
+                        if (lastUpdated == null) {
+                            applyDefaultGameData(game);
+                            continue;
+                        }
+
                         long diffSeconds = (System.currentTimeMillis() - lastUpdated.getTime()) / 1000;
                         if (diffSeconds >= STALE_THRESHOLD_SECONDS) {
-                            return createDefaultGameData(server);
+                            applyDefaultGameData(game);
+                            continue;
                         }
-                        int maxPlayers = resultSet.getInt("max_players");
-                        String data = resultSet.getString("data");
-                        if (data == null) return createDefaultGameData(server);
-                        JsonObject jsonData = JsonParser.parseString(data).getAsJsonObject();
-                        return parseGameData(server, jsonData, jsonData, maxPlayers);
+
+                        int maxPlayers = rs.getInt("max_players");
+                        String data = rs.getString("data");
+                        if (data == null) {
+                            applyDefaultGameData(game);
+                            continue;
+                        }
+
+                        JsonObject json = JsonParser.parseString(data).getAsJsonObject();
+                        applyParsedGameData(game, json, json, maxPlayers);
                     }
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return createDefaultGameData(server);
+
+        for (IGame game : games.values()) {
+            if (!fetched.contains(game.getName())) {
+                applyDefaultGameData(game);
+            }
+        }
     }
 
-    private GameData parseGameData(IGame server, JsonObject jsonData, JsonObject fullData) {
-        return parseGameData(server, jsonData, fullData,
+    private void applyParsedGameData(IGame server, JsonObject jsonData, JsonObject fullData) {
+        applyParsedGameData(server, jsonData, fullData,
                 jsonData.has("MaxPlayers") ? jsonData.get("MaxPlayers").getAsInt() : -1);
     }
 
-    private GameData parseGameData(IGame server, JsonObject jsonData, JsonObject fullData, int maxPlayers) {
-        GameData newData = new GameData(server);
+    private void applyParsedGameData(IGame server, JsonObject jsonData, JsonObject fullData, int maxPlayers) {
         try {
             if (!jsonData.has("GameState") || !jsonData.has("Players")) {
-                return createDefaultGameData(server);
+                applyDefaultGameData(server);
+                return;
             }
+
+            GameData newData = new GameData(server);
             newData.setGameState(GameState.valueOf(jsonData.get("GameState").getAsString()));
             newData.setPlayers(jsonData.get("Players").getAsInt());
             newData.setMaxPlayers(maxPlayers);
             newData.setJsonObject(fullData);
             newData.setLastUpdate(Instant.now());
             server.setData(newData);
-        } catch (IllegalArgumentException e) {
-            // Invalid GameState enum value
-            e.printStackTrace();
-            return createDefaultGameData(server);
         } catch (Exception e) {
-            e.printStackTrace();
-            return createDefaultGameData(server);
+            Logger.log("IMinigame: Failed to parse game data for " + server.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+            applyDefaultGameData(server);
         }
-        return newData;
     }
 
-    private GameData createDefaultGameData(IGame server) {
+    private void applyDefaultGameData(IGame server) {
         GameData data = new GameData(server);
         data.setGameState(GameState.LOADING);
         data.setPlayers(0);
         data.setMaxPlayers(-1);
         data.setLastUpdate(Instant.now());
         server.setData(data);
-        return data;
+    }
+
+
+    public CompletableFuture<GameData> getGameDataByGame(IGame server) {
+        return refreshDataIfNeeded().thenApply(v -> {
+            GameData cached = server.getData();
+            if (cached != null) return cached;
+            applyDefaultGameData(server);
+            return server.getData();
+        });
+    }
+
+    public CompletableFuture<List<GameData>> getServersData() {
+        return refreshGameListIfNeeded()
+                .thenCompose(v -> refreshDataIfNeeded())
+                .thenApply(v -> {
+                    List<GameData> list = new ArrayList<>();
+                    for (IGame arena : games.values()) {
+                        GameData data = arena.getData();
+                        if (data != null) list.add(data);
+                    }
+                    return list;
+                });
+    }
+
+    public CompletableFuture<IGame> getBestServer() {
+        return getServersData().thenApply(dataList ->
+                dataList.stream()
+                        .filter(d -> d.getServer().isOpenCached())
+                        .max(Comparator.comparingInt(GameData::getPlayers))
+                        .map(GameData::getServer)
+                        .orElse(null)
+        );
+    }
+
+    public CompletableFuture<IGame> getBestServer(PlayerIdentity playerIdentity) {
+        return getServersData().thenApply(dataList ->
+                dataList.stream()
+                        .filter(d -> d.getServer().isAvailableForCached(playerIdentity))
+                        .max(Comparator.comparingInt(GameData::getPlayers))
+                        .map(GameData::getServer)
+                        .orElse(null)
+        );
+    }
+
+    public CompletableFuture<List<IGame>> getAvailableGames(PlayerIdentity playerIdentity) {
+        return refreshDataIfNeeded().thenApply(v -> {
+            List<IGame> available = new ArrayList<>();
+            for (IGame game : games.values()) {
+                if (game.isAvailableForCached(playerIdentity)) {
+                    available.add(game);
+                }
+            }
+            return available;
+        });
     }
 }

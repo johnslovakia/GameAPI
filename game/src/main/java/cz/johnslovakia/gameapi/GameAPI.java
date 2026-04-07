@@ -2,8 +2,6 @@ package cz.johnslovakia.gameapi;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
-import com.infernalsuite.asp.api.AdvancedSlimePaperAPI;
-import com.infernalsuite.asp.api.world.SlimeWorld;
 import com.infernalsuite.asp.loaders.mysql.MysqlLoader;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -74,7 +72,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
-import java.sql.SQLException;
 import java.util.*;
 
 @Getter
@@ -432,7 +429,7 @@ public class GameAPI{
         JavaPlugin plugin = minigame.getPlugin();
         
         onEnable(minigame);
-        new Shared(plugin, minigame.getDatabase());
+        new Core(Core.PluginContext.MINIGAME, plugin, minigame.getDatabase());
 
         boolean somethingwrong = false;
         //TODO: something went wrong messages
@@ -590,23 +587,24 @@ public class GameAPI{
             experiencePoints.observe((offlinePlayer, amount, type) -> {
                 if (type == ResourceChangeType.DEPOSIT) {
                     if (levelModule != null) {
-                        Bukkit.getScheduler().runTaskAsynchronously(plugin, task -> levelModule.checkLevelUp(offlinePlayer));
+                        PlayerLevelData levelProgress = levelModule.getPlayerData(offlinePlayer);
 
-                        if (offlinePlayer.isOnline()) {
+                        if (levelProgress != null && levelProgress.getLevel() < levelModule.getLevelRanges().getLast().endLevel()) {
+                            Bukkit.getScheduler().runTaskAsynchronously(plugin, task -> levelModule.checkLevelUp(offlinePlayer));
+                        }
+
+                        if (offlinePlayer.isOnline() && levelProgress != null) {
                             Player player = offlinePlayer.getPlayer();
-                            PlayerLevelData levelProgress = levelModule.getPlayerData(offlinePlayer);
-                            if (levelProgress != null) {
-                                levelProgress.calculate().thenRun(() -> {
-                                    float xpProgress = (float) levelProgress.getXpOnCurrentLevel() / levelProgress.getXpToNextLevel();
+                            levelProgress.calculate().thenRun(() -> {
+                                float xpProgress = levelProgress.getXpToNextLevel() > 0 ? (float) levelProgress.getXpOnCurrentLevel() / levelProgress.getXpToNextLevel() : 1.0f;
 
-                                    if (!((GamePlayer) PlayerIdentityRegistry.get(offlinePlayer)).getGame().getState().equals(GameState.INGAME)) {
-                                        Bukkit.getScheduler().runTask(minigame.getPlugin(), task -> {
-                                            player.setExp(Math.min(xpProgress, 1.0f));
-                                            player.setLevel(levelProgress.getLevel());
-                                        });
-                                    }
-                                });
-                            }
+                                if (!((GamePlayer) PlayerIdentityRegistry.get(offlinePlayer)).getGame().getState().equals(GameState.INGAME)) {
+                                    Bukkit.getScheduler().runTask(minigame.getPlugin(), task -> {
+                                        player.setExp(Math.min(xpProgress, 1.0f));
+                                        player.setLevel(levelProgress.getLevel());
+                                    });
+                                }
+                            });
                         }
                     }
 

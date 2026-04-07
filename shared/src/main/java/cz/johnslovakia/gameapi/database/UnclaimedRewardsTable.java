@@ -1,8 +1,7 @@
 package cz.johnslovakia.gameapi.database;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedReward;
-import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.Logger;
 import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
@@ -14,12 +13,12 @@ public class UnclaimedRewardsTable {
     public static final String TABLE_NAME = "unclaimed_rewards";
 
     public static void addUnclaimedReward(UnclaimedReward unclaimedReward, String dataJSON) {
-        if (Shared.getInstance().getDatabase() == null) {
+        if (Core.getInstance().getDatabase() == null) {
             Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
             return;
         }
 
-        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
             if (connection == null) return;
 
             QueryResult result = connection.insert()
@@ -44,7 +43,7 @@ public class UnclaimedRewardsTable {
     }
 
     public static void removeUnclaimedReward(UnclaimedReward unclaimedReward) {
-        if (Shared.getInstance().getDatabase() == null) {
+        if (Core.getInstance().getDatabase() == null) {
             Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
             return;
         }
@@ -52,7 +51,7 @@ public class UnclaimedRewardsTable {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String formattedCreatedAt = unclaimedReward.getCreatedAt().format(formatter);
 
-        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
             if (connection == null) return;
 
             QueryResult result = connection.delete()
@@ -81,9 +80,9 @@ public class UnclaimedRewardsTable {
                         "data_json TEXT," +
                         "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP";
 
-        if (Shared.getInstance().getDatabase() == null) return;
+        if (Core.getInstance().getDatabase() == null) return;
 
-        try (SQLDatabaseConnection connection = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
             if (connection == null) return;
 
             QueryResult result = connection.exec(() ->

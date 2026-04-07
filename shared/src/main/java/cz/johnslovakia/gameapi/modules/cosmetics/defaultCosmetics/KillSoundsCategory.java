@@ -1,7 +1,6 @@
 package cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics;
 
 import com.cryptomorin.xseries.XMaterial;
-import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.*;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
@@ -9,7 +8,6 @@ import cz.johnslovakia.gameapi.utils.Utils;
 
 import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 

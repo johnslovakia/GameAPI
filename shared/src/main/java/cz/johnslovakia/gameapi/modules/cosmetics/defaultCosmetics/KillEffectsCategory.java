@@ -2,7 +2,7 @@ package cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics;
 
 import com.cryptomorin.xseries.particles.ParticleDisplay;
 import com.cryptomorin.xseries.particles.Particles;
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.*;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
@@ -12,7 +12,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -89,7 +88,7 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                                 cancel();
                             }
                         }
-                    }.runTaskTimer(Shared.getInstance().getPlugin(), 1, 0);
+                    }.runTaskTimer(Core.getInstance().getPlugin(), 1, 0);
                 });
         
         Cosmetic ball = new Cosmetic("Ball", new ItemStack(Material.SNOWBALL), CosmeticRarity.UNCOMMON)
@@ -138,7 +137,7 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                                 this.cancel();
                             }
                         }
-                    }.runTaskTimer(Shared.getInstance().getPlugin(), 2L, 1L);
+                    }.runTaskTimer(Core.getInstance().getPlugin(), 2L, 1L);
                 });
         
         Cosmetic rainbow = new Cosmetic("Rainbow", new ItemStack(Material.RED_DYE), CosmeticRarity.EPIC)
@@ -204,7 +203,7 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                         entity.setVelocity(direction.multiply(0.2));
                         items.add(entity);
                     }
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> items.forEach(Entity::remove), 30L);
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> items.forEach(Entity::remove), 30L);
                 });
         
         Cosmetic pumpkinExplosion = new Cosmetic("Pumpkin Explosion", new ItemStack(Material.PUMPKIN), CosmeticRarity.RARE)
@@ -225,7 +224,7 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                         entity.setVelocity(direction.multiply(0.2));
                         items.add(entity);
                     }
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> items.forEach(Entity::remove), 30L);
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> items.forEach(Entity::remove), 30L);
                 });
         
         Cosmetic lightning = new Cosmetic("Lightning Strike", new ItemStack(Material.LIGHTNING_ROD), CosmeticRarity.LEGENDARY)
@@ -243,7 +242,7 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                 .setAsPurchasable()
                 .setLocationConsumer(location -> {
                     location.getWorld().spawnParticle(Particle.FIREWORK, location, 100, 0.5, 0.5, 0.5, 0.15);
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), () -> {
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), () -> {
                         location.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, location, 1);
                     }, 10L);
                 });
@@ -268,7 +267,7 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                                 cancel();
                             }
                         }
-                    }.runTaskTimer(Shared.getInstance().getPlugin(), 0L, 1L);
+                    }.runTaskTimer(Core.getInstance().getPlugin(), 0L, 1L);
                 });
 
         Cosmetic freeze = new Cosmetic("Frozen", new ItemStack(Material.ICE), CosmeticRarity.UNCOMMON)
@@ -330,7 +329,7 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                                 cancel();
                             }
                         }
-                    }.runTaskTimer(Shared.getInstance().getPlugin(), 0L, 2L);
+                    }.runTaskTimer(Core.getInstance().getPlugin(), 0L, 2L);
                 });
 
         Cosmetic coins = new Cosmetic("Money Rain", new ItemStack(Material.GOLD_INGOT), CosmeticRarity.RARE)
@@ -359,7 +358,7 @@ public class KillEffectsCategory extends CosmeticsCategory implements Listener {
                         items.add(entity);
                     }
                     location.getWorld().spawnParticle(Particle.GLOW, location.clone().add(0, 1, 0), 30, 0.5, 0.5, 0.5, 0.1);
-                    Bukkit.getScheduler().runTaskLater(Shared.getInstance().getPlugin(), task -> items.forEach(Entity::remove), 40L);
+                    Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> items.forEach(Entity::remove), 40L);
                 });
 
         addCosmetic(hearth, squid, ball, tornado, blood, sparkle, musical, blossom, presentExplosion, 

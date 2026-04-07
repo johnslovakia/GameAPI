@@ -30,12 +30,14 @@ import cz.johnslovakia.gameapi.utils.PlayerBossBar;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -117,6 +119,7 @@ public class PlayerJoinQuitHandler {
 
             gamePlayer.setGameID(gameInstance.getID());
             player.setDisplayName("§r" + player.getName());
+            GameUtils.setTeamNameTag(gamePlayer.getOnlinePlayer(), gameInstance.getName().replace(" ", "") + gameInstance.getID(), ChatColor.WHITE);
 
             Location lobbyLocation = gameInstance.getModule(LobbyModule.class).getLobbyLocation().getLocation();
             player.teleport(lobbyLocation);
@@ -288,6 +291,8 @@ public class PlayerJoinQuitHandler {
             gamePlayer.getGame().quitPlayer(player);
         }
 
+        gameInstance.getModule(GameSessionModule.class).createPlayerSession(gamePlayer);
+
         gameInstance.getParticipants().add(gamePlayer);
         gamePlayer.setGameID(gameInstance.getID());
         gamePlayer.setSpectator(true);
@@ -359,7 +364,16 @@ public class PlayerJoinQuitHandler {
         } else if (gameInstance.getState() == GameState.INGAME){
             if (!gamePlayer.isSpectator()){
                 session.setState(GamePlayerState.DISCONNECTED);
-                player.damage(player.getHealth());
+                //player.damage(player.getHealth());
+
+                boolean hasKiller = PVPListener.hasLastDamager(gamePlayer) && (System.currentTimeMillis() - PVPListener.getLastDamager(gamePlayer).getMs()) <= PVPListener.KILL_CREDIT_TIMEOUT_MS;
+                GamePlayer killerGamePlayer = hasKiller ? PVPListener.getLastDamager(gamePlayer).getLastDamager() : null;
+                List<GamePlayer> assists = PVPListener.getAssists(gamePlayer, killerGamePlayer);
+
+                GamePlayerDeathEvent deathEvent = new GamePlayerDeathEvent(gameInstance, killerGamePlayer, gamePlayer, assists, null, new ArrayList<>());
+                Bukkit.getPluginManager().callEvent(deathEvent);
+
+                PVPListener.cleanupPlayer(gamePlayer);
 
                 /*boolean killer = PVPListener.hasLastDamager(gamePlayer) && (System.currentTimeMillis() - PVPListener.getLastDamager(gamePlayer).getMs()) <= 12000;
                 GamePlayerDeathEvent deathEvent = new GamePlayerDeathEvent(gamePlayer.getGame(), (killer ? PVPListener.getLastDamager(gamePlayer).getLastDamager() : null), PlayerManager.getGamePlayer(player), null,null);

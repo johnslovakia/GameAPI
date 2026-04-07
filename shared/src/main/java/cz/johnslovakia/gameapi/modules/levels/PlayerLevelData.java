@@ -1,27 +1,14 @@
 package cz.johnslovakia.gameapi.modules.levels;
 
-import com.google.gson.JsonObject;
-import cz.johnslovakia.gameapi.Shared;
-import cz.johnslovakia.gameapi.database.PlayerTable;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
-import cz.johnslovakia.gameapi.modules.dailyRewardTrack.DailyRewardTier;
-import cz.johnslovakia.gameapi.modules.dailyRewardTrack.DailyRewardTrackModule;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
-import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedReward;
-import cz.johnslovakia.gameapi.users.PlayerIdentity;
 
 import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import me.zort.sqllib.api.data.QueryResult;
-import me.zort.sqllib.api.data.Row;
-import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Getter

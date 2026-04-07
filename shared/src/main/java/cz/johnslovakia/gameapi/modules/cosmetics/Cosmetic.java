@@ -1,12 +1,12 @@
 package cz.johnslovakia.gameapi.modules.cosmetics;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
+import cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics.HatsCategory;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
-import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 
 import cz.johnslovakia.gameapi.utils.StringUtils;
 
@@ -71,7 +71,9 @@ public class Cosmetic {
         }
 
         ModuleManager.getModule(CosmeticsModule.class).setPlayerSelectedCosmetic(playerIdentity, this);
-        if (getSelectConsumer() != null) getSelectConsumer().accept(playerIdentity);
+        if (!category.getName().equalsIgnoreCase("Hats") || category.getCosmeticsModule().isShowHats()) {
+            if (getSelectConsumer() != null) getSelectConsumer().accept(playerIdentity);
+        }
 
         if (message) {
             ModuleManager.getModule(MessageModule.class).get(player, "chat.cosmetics.select")
@@ -118,7 +120,7 @@ public class Cosmetic {
 
             costStringList.add(StringUtils.betterNumberFormat(cost) + " " + resource.getDisplayName());
 
-            Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> {
+            Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(), task -> {
                 resource.getResourceInterface().withdraw(player, cost);
             });
         }
@@ -132,7 +134,7 @@ public class Cosmetic {
         //GameAPI.getInstance().getVaultPerms().playerAdd(player, getPermission());
         //gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer().getLocation(), Sound.UI_BUTTON_CLICK, 10.0F, 10.0F); - už u select
         select(playerIdentity);
-        Bukkit.getScheduler().runTaskAsynchronously(Shared.getInstance().getPlugin(), task -> ModuleManager.getModule(CosmeticsModule.class).savePlayerCosmetics(playerIdentity));
+        Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(), task -> ModuleManager.getModule(CosmeticsModule.class).savePlayerCosmetics(playerIdentity));
     }
 
     public boolean hasPurchased(PlayerIdentity playerIdentity){

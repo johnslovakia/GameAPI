@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.listeners.TestServerListener;
 import cz.johnslovakia.gameapi.modules.perks.PerkManager;
 import cz.johnslovakia.gameapi.modules.quests.QuestManager;
+import cz.johnslovakia.gameapi.modules.serverManagement.IMinigame;
 import cz.johnslovakia.gameapi.modules.serverManagement.ServerRegistry;
 import cz.johnslovakia.gameapi.modules.serverManagement.gameData.JSONProperty;
 import cz.johnslovakia.gameapi.utils.InputStreamWithName;
@@ -129,13 +130,16 @@ public abstract class Minigame {
 
     //TODO: rewrite
     public Minigame setServerDataMySQL(Database serverDataMySQL) {
-        moduleManager.registerModule(new ServerRegistry(serverDataMySQL));
+        ServerRegistry registry = moduleManager.registerModule(new ServerRegistry(serverDataMySQL));
+        registry.addMinigame(new IMinigame(registry, getFullName()));
         return this;
     }
 
     //TODO: rewrite
     public Minigame setServerDataRedis(RedisManager serverDataRedis) {
-        moduleManager.registerModule(new ServerRegistry(serverDataRedis));
+        ServerRegistry registry = moduleManager.registerModule(new ServerRegistry(serverDataRedis));
+        registry.addMinigame(new IMinigame(registry, getFullName()));
+        //moduleManager.registerModule(new ServerRegistry(serverDataRedis));
         return this;
     }
 

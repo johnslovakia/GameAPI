@@ -1,7 +1,7 @@
 package cz.johnslovakia.gameapi.modules.stats;
 
 import cz.johnslovakia.gameapi.Minigame;
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.database.Type;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.Logger;
@@ -29,7 +29,7 @@ public class StatsTable {
     }
 
     public void createTable() {
-        if (Shared.getInstance().getDatabase() == null) {
+        if (Core.getInstance().getDatabase() == null) {
             Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
             return;
         }
@@ -45,7 +45,7 @@ public class StatsTable {
                     .append("` INT DEFAULT 0");
         }
 
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) return;
 
             Connection conn = dbConn.getConnection();
@@ -59,14 +59,14 @@ public class StatsTable {
     }
 
     public StatsTable createNewColumn(Type type, String name) {
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) return this;
             Connection conn = dbConn.getConnection();
 
             try (PreparedStatement checkStmt = conn.prepareStatement(
                     "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?"
             )) {
-                checkStmt.setString(1, Shared.getInstance().getDatabase().getDatabase());
+                checkStmt.setString(1, Core.getInstance().getDatabase().getDatabase());
                 checkStmt.setString(2, TABLE_NAME);
                 checkStmt.setString(3, name);
 
@@ -91,9 +91,9 @@ public class StatsTable {
     }
 
     public void newUser(PlayerIdentity playerIdentity) {
-        if (Shared.getInstance().getDatabase() == null) return;
+        if (Core.getInstance().getDatabase() == null) return;
 
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) return;
             Connection conn = dbConn.getConnection();
 
@@ -120,7 +120,7 @@ public class StatsTable {
     public void setStat(String nick, String statName, int count) {
         statName = statName.replace(" ", "_");
 
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) return;
             Connection conn = dbConn.getConnection();
 
@@ -151,7 +151,7 @@ public class StatsTable {
     public int getStat(String nick, String statName) {
         statName = statName.replace(" ", "_");
 
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) return 0;
             Connection conn = dbConn.getConnection();
 
@@ -179,7 +179,7 @@ public class StatsTable {
             columns.add(stat.getName().replace(" ", "_"));
         }
 
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) {
                 for (String s : columns) stats.put(s, 0);
                 return stats;
@@ -216,7 +216,7 @@ public class StatsTable {
         type = type.replace(" ", "_");
         LinkedHashMap<String, Integer> result = new LinkedHashMap<>();
 
-        try (SQLDatabaseConnection dbConn = Shared.getInstance().getDatabase().getConnection()) {
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
             if (dbConn == null) return result;
 
             Connection conn = dbConn.getConnection();
@@ -235,5 +235,40 @@ public class StatsTable {
         }
 
         return result;
+    }
+
+    public int getPlayerRank(String nickname, String statName) {
+        String columnName = statName.replace(" ", "_");
+
+        try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getConnection()) {
+            if (dbConn == null) return -1;
+
+            String checkQuery = "SELECT `" + columnName + "` FROM " + quotedTableName()
+                    + " WHERE `Nickname` = ? LIMIT 1";
+            try (PreparedStatement checkStmt = dbConn.getConnection().prepareStatement(checkQuery)) {
+                checkStmt.setString(1, nickname);
+                try (ResultSet checkRs = checkStmt.executeQuery()) {
+                    if (!checkRs.next() || checkRs.getInt(1) <= 0) {
+                        return -1;
+                    }
+                }
+            }
+
+            String rankQuery = "SELECT COUNT(*) + 1 AS `rank` FROM " + quotedTableName()
+                    + " WHERE `" + columnName + "` > "
+                    + "(SELECT `" + columnName + "` FROM " + quotedTableName()
+                    + " WHERE `Nickname` = ? LIMIT 1)";
+            try (PreparedStatement rankStmt = dbConn.getConnection().prepareStatement(rankQuery)) {
+                rankStmt.setString(1, nickname);
+                try (ResultSet rs = rankStmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getInt("rank");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return -1;
     }
 }

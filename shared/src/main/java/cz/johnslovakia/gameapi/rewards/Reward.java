@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
-import cz.johnslovakia.gameapi.Shared;
 import cz.johnslovakia.gameapi.database.UnclaimedRewardsTable;
 import cz.johnslovakia.gameapi.inventoryBuilder.InventoryBuilder;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
@@ -20,12 +19,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 @Getter @Setter @NoArgsConstructor
 public class Reward {

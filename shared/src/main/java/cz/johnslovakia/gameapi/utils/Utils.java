@@ -1,7 +1,7 @@
 package cz.johnslovakia.gameapi.utils;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 
@@ -161,7 +161,7 @@ public class Utils {
         } catch (Exception exception) {
             player.kick(ModuleManager.getModule(MessageModule.class).get(player, "kick.offline_server").add(" §8(" + exception.getMessage() + ")§r").getTranslated());
         }
-        player.sendPluginMessage(Shared.getInstance().getPlugin(), "BungeeCord", b.toByteArray());
+        player.sendPluginMessage(Core.getInstance().getPlugin(), "BungeeCord", b.toByteArray());
     }
 
     public static String getStringProgressBar(int current, int required) {
@@ -243,26 +243,30 @@ public class Utils {
     }*/
 
     public static ItemStack getPlayerHead(Player player) {
-        UUID uuid = player.getUniqueId();
-        if (headCache.containsKey(uuid)) return headCache.get(uuid).clone();
+        try{
+            UUID uuid = player.getUniqueId();
+            if (headCache.containsKey(uuid)) return headCache.get(uuid).clone();
 
-        PlayerProfile profile = player.getPlayerProfile();
-        PlayerTextures textures = profile.getTextures();
-        URL skinUrl = textures.getSkin();
+            PlayerProfile profile = player.getPlayerProfile();
+            PlayerTextures textures = profile.getTextures();
+            URL skinUrl = textures.getSkin();
 
-        ItemStack item;
-        if (skinUrl != null) {
-            item = getCustomHead(skinUrl.toString());
-        } else {
-            item = new ItemStack(Material.PLAYER_HEAD);
-            SkullMeta meta = (SkullMeta) item.getItemMeta();
-            PlayerProfile staticProfile = Bukkit.createProfile(uuid, player.getName());
-            meta.setPlayerProfile(staticProfile);
-            item.setItemMeta(meta);
+            ItemStack item;
+            if (skinUrl != null) {
+                item = getCustomHead(skinUrl.toString());
+            } else {
+                item = new ItemStack(Material.PLAYER_HEAD);
+                SkullMeta meta = (SkullMeta) item.getItemMeta();
+                PlayerProfile staticProfile = Bukkit.createProfile(uuid, player.getName());
+                meta.setPlayerProfile(staticProfile);
+                item.setItemMeta(meta);
+            }
+
+            headCache.put(uuid, item.clone());
+            return item;
+        }catch (Exception e) {
+            return new ItemStack(Material.PLAYER_HEAD);
         }
-
-        headCache.put(uuid, item.clone());
-        return item;
     }
 
     public static void clearHeadCache(UUID uuid) {

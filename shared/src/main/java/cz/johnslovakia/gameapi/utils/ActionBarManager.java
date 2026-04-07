@@ -1,6 +1,6 @@
 package cz.johnslovakia.gameapi.utils;
 
-import cz.johnslovakia.gameapi.Shared;
+import cz.johnslovakia.gameapi.Core;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
@@ -65,7 +65,7 @@ public class ActionBarManager {
                 player.sendActionBar(msg.component);
                 ticksLeft--;
             }
-        }.runTaskTimer(Shared.getInstance().getPlugin(), 0L, 1L);
+        }.runTaskTimer(Core.getInstance().getPlugin(), 0L, 1L);
     }
 
     private record Message(Component component, int durationTicks, int priority) implements Comparable<Message> {
