@@ -123,11 +123,7 @@ public abstract class Minigame {
             try (JarFile jar = new JarFile(jarFile)) {
                 jar.stream()
                         .filter(entry -> entry.getName().startsWith("languages/") && entry.getName().endsWith(".yml"))
-                        .map(entry -> {
-                            // Use only the base file name after the prefix to avoid any path traversal.
-                            String stripped = new File(entry.getName()).getName().replace(".yml", "");
-                            return stripped;
-                        })
+                        .map(entry -> new File(entry.getName()).getName().replace(".yml", ""))
                         .filter(n -> !n.isEmpty() && n.matches("[a-zA-Z0-9_\\-]+"))
                         .forEach(names::add);
             }

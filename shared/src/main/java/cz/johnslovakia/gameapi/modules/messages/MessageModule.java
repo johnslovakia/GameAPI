@@ -72,9 +72,11 @@ public class MessageModule implements Module, Listener {
 
             URI uri = url.toURI();
             if ("jar".equals(uri.getScheme())) {
-                String ssp = uri.getRawSchemeSpecificPart(); // file:/path/to/plugin.jar!/dir
-                String filePart = ssp.substring("file:".length(), ssp.indexOf("!"));
-                try (JarFile jar = new JarFile(new File(URI.create("file:" + filePart).getPath()))) {
+                // ssp is like: file:/path/to/plugin.jar!/resourceDir
+                String ssp = uri.getRawSchemeSpecificPart();
+                // Extract the jar file path (the part before the '!' separator)
+                URI jarUri = URI.create(ssp.substring(0, ssp.indexOf('!')));
+                try (JarFile jar = new JarFile(new File(jarUri.getPath()))) {
                     jar.stream()
                             .filter(e -> e.getName().startsWith(prefix) && e.getName().endsWith(".yml"))
                             .forEach(entry -> {
