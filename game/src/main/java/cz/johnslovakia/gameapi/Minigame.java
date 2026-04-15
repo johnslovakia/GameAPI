@@ -124,10 +124,11 @@ public abstract class Minigame {
                 jar.stream()
                         .filter(entry -> entry.getName().startsWith("languages/") && entry.getName().endsWith(".yml"))
                         .map(entry -> {
-                            String stripped = entry.getName().substring("languages/".length());
-                            return stripped.replace(".yml", "");
+                            // Use only the base file name after the prefix to avoid any path traversal.
+                            String stripped = new File(entry.getName()).getName().replace(".yml", "");
+                            return stripped;
                         })
-                        .filter(n -> !n.isEmpty() && !n.contains("/"))
+                        .filter(n -> !n.isEmpty() && n.matches("[a-zA-Z0-9_\\-]+"))
                         .forEach(names::add);
             }
         } catch (URISyntaxException e) {

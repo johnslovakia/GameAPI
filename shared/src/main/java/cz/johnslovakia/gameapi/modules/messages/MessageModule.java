@@ -78,10 +78,9 @@ public class MessageModule implements Module, Listener {
                     jar.stream()
                             .filter(e -> e.getName().startsWith(prefix) && e.getName().endsWith(".yml"))
                             .forEach(entry -> {
-                                String langName = entry.getName()
-                                        .substring(prefix.length())
-                                        .replace(".yml", "");
-                                if (langName.isEmpty() || langName.contains("/")) return;
+                                // Use only the base file name to prevent any path traversal from entry names.
+                                String langName = new File(entry.getName()).getName().replace(".yml", "");
+                                if (langName.isEmpty() || !langName.matches("[a-zA-Z0-9_\\-]+")) return;
                                 InputStream stream = classLoader.getResourceAsStream(entry.getName());
                                 if (stream != null) groups.add(new FileGroup(langName, stream));
                             });
@@ -346,8 +345,10 @@ public class MessageModule implements Module, Listener {
     }
 
     public void addMessage(String name, String message) {
+        List<Language> langs = Language.getLanguages();
+        if (langs.isEmpty()) return;
         Map<Language, String> map = messages.computeIfAbsent(name, k -> new HashMap<>());
-        for (Language language : Language.getLanguages()) {
+        for (Language language : langs) {
             map.putIfAbsent(language, message);
         }
     }
@@ -487,8 +488,7 @@ public class MessageModule implements Module, Listener {
                     firstLine = false;
                 }
                 // Keep the line unless it starts with the key followed by a colon.
-                String trimmed = line.trim();
-                if (!trimmed.isEmpty() && !trimmed.startsWith("#") && line.startsWith(key + ":")) {
+                if (line.startsWith(key + ":")) {
                     continue;
                 }
                 lines.add(line);
