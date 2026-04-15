@@ -33,11 +33,11 @@ public interface Quest {
             @Override
             public void run() {
                 player.playSound(player, "jsplugins:completed", 20.0F, 20.0F);
-                player.sendMessage(ModuleManager.getModule(MessageModule.class).get(player, "chat.quests.completed")
-                        .replace("%type%", ModuleManager.getModule(MessageModule.class).get(player, "quest_type." + getType().toString().toLowerCase()).getTranslated())
+                player.sendMessage(ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.quests.completed")
+                        .replace("%type%", ModuleManager.getModule(MessageModule.class).getMessage(player, "quest_type." + getType().toString().toLowerCase()).toComponent())
                         .replace("%quest_name%", getName())
-                        .replace("%description%", ModuleManager.getModule(MessageModule.class).get(player, getTranslationKey()).getTranslated())
-                        .getTranslated());
+                        .replace("%description%", ModuleManager.getModule(MessageModule.class).getMessage(player, getTranslationKey()).toComponent())
+                        .toComponent());
 
                 JsonObject json = new JsonObject();
                 json.addProperty("questName", getName());

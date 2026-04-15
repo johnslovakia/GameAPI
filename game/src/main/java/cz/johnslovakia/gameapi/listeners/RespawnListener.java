@@ -65,7 +65,7 @@ public class RespawnListener implements Listener {
                         if (second == 0) {
                             player.teleport(playingMap.getPlayerToLocation(gamePlayer));
                         }else{
-                            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "title.respawn")
+                            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "title.respawn")
                                     .replace("%time%", "" + second)
                                     .send();
                         }

@@ -68,7 +68,7 @@ public class KitInventoryEditor implements Listener {
         Inventory gui = Bukkit.createInventory(null, 54, Component.text("§f七七七七七七七七ㆾ").font(Key.key("jsplugins", "guis")));
 
         for (int i = 27; i <= 35; i++){
-            gui.setItem(i, new ItemBuilder(Material.GRAY_STAINED_GLASS_PANE).setName(" ").setLore(ModuleManager.getModule(MessageModule.class).get(gamePlayer.getOnlinePlayer(), "inventory.set_kit_inventory.item.info").getTranslated()).toItemStack());
+            gui.setItem(i, new ItemBuilder(Material.GRAY_STAINED_GLASS_PANE).setName(" ").setLore(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer.getOnlinePlayer(), "inventory.set_kit_inventory.item.info").toComponent()).toItemStack());
         }
 
         Inventory currentKitInventory = gamePlayer.getPlayerData().getKitInventory(kit);
@@ -83,24 +83,24 @@ public class KitInventoryEditor implements Listener {
         }
 
         ItemBuilder save = new ItemBuilder(Material.EMERALD_BLOCK);
-        save.setName(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.set_kit_inventory.item.save_inventory").getTranslated());
-        save.setLore(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.set_kit_inventory.item.save_inventory.lore").getTranslated());
+        save.setName(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.set_kit_inventory.item.save_inventory").toComponent());
+        save.setLore(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.set_kit_inventory.item.save_inventory.lore").toComponent());
 
         ItemBuilder reset = new ItemBuilder(Material.BARRIER);
-        reset.setName(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.set_kit_inventory.item.reset").getTranslated());
-        reset.setLore(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.set_kit_inventory.item.reset.lore").getTranslated());
+        reset.setName(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.set_kit_inventory.item.reset").toComponent());
+        reset.setLore(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.set_kit_inventory.item.reset.lore").toComponent());
 
         String translateKey = "kit." + kit.getName().toLowerCase().replace(" ", "_");
         ItemBuilder kitItem = new ItemBuilder(kit.getIcon());
         kitItem.hideAllFlags();
         kitItem.setName("§a" + kit.getName());
         kitItem.removeLore();
-        if (ModuleManager.getModule(MessageModule.class).existMessage(translateKey)) {
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, translateKey)
+        if (ModuleManager.getModule(MessageModule.class).hasMessage(translateKey)) {
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, translateKey)
                     .addToItemLore(kitItem);
         }
 
-        ItemBuilder back = new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1016).setName(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.item.go_back").getTranslated());
+        ItemBuilder back = new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1016).setName(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.item.go_back").toComponent());
 
         ItemBuilder invisibleItem = new ItemBuilder(Material.MAP).setName(" ").setCustomModelData(1010).hideAllFlags();
         for (int i = 45; i <= 53; i++){
@@ -122,12 +122,12 @@ public class KitInventoryEditor implements Listener {
         boolean autoArmor = (boolean) gamePlayer.getMetadata().get("set_kit_inventory.autoArmor");
 
         ItemBuilder armor = new ItemBuilder(Material.LEATHER_CHESTPLATE);
-        armor.setName((autoArmor ? "#72f622" : "§c") + PlainTextComponentSerializer.plainText().serialize(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.set_kit_inventory.item.auto_equip_armor").getTranslated()));
+        armor.setName((autoArmor ? "#72f622" : "§c") + PlainTextComponentSerializer.plainText().serialize(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.set_kit_inventory.item.auto_equip_armor").toComponent()));
         armor.addLoreLine("");
         if (autoArmor) {
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.set_kit_inventory.item.auto_equip_armor.action1").addToItemLore(armor);
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.set_kit_inventory.item.auto_equip_armor.action1").addToItemLore(armor);
         }else{
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.set_kit_inventory.item.auto_equip_armor.action2").addToItemLore(armor);
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.set_kit_inventory.item.auto_equip_armor.action2").addToItemLore(armor);
         }
         return armor.toItemStack();
     }
@@ -275,12 +275,12 @@ public class KitInventoryEditor implements Listener {
             gamePlayer.getMetadata().put("set_kit_inventory.inventory", event.getInventory());
 
 
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.set_kit_inventory.closed_inventory")
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.set_kit_inventory.closed_inventory")
                     .replace("%kit%", kit.getName())
                     .send();
 
-            Component message = ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save").getTranslated()
-                    .hoverEvent(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save.hover").getTranslated())
+            Component message = ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save").toComponent()
+                    .hoverEvent(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.set_kit_inventory.closed_inventory.wanna_save.hover").toComponent())
                     .clickEvent(ClickEvent.runCommand("/saveinventory"));
 
             player.sendMessage(message);
@@ -328,7 +328,7 @@ public class KitInventoryEditor implements Listener {
     public static void save(GamePlayer gamePlayer, Kit kit, Inventory inventory, boolean autoArmor) {
         gamePlayer.getPlayerData().setKitInventory(kit, getCopyOfInventory(inventory, kit, autoArmor));
 
-        ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.set_kit_inventory.saved")
+        ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.set_kit_inventory.saved")
                 .replace("%kit%", kit.getName())
                 .send();
         gamePlayer.getMetadata().remove("set_kit_inventory.kit");

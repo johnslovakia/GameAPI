@@ -71,10 +71,10 @@ public class QuestInventory {
             item = new ItemBuilder(Material.BARRIER); //TODO: item pro dokončený quest
         }
 
-        item.setName(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.name")
-                .replace("%type%", ModuleManager.getModule(MessageModule.class).get(gamePlayer, "quest_type." + quest.getType().toString().toLowerCase()).getTranslated())
+        item.setName(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.quests.name")
+                .replace("%type%", ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "quest_type." + quest.getType().toString().toLowerCase()).toComponent())
                 .replace("%name%", quest.getDisplayName())
-                .getTranslated());
+                .toComponent());
         item.removeLore();
         /*if (!completed && in_progress) {
             item.addEnchant(Enchantment.SHARPNESS, 1);
@@ -82,38 +82,38 @@ public class QuestInventory {
         item.hideAllFlags();
 
         item.addLoreLine("");
-        item.addLoreLine(net.kyori.adventure.text.Component.text("§7").append(ModuleManager.getModule(MessageModule.class).get(gamePlayer, quest.getTranslationKey()).getTranslated()));
+        item.addLoreLine(net.kyori.adventure.text.Component.text("§7").append(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, quest.getTranslationKey()).toComponent()));
         item.addLoreLine("");
         item.addLoreLine(Utils.getStringProgressBar(data.getQuestData(quest).getProgress(), quest.getCompletionGoal()));
-        item.addLoreLine(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.progress")
-                .replace("%progress%", (completed ? "#71c900" : "§f") + data.getQuestData(quest).getProgress() + "§8/§7" + quest.getCompletionGoal()).getTranslated());
+        item.addLoreLine(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.quests.progress")
+                .replace("%progress%", (completed ? "#71c900" : "§f") + data.getQuestData(quest).getProgress() + "§8/§7" + quest.getCompletionGoal()).toComponent());
         item.addLoreLine("");
-        item.addLoreLine(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.rewards").getTranslated());
+        item.addLoreLine(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.quests.rewards").toComponent());
         for (RewardItem rewardItem : quest.getReward().getRewardItems()) {
             Resource resource = rewardItem.getResource();
-            item.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName()  + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "word.chance").getTranslated()) + ")" : ""));
+            item.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName()  + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "word.chance").toComponent()) + ")" : ""));
             if (bonus != 0 && resource.isApplicableBonus()){
-                item.addLoreLine(ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.bonus")
+                item.addLoreLine(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.quests.bonus")
                         .replace("%bonus%", "" + bonus)
-                        .getTranslated());
+                        .toComponent());
             }
         }
 
         if (unclaimedReward.isEmpty() || (quest.getType() == QuestType.DAILY && !unclaimedReward.get().getCreatedAt().toLocalDate().isBefore(today))
         || (quest.getType() == QuestType.WEEKLY && !unclaimedReward.get().getCreatedAt().toLocalDate().equals(LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))))) {
             item.addLoreLine("");
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.resets_in")
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.quests.resets_in")
                     .replace("%time%", (quest.getType().equals(QuestType.WEEKLY) ? StringUtils.getTimeLeftUntil(nextMondayStart) : StringUtils.getTimeLeftUntil(LocalDate.now().plusDays(1).atStartOfDay())))
                     .addToItemLore(item);
         }
 
         item.addLoreLine("");
         if (unclaimedReward.isPresent()) {
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.unclaimed_rewards.click_to_claim").addToItemLore(item);
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.unclaimed_rewards.click_to_claim").addToItemLore(item);
         } else if (completed) {
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.completed").addToItemLore(item);
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.quests.completed").addToItemLore(item);
         } else {
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.quests.currently_active").addToItemLore(item);
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.quests.currently_active").addToItemLore(item);
         }
 
         return item.toItemStack();
@@ -151,15 +151,15 @@ public class QuestInventory {
                     ItemBuilder back = new ItemBuilder(Material.ECHO_SHARD);
                     back.setCustomModelData(1016);
                     back.hideAllFlags();
-                    back.setName(ModuleManager.getModule(MessageModule.class).get(player, "inventory.item.go_back")
-                            .getTranslated());
+                    back.setName(ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.item.go_back")
+                            .toComponent());
 
                     ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
                     info.setCustomModelData(1018);
                     info.hideAllFlags();
-                    info.setName(ModuleManager.getModule(MessageModule.class).get(player, "inventory.info_item.quests_inventory.name")
-                            .getTranslated());
-                    info.setLore(ModuleManager.getModule(MessageModule.class).get(player, "inventory.info_item.quests_inventory.lore").getTranslated());
+                    info.setName(ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.info_item.quests_inventory.name")
+                            .toComponent());
+                    info.setLore(ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.info_item.quests_inventory.lore").toComponent());
 
                     gui.appendElement(0, Component.element(back.toItemStack()).addClick(i -> {
                         ProfileInventory.openGUI(gamePlayer);
@@ -193,7 +193,7 @@ public class QuestInventory {
 
                         Element element = Component.element(getEditedItem(gamePlayer, quest)).addClick(i -> {
                             if (unclaimedReward.isPresent()){
-                                ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.unclaimed_reward.quest.claimed").send();
+                                ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.unclaimed_reward.quest.claimed").send();
                                 if (bonus != 0) {
                                     unclaimedReward.get().setBonus(bonus);
                                 }
@@ -201,16 +201,16 @@ public class QuestInventory {
                                 openGUI(gamePlayer);
                                 player.playSound(player, Sound.UI_BUTTON_CLICK, 1F, 1F);
                             } else if (data.getQuestData(quest).isCompleted()){
-                                ModuleManager.getModule(MessageModule.class).get(player, "chat.quests.already_completed").send();
+                                ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.quests.already_completed").send();
                                 player.playSound(player, Sound.BLOCK_ANVIL_BREAK, 1F, 1F);
                             }/*else if (data.getQuestData(quest).getStatus().equals(PlayerQuestData.Status.IN_PROGRESS)){
-                                ModuleManager.getModule(MessageModule.class).get(player, "chat.quests.already_started")
+                                ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.quests.already_started")
                                         .replace("%progress%", data.getQuestData(quest).getProgress() + "/" + quest.getCompletionGoal())
                                         .send();
                                 player.playSound(player, Sound.BLOCK_ANVIL_BREAK, 1F, 1F);
                             }else{
                                 data.getQuestData(quest).setStatus(PlayerQuestData.Status.IN_PROGRESS);
-                                ModuleManager.getModule(MessageModule.class).get(player, "chat.quests.started")
+                                ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.quests.started")
                                         .replace("%type%", StringUtils.stylizeText(quest.getType().name()))
                                         .replace("%name%", quest.getDisplayName())
                                         .send();

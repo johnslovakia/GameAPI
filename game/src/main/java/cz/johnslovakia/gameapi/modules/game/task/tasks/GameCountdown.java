@@ -68,12 +68,12 @@ public class GameCountdown implements TaskInterface {
         for (GamePlayer gamePlayer : game.getParticipants()) {
             PlayerBossBar playerBossBar = PlayerBossBar.getOrCreateBossBar(gamePlayer.getOnlinePlayer().getUniqueId(), Component.text(""));
 
-            Component component = ModuleManager.getModule(MessageModule.class).get(gamePlayer, "bossbar.time_is_up").getTranslated()
+            Component component = ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "bossbar.time_is_up").toComponent()
                     .font(Key.key("jsplugins", "bossbar_offset"));
             playerBossBar.setName(component);
 
 
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "title.time_is_up.title")
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "title.time_is_up.title")
                     .send();
             gamePlayer.getOnlinePlayer().stopSound("jsplugins:ending");
             gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer().getLocation(), Sound.BLOCK_ANVIL_BREAK, 20.0F, 20.0F);

@@ -28,7 +28,9 @@ import cz.johnslovakia.gameapi.guis.ProfileInventory;
 import cz.johnslovakia.gameapi.modules.levels.LevelModule;
 import cz.johnslovakia.gameapi.modules.levels.PlayerLevelData;
 import cz.johnslovakia.gameapi.modules.messages.FileGroup;
+import cz.johnslovakia.gameapi.modules.messages.Language;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
+import cz.johnslovakia.gameapi.utils.InputStreamWithName;
 import cz.johnslovakia.gameapi.modules.perks.Perk;
 import cz.johnslovakia.gameapi.modules.perks.PerkManager;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
@@ -445,16 +447,54 @@ public class GameAPI{
         ResourcesModule resourcesModule = moduleManager.registerModule(new ResourcesModule());
 
 
-        List<FileGroup> fileGroups = new ArrayList<>();
-        for (Map.Entry<String, InputStreamWithName> entry : minigame.getLanguageFiles().entrySet()) {
-           List<InputStream> streams = new ArrayList<>();
-            streams.add(entry.getValue().inputStream());
+        // Auto-discover language names from the minigame JAR (languages/*.yml) and any manually
+        // registered entries. Then also pick up user-created language files on the server disk.
+        Set<String> languageNames = minigame.detectLanguageNames();
 
-            InputStream in = GameAPI.class.getClassLoader().getResourceAsStream("gLanguages/" + entry.getValue().fileName());
-            if (in != null) streams.add(in);
-
-            fileGroups.add(new FileGroup(entry.getKey(), streams));
+        File serverLanguagesFolder = new File(plugin.getDataFolder(), "languages");
+        if (serverLanguagesFolder.exists()) {
+            File[] extraFiles = serverLanguagesFolder.listFiles((dir, n) -> n.endsWith(".yml") && !n.contains("scoreboard"));
+            if (extraFiles != null) {
+                for (File f : extraFiles) {
+                    languageNames.add(f.getName().replace(".yml", ""));
+                }
+            }
         }
+
+        // Set the default language from MinigameSettings.
+        String defaultLangName = minigame.getSettings().getDefaultLanguage();
+
+        List<FileGroup> fileGroups = new ArrayList<>();
+        for (String langName : languageNames) {
+            List<InputStream> streams = new ArrayList<>();
+
+            // Prefer a manually registered stream; fall back to the plugin resource.
+            InputStreamWithName registered = minigame.getLanguageFiles().get(langName);
+            if (registered != null) {
+                streams.add(registered.inputStream());
+            } else {
+                InputStream minigameStream = plugin.getResource("languages/" + langName + ".yml");
+                if (minigameStream != null) streams.add(minigameStream);
+            }
+
+            // Always merge with GameAPI's built-in gLanguages if available.
+            InputStream gLangStream = GameAPI.class.getClassLoader().getResourceAsStream("gLanguages/" + langName + ".yml");
+            if (gLangStream != null) streams.add(gLangStream);
+
+            if (!streams.isEmpty()) {
+                fileGroups.add(new FileGroup(langName, streams));
+            }
+
+            // Register the Language object and mark the default.
+            Language lang = Language.getLanguage(langName);
+            if (lang == null) {
+                lang = Language.addLanguage(new Language(langName));
+            }
+            if (langName.equalsIgnoreCase(defaultLangName)) {
+                lang.setDefaultLanguage(true);
+            }
+        }
+
         moduleManager.registerModule(new MessageModule(plugin, fileGroups));
 
 
@@ -553,6 +593,8 @@ public class GameAPI{
 
             minigame.setupOther();
 
+            // Run any registered migrations after the plugin is fully set up.
+            minigame.getMigrationManager().runAll();
 
             if (levelModule != null && dailyRewardTrackModule != null){
                 //playerTable.createNewColumn(Type.INT, "Level", "1");

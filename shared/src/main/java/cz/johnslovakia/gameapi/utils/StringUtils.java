@@ -158,7 +158,7 @@ public class StringUtils {
             Damageable damageable = (Damageable) item.getItemMeta();
             if (damageable != null) {
                 if (damageable.getDamage() != 0) {
-                    String duration = item.getType().getMaxDurability() - damageable.getDamage() + " " + ModuleManager.getModule(MessageModule.class).get(player, "word.uses").getRawTranslated();
+                    String duration = item.getType().getMaxDurability() - damageable.getDamage() + " " + ModuleManager.getModule(MessageModule.class).getMessage(player, "word.uses").toString();
                     if (formatedName.contains("(")) {
                         if (formatedName.length() >= maxLoreLength) {
                             formatedName += ",\n ";

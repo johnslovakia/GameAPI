@@ -176,7 +176,7 @@ public class PlayerDeathListener implements Listener {
                 blockedXKill.put(killerId + ":" + currentCount, true);
             }
 
-            messageModule.get(game.getParticipants(), ModuleManager.getModule(KillMessageModule.class).getForPlayer(killer).getTranslationKey(e.getDmgType()))
+            messageModule.getMessage(game.getParticipants(), ModuleManager.getModule(KillMessageModule.class).getForPlayer(killer).getTranslationKey(e.getDmgType()))
                     .replace("%dead%", gamePlayer.getName())
                     .replace("%killer%", killer.getName())
                     .replace("%dead_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
@@ -188,14 +188,14 @@ public class PlayerDeathListener implements Listener {
 
             if (e.getAssists() != null && !e.getAssists().isEmpty()) {
                 for (GamePlayer gp : e.getAssists()) {
-                    messageModule.get(gp, "chat.assisted")
+                    messageModule.getMessage(gp, "chat.assisted")
                             .replace("%player%", gamePlayer.getOnlinePlayer().getName())
                             .send();
                 }
             }
 
             if (e.isFirstGameKill()) {
-                messageModule.get(game.getParticipants(), "chat.first_blood")
+                messageModule.getMessage(game.getParticipants(), "chat.first_blood")
                         .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                         .replace("%killer%", killer.getOnlinePlayer().getName())
                         .replace("%killer_color%", useTeams ? "" + killer.getGameSession().getTeam().getChatColor() : "§a")
@@ -211,7 +211,7 @@ public class PlayerDeathListener implements Listener {
             }.runTaskLater(Minigame.getInstance().getPlugin(), 12 * 20L);*/
 
             /*if (currentCount >= 6) {
-                messageModule.get(killer, "chat.kill_fast").send();
+                messageModule.getMessage(killer, "chat.kill_fast").send();
             }*/
 
             //killer.getOnlinePlayer().playSound(killer.getOnlinePlayer().getLocation(), "jsplugins:good", 1F, 1F);
@@ -226,7 +226,7 @@ public class PlayerDeathListener implements Listener {
                 key = "chat.died";
             }
 
-            messageModule.get(game.getParticipants(), key)
+            messageModule.getMessage(game.getParticipants(), key)
                     .replace("%dead%", gamePlayer.getOnlinePlayer().getName())
                     .replace("%player_color%", useTeams && gamePlayer.getGameSession().getTeam() != null ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
                     .replace("%dead_color%", useTeams && gamePlayer.getGameSession().getTeam() != null ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
@@ -238,7 +238,7 @@ public class PlayerDeathListener implements Listener {
             game.getPlacements().add(new Placement<>(gamePlayer, placement));
 
             if (gamePlayer.isOnline()){
-                messageModule.get(gamePlayer, "title.spectator")
+                messageModule.getMessage(gamePlayer, "title.spectator")
                         .send();
                 gamePlayer.setSpectator(true);
             }
@@ -256,17 +256,17 @@ public class PlayerDeathListener implements Listener {
                         player.sendMessage(Component.empty());
 
                         Component message = messageModule
-                                .get(gamePlayer, "chat.view_summary")
-                                .getTranslated();
+                                .getMessage(gamePlayer, "chat.view_summary")
+                                .toComponent();
 
-                        Component hoverText = messageModule.get(gamePlayer, "chat.view_statistic.survived_for")
+                        Component hoverText = messageModule.getMessage(gamePlayer, "chat.view_statistic.survived_for")
                                 .replace("%time%", StringUtils.getDurationString(
                                         game.getRunningMainTask().getStartCounter() - game.getRunningMainTask().getCounter()))
-                                .getTranslated()
+                                .toComponent()
                                 .appendNewline();
-                        hoverText = hoverText.append(messageModule.get(gamePlayer, "chat.view_statistic.outlived")
+                        hoverText = hoverText.append(messageModule.getMessage(gamePlayer, "chat.view_statistic.outlived")
                                 .replace("%outlived%", String.valueOf((int) game.getMetadata().get("players_at_start") - (game.getPlayers().size() + 1)))
-                                .getTranslated());
+                                .toComponent());
 
                         Map<Score, Integer> stats = session.getScores().entrySet()
                                 .stream().filter(entry -> entry.getKey().getLinkedStat() != null)
@@ -289,7 +289,7 @@ public class PlayerDeathListener implements Listener {
 
                         if (session.earnedSomething()) {
                             hoverText = hoverText.appendNewline().appendNewline()
-                                    .append(messageModule.get(gamePlayer, "chat.view_statistic.rewards_earned").getTranslated());
+                                    .append(messageModule.getMessage(gamePlayer, "chat.view_statistic.rewards_earned").toComponent());
 
                             for (Map.Entry<Resource, Integer> entry : session.getTotalEarned().entrySet()) {
                                 Resource resource = entry.getKey();
@@ -314,7 +314,7 @@ public class PlayerDeathListener implements Listener {
             GameTeam gameTeam = session.getTeam();
             if (gameTeam != null) {
                 if (gameTeam.getAliveMembers().isEmpty()) {
-                    messageModule.get(game.getParticipants(), "chat.team_eliminated")
+                    messageModule.getMessage(game.getParticipants(), "chat.team_eliminated")
                             .replace("%team%", Component.text(gameTeam.getName()).color(gameTeam.getTeamColor().getTextColor()))
                             .send();
 

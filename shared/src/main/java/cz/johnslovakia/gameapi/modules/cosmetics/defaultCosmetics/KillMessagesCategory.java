@@ -92,10 +92,10 @@ public class KillMessagesCategory extends CosmeticsCategory {
         player.sendMessage("");
         player.sendMessage("§fKill Messages §7- §a" + cosmetic.getName() + " §8(Chat Messages)");
 
-        player.sendMessage(Component.text(" §aMelee Kill:").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".melee").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
-        player.sendMessage(Component.text(" §aFall Damage Kill: ").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".fall").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
-        player.sendMessage(Component.text(" §aVoid Kill: ").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".void").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
-        player.sendMessage(Component.text(" §aRanged Kill: ").append(ModuleManager.getModule(MessageModule.class).get(player, "chat.kill_message." + messageName + ".ranged").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").getTranslated()));
+        player.sendMessage(Component.text(" §aMelee Kill:").append(ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.kill_message." + messageName + ".melee").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").toComponent()));
+        player.sendMessage(Component.text(" §aFall Damage Kill: ").append(ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.kill_message." + messageName + ".fall").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").toComponent()));
+        player.sendMessage(Component.text(" §aVoid Kill: ").append(ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.kill_message." + messageName + ".void").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").toComponent()));
+        player.sendMessage(Component.text(" §aRanged Kill: ").append(ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.kill_message." + messageName + ".ranged").replace("%dead_color%", "§c").replace("%dead%", "§cPlayer").replace("%killer_color%", "§c").replace("%killer%", "§cKiller").toComponent()));
         player.sendMessage("");
     }
 }

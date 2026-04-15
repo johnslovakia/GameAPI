@@ -33,8 +33,8 @@ public class ChatListener implements Listener {
         LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
         
 
-        Component word_all = ModuleManager.getModule(MessageModule.class).get(gamePlayer, "word.all_chat").getTranslated();
-        Component word_team = ModuleManager.getModule(MessageModule.class).get(gamePlayer, "word.team_chat").getTranslated();
+        Component word_all = ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "word.all_chat").toComponent();
+        Component word_team = ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "word.team_chat").toComponent();
 
         String prefix = gamePlayer.getPrefix();
 
@@ -47,11 +47,11 @@ public class ChatListener implements Listener {
 
             if (gamePlayer.isSpectator() && game.getState() == GameState.INGAME) {
                 e.setCancelled(true);
-                if (!ModuleManager.getModule(MessageModule.class).existMessage("chat.format.spectator")) {
+                if (!ModuleManager.getModule(MessageModule.class).hasMessage("chat.format.spectator")) {
                     String msg = "§8[§7Spectator Chat§8] " + StringUtils.colorizer(prefix) + player.getName() + "§r: " + e.getMessage();
                     game.getSpectators().forEach(gp -> gp.getOnlinePlayer().sendMessage(msg));
                 }else {
-                    ModuleManager.getModule(MessageModule.class).get(game.getSpectators(), "chat.format.spectator")
+                    ModuleManager.getModule(MessageModule.class).getMessage(game.getSpectators(), "chat.format.spectator")
                             .replace("%prefix%", StringUtils.colorizer(prefix))
                             .replace("%name%", player.getName())
                             .replace("%message%", e.getMessage())
@@ -65,11 +65,11 @@ public class ChatListener implements Listener {
                             e.setCancelled(true);
                             if (e.getMessage().length() == 1) return;
                             e.setMessage(e.getMessage().substring(1));
-                            if (!ModuleManager.getModule(MessageModule.class).existMessage("chat.format.all")) {
+                            if (!ModuleManager.getModule(MessageModule.class).hasMessage("chat.format.all")) {
                                 String msg = "§8[" + team.getChatColor() + word_all + "§8] " + StringUtils.colorizer(prefix) + "§r" + team.getChatColor() + player.getName() + "§r: " + e.getMessage();
                                 game.getParticipants().forEach(gp -> gp.getOnlinePlayer().sendMessage(msg));
                             }else {
-                                ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), "chat.format.all")
+                                ModuleManager.getModule(MessageModule.class).getMessage(game.getParticipants(), "chat.format.all")
                                         .replace("%prefix%", StringUtils.colorizer(prefix))
                                         .replace("%name%", player.getName())
                                         .replace("%team_color%", "" + team.getTeamColor().getChatColor())
@@ -80,11 +80,11 @@ public class ChatListener implements Listener {
                             }
                         } else {
                             e.setCancelled(true);
-                            if (!ModuleManager.getModule(MessageModule.class).existMessage("chat.format.team")) {
+                            if (!ModuleManager.getModule(MessageModule.class).hasMessage("chat.format.team")) {
                                 String msg = "§8[" + team.getChatColor() + word_team + "§8] " +StringUtils.colorizer(prefix) + "§r" + team.getChatColor() + player.getName() + "§r: " + e.getMessage();
                                 team.getAllMembers().forEach(gp -> gp.getOnlinePlayer().sendMessage(msg));
                             }else {
-                                ModuleManager.getModule(MessageModule.class).get(team.getAllMembers(), "chat.format.team")
+                                ModuleManager.getModule(MessageModule.class).getMessage(team.getAllMembers(), "chat.format.team")
                                         .replace("%prefix%", StringUtils.colorizer(prefix))
                                         .replace("%name%", player.getName())
                                         .replace("%team_color%", "" + team.getTeamColor().getChatColor())
@@ -102,11 +102,11 @@ public class ChatListener implements Listener {
 
                 } else {
                     e.setCancelled(true);
-                    if (!ModuleManager.getModule(MessageModule.class).existMessage("chat.format.all")){
+                    if (!ModuleManager.getModule(MessageModule.class).hasMessage("chat.format.all")){
                         String msg = "§8[§a" + word_all + "§8] " + StringUtils.colorizer(prefix) + "§r" + player.getName() +  "§r: " + e.getMessage();
                         game.getParticipants().forEach(gp -> gp.getOnlinePlayer().sendMessage(msg));
                     }else {
-                        ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), "chat.format.all")
+                        ModuleManager.getModule(MessageModule.class).getMessage(game.getParticipants(), "chat.format.all")
                                 .replace("%prefix%", StringUtils.colorizer(prefix))
                                 .replace("%name%", player.getName())
                                 .replace("%message%", e.getMessage())
@@ -118,11 +118,11 @@ public class ChatListener implements Listener {
                 }
             }else{
                 e.setCancelled(true);
-                if (!ModuleManager.getModule(MessageModule.class).existMessage("chat.format.default")) {
+                if (!ModuleManager.getModule(MessageModule.class).hasMessage("chat.format.default")) {
                     String msg = StringUtils.colorizer(prefix) + "§r" + player.getName() + "§r: " + e.getMessage();
                     game.getParticipants().forEach(gp -> gp.getOnlinePlayer().sendMessage(msg));
                 }else {
-                    ModuleManager.getModule(MessageModule.class).get(game.getParticipants(), "chat.format.default")
+                    ModuleManager.getModule(MessageModule.class).getMessage(game.getParticipants(), "chat.format.default")
                             .replace("%prefix%", StringUtils.colorizer(prefix))
                             .replace("%name%", player.getName())
                             .replace("%message%", e.getMessage())

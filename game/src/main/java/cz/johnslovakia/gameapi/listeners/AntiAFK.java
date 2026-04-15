@@ -175,7 +175,7 @@ public class AntiAFK implements Listener {
 
                 if (countdown == KICK_COUNTDOWN_SECONDS || countdown == 10 || countdown <= 5) {
                     ModuleManager.getModule(MessageModule.class)
-                            .get(player, "chat.afk_kick_countdown")
+                            .getMessage(player, "chat.afk_kick_countdown")
                             .replace("%seconds%", String.valueOf(countdown))
                             .send();
                     player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 1.0f, 1.0f);

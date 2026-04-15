@@ -82,7 +82,7 @@ public class PlayerData {
                 kitInventories.remove(kit);
                 Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> saveKitInventories());
 
-                ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.kit_layout_reset")
+                ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.kit_layout_reset")
                         .replace("%kit%", kit.getName())
                         .send();
                 return kit.getContent().getInventory();

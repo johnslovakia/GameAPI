@@ -164,7 +164,7 @@ public class IGame {
                 } catch (Exception e) {
                     MessageModule messageModule = ModuleManager.getModule(MessageModule.class);
                     if (messageModule != null) {
-                        messageModule.get(player, "chat.something_wrong.new_game").send();
+                        messageModule.getMessage(player, "chat.something_wrong.new_game").send();
                     }
                     e.printStackTrace();
                 }

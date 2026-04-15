@@ -107,7 +107,7 @@ public class AbilityItem implements Listener {
         ItemBuilder finalItem = new ItemBuilder(itemStack, amount);
         finalItem.setName("§a" + name);
         if (loreTranslationKey != null) {
-            finalItem.setLore(ModuleManager.getModule(MessageModule.class).get(Language.getDefaultLanguage(), loreTranslationKey));
+            finalItem.setLore(ModuleManager.getModule(MessageModule.class).getTranslation(Language.getDefaultLanguage(), loreTranslationKey));
         }
         ItemStack result = finalItem.toItemStack();
         ItemMeta meta = result.getItemMeta();
@@ -124,7 +124,7 @@ public class AbilityItem implements Listener {
         ItemBuilder finalItem = new ItemBuilder(itemStack, amount);
         finalItem.setName("§a" + name);
         if (loreTranslationKey != null) {
-            finalItem.setLore(ModuleManager.getModule(MessageModule.class).get(gamePlayer, loreTranslationKey).getTranslated());
+            finalItem.setLore(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, loreTranslationKey).toComponent());
         }
         ItemStack result = finalItem.toItemStack();
         ItemMeta meta = result.getItemMeta();

@@ -33,24 +33,24 @@ public class TeamSelectorInventory implements Listener {
                     ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
                     close.setCustomModelData(1017);
                     close.hideAllFlags();
-                    close.setName(messageModule.get(player, "inventory.item.close")
-                            .getTranslated());
+                    close.setName(messageModule.getMessage(player, "inventory.item.close")
+                            .toComponent());
 
                     ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
                     info.setCustomModelData(1018);
                     info.hideAllFlags();
-                    info.setName(messageModule.get(player, "inventory.info_item.team_selector_inventory.name")
-                            .getTranslated());
-                    info.setLore(messageModule.get(player, "inventory.info_item.team_selector_inventory.lore").getTranslated());
+                    info.setName(messageModule.getMessage(player, "inventory.info_item.team_selector_inventory.name")
+                            .toComponent());
+                    info.setLore(messageModule.getMessage(player, "inventory.info_item.team_selector_inventory.lore").toComponent());
 
 
                     ItemBuilder reset = new ItemBuilder(Material.MAP);
                     reset.setCustomModelData(1010);
                     reset.hideAllFlags();
-                    reset.setName(messageModule.get(player, "inventory.kit.reset")
-                            .getTranslated());
+                    reset.setName(messageModule.getMessage(player, "inventory.kit.reset")
+                            .toComponent());
                     reset.removeLore();
-                    messageModule.get(player, "inventory.kit.reset_lore")
+                    messageModule.getMessage(player, "inventory.kit.reset_lore")
                             .addToItemLore(reset);
 
 
@@ -79,13 +79,13 @@ public class TeamSelectorInventory implements Listener {
                                     }
                                     item.addLoreLine("");
                                     if (team.isMember(gamePlayer)) {
-                                        messageModule.get(gamePlayer, "inventory.team.joined")
+                                        messageModule.getMessage(gamePlayer, "inventory.team.joined")
                                                 .addToItemLore(item);
                                     } else if (team.isFull()) {
-                                        messageModule.get(gamePlayer, "inventory.team.full")
+                                        messageModule.getMessage(gamePlayer, "inventory.team.full")
                                                 .addToItemLore(item);
                                     } else if (!team.isMember(gamePlayer)) {
-                                        messageModule.get(gamePlayer, "inventory.team.join")
+                                        messageModule.getMessage(gamePlayer, "inventory.team.join")
                                                 .addToItemLore(item);
                                     }
 

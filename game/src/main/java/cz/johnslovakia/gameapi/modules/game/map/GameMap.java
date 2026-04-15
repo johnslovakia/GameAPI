@@ -88,7 +88,7 @@ public class GameMap {
 
         if (!game.getModule(MapModule.class).isEnabledVoting() ||
                 !(game.getState().equals(GameState.WAITING) || game.getState().equals(GameState.STARTING))) {
-            ModuleManager.getModule(MessageModule.class).get(player, "chat.map.vote_ended").send();
+            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.map.vote_ended").send();
             player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 20.0F, 20.0F);
             return;
         }
@@ -104,7 +104,7 @@ public class GameMap {
         int currentVotes = game.getModule(MapModule.class).getTotalPlayerVotes(gamePlayer);
 
         if (currentVotes >= allowedVotes) {
-            ModuleManager.getModule(MessageModule.class).get(player, "chat.map.no_more_votes")
+            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.map.no_more_votes")
                     .send();
             return;
         }
@@ -117,7 +117,7 @@ public class GameMap {
 
             int balance = resourcesModule.getPlayerBalanceCached(player, resource);
             if (balance < cost) {
-                ModuleManager.getModule(MessageModule.class).get(player, "chat.dont_have_enough")
+                ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.dont_have_enough")
                         .replace("%need_more%", StringUtils.betterNumberFormat((long) (cost - balance)))
                         .replace("%economy_name%", resource.getDisplayName())
                         .send();
@@ -129,7 +129,7 @@ public class GameMap {
 
         game.getModule(MapModule.class).addPlayerVote(gamePlayer, this);
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 20.0F, 20.0F);
-        ModuleManager.getModule(MessageModule.class).get(player, "chat.map.vote")
+        ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.map.vote")
                 .replace("%map%", getName())
                 .replace("%votes%", "" + getVotes())
                 .send();

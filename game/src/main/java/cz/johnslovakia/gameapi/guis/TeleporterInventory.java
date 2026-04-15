@@ -30,15 +30,15 @@ public class TeleporterInventory {
                     ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
                     close.setCustomModelData(1017);
                     close.hideAllFlags();
-                    close.setName(ModuleManager.getModule(MessageModule.class).get(player, "inventory.item.close")
-                            .getTranslated());
+                    close.setName(ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.item.close")
+                            .toComponent());
 
                     ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
                     info.setCustomModelData(1018);
                     info.hideAllFlags();
-                    info.setName(ModuleManager.getModule(MessageModule.class).get(player, "inventory.info_item.teleporter.name")
-                            .getTranslated());
-                    info.setLore(ModuleManager.getModule(MessageModule.class).get(player, "inventory.info_item.teleporter.lore").getTranslated());
+                    info.setName(ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.info_item.teleporter.name")
+                            .toComponent());
+                    info.setLore(ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.info_item.teleporter.lore").toComponent());
 
                     gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> {
                         gui.close(player);
@@ -81,30 +81,30 @@ public class TeleporterInventory {
         alivePlayerItem.setName(alivePlayer.getName()).setName("§a§l" + alivePlayer.getName());
 
         if (team != null) {
-            ModuleManager.getModule(MessageModule.class).get(forGamePlayer, "inventory.teleporter.team")
+            ModuleManager.getModule(MessageModule.class).getMessage(forGamePlayer, "inventory.teleporter.team")
                     .replace("%team%", team.getChatColor() + team.getName())
                     .addToItemLore(alivePlayerItem);
         }
         alivePlayerItem.addLoreLine("");
-        ModuleManager.getModule(MessageModule.class).get(forGamePlayer, "inventory.teleporter.health")
+        ModuleManager.getModule(MessageModule.class).getMessage(forGamePlayer, "inventory.teleporter.health")
                 .replace("%health%", "" + (int) alivePlayer.getHealth())
                 .replace("%max_health%", "" + (int) alivePlayer.getHealthScale())
                 .addToItemLore(alivePlayerItem);
-        ModuleManager.getModule(MessageModule.class).get(forGamePlayer, "inventory.teleporter.food")
+        ModuleManager.getModule(MessageModule.class).getMessage(forGamePlayer, "inventory.teleporter.food")
                 .replace("%food%", "" + alivePlayer.getFoodLevel())
                 .addToItemLore(alivePlayerItem);
         alivePlayerItem.addLoreLine("");
         if (kitManager != null) {
             Kit kit = aliveGamePlayer.getGamePlayer().getGameSession().getSelectedKit();
 
-            ModuleManager.getModule(MessageModule.class).get(forGamePlayer, "inventory.teleporter.kit")
-                    .replace("%kit%", (kit != null ? net.kyori.adventure.text.Component.text(kit.getName()) : ModuleManager.getModule(MessageModule.class).get(forGamePlayer, "word.none_kit").getTranslated()))
+            ModuleManager.getModule(MessageModule.class).getMessage(forGamePlayer, "inventory.teleporter.kit")
+                    .replace("%kit%", (kit != null ? net.kyori.adventure.text.Component.text(kit.getName()) : ModuleManager.getModule(MessageModule.class).getMessage(forGamePlayer, "word.none_kit").toComponent()))
                     .addToItemLore(alivePlayerItem);
             alivePlayerItem.addLoreLine("");
         }
-        ModuleManager.getModule(MessageModule.class).get(forGamePlayer, "inventory.teleporter.left_click")
+        ModuleManager.getModule(MessageModule.class).getMessage(forGamePlayer, "inventory.teleporter.left_click")
                 .addToItemLore(alivePlayerItem);
-        ModuleManager.getModule(MessageModule.class).get(forGamePlayer, "inventory.teleporter.right_click")
+        ModuleManager.getModule(MessageModule.class).getMessage(forGamePlayer, "inventory.teleporter.right_click")
                 .addToItemLore(alivePlayerItem);
 
         return alivePlayerItem.toItemStack();

@@ -106,13 +106,13 @@ public class PlayerStatsHologram implements Listener {
         List<Stat> stats = statsModule.getStats().stream().filter(Stat::isShowToPlayer).toList();
 
         Component periodName = ModuleManager.getModule(MessageModule.class)
-                .get(playerIdentity, period.getTranslationKey()).getTranslated();
+                .getMessage(playerIdentity, period.getTranslationKey()).toComponent();
 
         Component title = ModuleManager.getModule(MessageModule.class)
-                .get(playerIdentity, "hologram.player_stats")
+                .getMessage(playerIdentity, "hologram.player_stats")
                 .replace("%minigame_name%", Minigame.getInstance().getName())
                 .replace("%period_name%", periodName)
-                .getTranslated();
+                .toComponent();
 
         int maxLength = stats.stream()
                 .mapToInt(stat -> {
@@ -137,9 +137,9 @@ public class PlayerStatsHologram implements Listener {
         displayMap.put(playerIdentity, display);
 
         Component periodSubContent = ModuleManager.getModule(MessageModule.class)
-                .get(playerIdentity, "hologram.player_stats.click_period")
+                .getMessage(playerIdentity, "hologram.player_stats.click_period")
                 .replace("%period_name%", periodName)
-                .getTranslated();
+                .toComponent();
 
         Location subLoc = location.clone().subtract(0, 0.6, 0);
 
@@ -178,11 +178,11 @@ public class PlayerStatsHologram implements Listener {
             );
 
             component = component.append(
-                    ModuleManager.getModule(MessageModule.class).get(playerIdentity, "hologram.player_stats.score_line")
+                    ModuleManager.getModule(MessageModule.class).getMessage(playerIdentity, "hologram.player_stats.score_line")
                             .replace("%stat_name%", stat.getTranslated(playerIdentity))
                             .replace("%value%", StringUtils.betterNumberFormat(value))
                             .replace("%space_pad%", Component.text(StringUtils.calculateNegativeSpaces(dotCount)))
-                            .getTranslated()
+                            .toComponent()
             );
 
             if (i < stats.size() - 1) component = component.appendNewline();

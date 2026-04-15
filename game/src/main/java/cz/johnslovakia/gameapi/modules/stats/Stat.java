@@ -22,8 +22,8 @@ public class Stat{
     }
 
     public Component getTranslated(PlayerIdentity playerIdentity){
-        if (ModuleManager.getModule(MessageModule.class).existMessage(playerIdentity, translationKey)){
-            return ModuleManager.getModule(MessageModule.class).get(playerIdentity, translationKey).getTranslated();
+        if (ModuleManager.getModule(MessageModule.class).hasMessage(playerIdentity, translationKey)){
+            return ModuleManager.getModule(MessageModule.class).getMessage(playerIdentity, translationKey).toComponent();
         }else{
             return Component.text(getName());
         }

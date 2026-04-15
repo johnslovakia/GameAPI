@@ -199,7 +199,7 @@ public class InventoryBuilder implements Listener, Initialize, Terminate {
 
         for (Item item : items){
             ItemBuilder translated = new ItemBuilder((item.isPlayerHead() ? Utils.getPlayerHead(player) : item.getItem()))
-                    .setName(ModuleManager.getModule(MessageModule.class).get(playerIdentity, item.getTranslationKey()).getTranslated());
+                    .setName(ModuleManager.getModule(MessageModule.class).getMessage(playerIdentity, item.getTranslationKey()).toComponent());
             if (item.getBlinking() != null &&  item.getBlinking().test(playerIdentity)){
                 translated.setCustomModelData(item.getBlinkingItemCustomModelData());
             }
@@ -221,7 +221,7 @@ public class InventoryBuilder implements Listener, Initialize, Terminate {
 
         Inventory inv = player.getInventory();
         for (Item item : items) {
-            Component component = ModuleManager.getModule(MessageModule.class).get(playerIdentity, item.getTranslationKey()).getTranslated();
+            Component component = ModuleManager.getModule(MessageModule.class).getMessage(playerIdentity, item.getTranslationKey()).toComponent();
             if (component != null){
                 for (ItemStack itemStack : player.getInventory().getContents()){
                     if (itemStack == null || !itemStack.hasItemMeta() || !itemStack.getItemMeta().hasDisplayName()){

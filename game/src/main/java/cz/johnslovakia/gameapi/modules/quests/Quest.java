@@ -36,11 +36,11 @@ public interface Quest {
             @Override
             public void run() {
                 gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "jsplugins:completed", 20.0F, 20.0F);
-                player.sendMessage(ModuleManager.getModule(MessageModule.class).get(player, "chat.quests.completed")
-                        .replace("%type%", ModuleManager.getModule(MessageModule.class).get(player, "quest_type." + getType().toString().toLowerCase()).getTranslated())
+                player.sendMessage(ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.quests.completed")
+                        .replace("%type%", ModuleManager.getModule(MessageModule.class).getMessage(player, "quest_type." + getType().toString().toLowerCase()).toComponent())
                         .replace("%quest_name%", getName())
-                        .replace("%description%", "§7" + ModuleManager.getModule(MessageModule.class).get(player, getTranslationKey()).getRawTranslated().replace("\n", " "))
-                        .getTranslated());
+                        .replace("%description%", "§7" + ModuleManager.getModule(MessageModule.class).getMessage(player, getTranslationKey()).toString().replace("\n", " "))
+                        .toComponent());
 
                 JsonObject json = new JsonObject();
                 json.addProperty("questName", getName());

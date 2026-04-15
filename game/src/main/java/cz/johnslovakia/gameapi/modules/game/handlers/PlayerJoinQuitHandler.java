@@ -96,7 +96,7 @@ public class PlayerJoinQuitHandler {
                             continue;
                         }
 
-                        ModuleManager.getModule(MessageModule.class).get(kickPlayer, "server.kicked_because_reserved_slot")
+                        ModuleManager.getModule(MessageModule.class).getMessage(kickPlayer, "server.kicked_because_reserved_slot")
                                 .send();
                         GameUtils.sendToLobby(kickPlayer, false);
                         joined = true;
@@ -104,13 +104,13 @@ public class PlayerJoinQuitHandler {
                     }
 
                     if (!joined){
-                        ModuleManager.getModule(MessageModule.class).get(player, "vip.full.slots")
+                        ModuleManager.getModule(MessageModule.class).getMessage(player, "vip.full.slots")
                                 .send();
                         GameUtils.sendToLobby(player, false);
                         return;
                     }
                 }else {
-                    ModuleManager.getModule(MessageModule.class).get(player, "server.full")
+                    ModuleManager.getModule(MessageModule.class).getMessage(player, "server.full")
                             .send();
                     GameUtils.sendToLobby(player, false);
                     return;
@@ -148,7 +148,7 @@ public class PlayerJoinQuitHandler {
                 if (participants.size() == settings.getReducedPlayers()) {
                     if (gameInstance.getRunningMainTask().getCounter() > settings.getReducedTime()) {
                         gameInstance.getRunningMainTask().setCounter(settings.getReducedTime());
-                        ModuleManager.getModule(MessageModule.class).get(participants, "chat.time_reduced")
+                        ModuleManager.getModule(MessageModule.class).getMessage(participants, "chat.time_reduced")
                                 .send();
                     }
                 }
@@ -210,7 +210,7 @@ public class PlayerJoinQuitHandler {
                     player.sendMessage("§cAn error occurred, you are being sent to the lobby");
                 }
             }else{
-                ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.join_failed.full_game.rejoin")
+                ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.join_failed.full_game.rejoin")
                         .send();
             }
         }else if (gameInstance.getState().equals(GameState.INGAME) && settings.isEnabledJoiningAfterStart()){
@@ -241,7 +241,7 @@ public class PlayerJoinQuitHandler {
                 return;
             }else{
                 player.setGameMode(GameMode.SPECTATOR);
-                ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.join_failed.full_game.game_in_progress")
+                ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.join_failed.full_game.game_in_progress")
                         .send();
             }
         }else if (gameInstance.getState().equals(GameState.INGAME)) {
@@ -261,7 +261,7 @@ public class PlayerJoinQuitHandler {
     }
 
     public void sendPlayerJoinMessage(GamePlayer gamePlayer, int players){
-        ModuleManager.getModule(MessageModule.class).get(gameInstance.getParticipants(), "chat.join")
+        ModuleManager.getModule(MessageModule.class).getMessage(gameInstance.getParticipants(), "chat.join")
                 .replace("%prefix%", gamePlayer.getPrefix())
                 .replaceWithComponent("%player%", gp -> {
                     boolean highlight = gp.getFriends().isFriendWith(gamePlayer)
@@ -324,7 +324,7 @@ public class PlayerJoinQuitHandler {
         gameInstance.getParticipants().remove(gamePlayer);
 
         if (gameInstance.getState().equals(GameState.WAITING) || gameInstance.getState().equals(GameState.STARTING)){
-            ModuleManager.getModule(MessageModule.class).get(gameInstance.getParticipants(), "chat.quit")
+            ModuleManager.getModule(MessageModule.class).getMessage(gameInstance.getParticipants(), "chat.quit")
                     .replace("%prefix%", gamePlayer.getPrefix())
                     .replaceWithComponent("%player%", gp -> {
                         boolean highlight = gp.getFriends().isFriendWith(gamePlayer)

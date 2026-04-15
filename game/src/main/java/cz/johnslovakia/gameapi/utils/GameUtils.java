@@ -143,12 +143,12 @@ public class GameUtils {
         ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", Minigame.getInstance().getPlugin());
         List<String> lobbies = config.getConfig().getStringList("lobby_servers");
 
-        if (message) ModuleManager.getModule(MessageModule.class).get(player, "chat.sending_to_lobby").send();
+        if (message) ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.sending_to_lobby").send();
 
         Collections.shuffle(lobbies);
         Utils.sendToServer(player, (lobbies.isEmpty() ? "Lobby" : lobbies.get(0)));
 
-        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> player.kick(ModuleManager.getModule(MessageModule.class).get(player, "kick.offline_server").getTranslated()), 50L);
+        Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> player.kick(ModuleManager.getModule(MessageModule.class).getMessage(player, "kick.offline_server").toComponent()), 50L);
     }
 
     public static void colorizeArmor(GamePlayer gamePlayer) {
