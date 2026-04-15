@@ -3,10 +3,13 @@ package cz.johnslovakia.gameapi.guis;
 import cz.johnslovakia.gameapi.modules.game.map.GameMap;
 import cz.johnslovakia.gameapi.modules.game.map.MapModule;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
+import cz.johnslovakia.gameapi.modules.resources.Resource;
+import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
+import cz.johnslovakia.gameapi.utils.StringUtils;
 import me.zort.containr.Component;
 import me.zort.containr.Element;
 import me.zort.containr.GUI;
@@ -39,22 +42,41 @@ public class VotingInventory {
                     .replace("%creators%", map.getAuthors())
                     .addToItemLore(item);
         }
+        item.addLoreLine("");
+
+        int freeVotes = getPlayersFreeVotes(gamePlayer);
+
         if (!mapModule.isVoting()){
-            item.addLoreLine("");
             messageModule.get(gamePlayer, "inventory.map.vote_ended")
                     .addToItemLore(item);
-        }else if (votes < getPlayersFreeVotes(gamePlayer)) {
-            item.addLoreLine("");
-            if (getPlayersFreeVotes(gamePlayer) - votes > 1){
+        } else if (votes < freeVotes) {
+            if (freeVotes - votes > 1) {
                 messageModule.get(gamePlayer, "inventory.map.vote.more_votes")
-                        .replace("%votes_left%", "" + (getPlayersFreeVotes(gamePlayer) - votes))
+                        .replace("%votes_left%", "" + (freeVotes - votes))
                         .addToItemLore(item);
-            }else {
+            } else {
                 messageModule.get(gamePlayer, "inventory.map.vote")
                         .addToItemLore(item);
             }
+
+        } else if (votes < 3) {
+            int[] votePrices = {150, 200};
+            int price = votePrices[votes - freeVotes];
+
+            ResourcesModule resourcesModule = ModuleManager.getModule(ResourcesModule.class);
+            Resource resource = resourcesModule.getResourceByName("Coins");
+            int balance = resourcesModule.getPlayerBalanceCached(gamePlayer, resource);
+
+            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.map.vote.price")
+                    .replace("%balance%", (balance >= price ? "§a" : "§c") + StringUtils.betterNumberFormat(balance))
+                    .replace("%price%", StringUtils.betterNumberFormat(price))
+                    .replace("%economy_name%", resource.getDisplayName())
+                    .addToItemLore(item);
+
+            messageModule.get(gamePlayer, "inventory.map.vote")
+                    .replace("%price%", String.valueOf(price))
+                    .addToItemLore(item);
         }else{
-            item.addLoreLine("");
             messageModule.get(gamePlayer, "inventory.map.voted")
                     .addToItemLore(item);
         }
@@ -116,10 +138,10 @@ public class VotingInventory {
 
     private static int getPlayersFreeVotes(GamePlayer gamePlayer){
         int votes = 1;
-        if (gamePlayer.getOnlinePlayer().hasPermission("vip.2votes")){
-            votes = 2;
-        }else if (gamePlayer.getOnlinePlayer().hasPermission("vip.3votes")){
+        if (gamePlayer.getOnlinePlayer().hasPermission("vip.3votes")){
             votes = 3;
+        }else if (gamePlayer.getOnlinePlayer().hasPermission("vip.2votes")){
+            votes = 2;
         }
         return votes;
     }

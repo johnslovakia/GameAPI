@@ -50,6 +50,16 @@ public class ClickContext {
     public int getInt(ConfigAPI config, String key) { return config.getConfig().getInt(key); }
     public boolean getBool(ConfigAPI config, String key) { return config.getConfig().getBoolean(key); }
 
+    public void cycleString(ConfigAPI config, String key, String[] values) {
+        String current = config.getConfig().getString(key, values[0]);
+        int idx = 0;
+        for (int i = 0; i < values.length; i++) {
+            if (values[i].equalsIgnoreCase(current)) { idx = i; break; }
+        }
+        config.getConfig().set(key, values[(idx + 1) % values.length]);
+        saveYaml(config);
+    }
+
     private void saveYaml(ConfigAPI config) {
         try {
             config.saveConfig();

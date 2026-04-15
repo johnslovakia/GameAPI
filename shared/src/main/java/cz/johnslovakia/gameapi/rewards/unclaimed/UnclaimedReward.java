@@ -59,6 +59,7 @@ public class UnclaimedReward {
 
     public void claim(){
         //TODO: přepsat na lepší systém bonusů, neukládá se bonus
+        if (!ModuleManager.getModule(UnclaimedRewardsModule.class).getPlayerUnclaimedRewards(offlinePlayer).contains(this)) return;
         getReward().applyReward(offlinePlayer, true, bonus);
         UnclaimedRewardsTable.removeUnclaimedReward(this);
         ModuleManager.getModule(UnclaimedRewardsModule.class).removeUnclaimedReward(offlinePlayer, this);

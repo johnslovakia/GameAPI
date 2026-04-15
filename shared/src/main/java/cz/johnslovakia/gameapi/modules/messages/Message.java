@@ -240,7 +240,10 @@ public class Message {
             if (finalMsg == null) continue;
 
             switch (msgType) {
-                case ACTIONBAR -> ActionBarManager.sendActionBar(player, finalMsg.replaceText(TextReplacementConfig.builder().match(MessageType.ACTIONBAR.getKey()).replacement("").build()));
+                case ACTIONBAR -> {
+                    player.sendActionBar(finalMsg.replaceText(TextReplacementConfig.builder().match(MessageType.ACTIONBAR.getKey()).replacement("").build()));
+                    //ActionBarManager.sendActionBar(player, finalMsg.replaceText(TextReplacementConfig.builder().match(MessageType.ACTIONBAR.getKey()).replacement("").build()));
+                }
                 case CHAT -> player.sendMessage(finalMsg.replaceText(TextReplacementConfig.builder().match(MessageType.CHAT.getKey()).replacement("").build()));
                 case KICK -> player.kick(finalMsg.replaceText(TextReplacementConfig.builder().match(MessageType.KICK.getKey()).replacement("").build()));
                 case SUBTITLE -> player.showTitle(Title.title(Component.empty(), finalMsg.replaceText(TextReplacementConfig.builder().match("/subtitle/").replacement("").build())));

@@ -33,6 +33,7 @@ public class BatchedStorage implements ResourceStorage {
                 BatchConfig.builder("resource-" + resourceName)
                         .maxBatchSize(50)
                         .flushIntervalSeconds(30)
+                        .debugEnabled(false)
                         .build(),
                 this::loadBalanceFromDB,
                 this::saveBalanceToDB,

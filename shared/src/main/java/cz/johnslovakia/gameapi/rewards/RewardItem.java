@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Getter @Setter
 public class RewardItem {
@@ -58,7 +59,7 @@ public class RewardItem {
     public boolean shouldApply() {
         if (chance >= 100) return true;
         if (chance <= 0) return false;
-        return new Random().nextInt(100) < chance;
+        return ThreadLocalRandom.current().nextInt(100) < chance;
     }
 
 

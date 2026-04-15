@@ -183,6 +183,7 @@ public class PlayerDeathListener implements Listener {
                     .replace("%player_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
                     .replace("%killer_color%", useTeams ? "" + killer.getGameSession().getTeam().getChatColor() : "§a")
                     .addAndTranslate(multiKillKey)
+                    .addAndTranslate(e.isFinalKill() ? "word.elimination" : "")
                     .send();
 
             if (e.getAssists() != null && !e.getAssists().isEmpty()) {

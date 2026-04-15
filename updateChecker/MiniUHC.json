@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.3.3",
-  "update_message": "Bug Fixes and Improvements",
+  "latest_version": "2.4",
+  "update_message": "Enhanced World Generation, Bug Fixes & More",
   "update_messages": {
     "2.1": "LevelSystem, Changes and Bug Fixes",
     "2.1.1": "Bug Fixes",
@@ -10,6 +10,7 @@
     "2.3": "New Settings, Improvements, Bug Fixes, and more...",
     "2.3.1": "Optimization, Server Health Monitoring, and Bug Fixes",
     "2.3.2": "Bug Fixes",
-    "2.3.3": "Bug Fixes and Improvements"
+    "2.3.3": "Bug Fixes and Improvements",
+    "2.4": "Enhanced World Generation, Bug Fixes & More"
   }
 }

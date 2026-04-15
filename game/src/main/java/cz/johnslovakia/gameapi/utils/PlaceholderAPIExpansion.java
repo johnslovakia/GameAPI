@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.modules.scores.Score;
 import cz.johnslovakia.gameapi.modules.scores.ScoreModule;
 import cz.johnslovakia.gameapi.modules.stats.Stat;
+import cz.johnslovakia.gameapi.modules.stats.StatPeriod;
 import cz.johnslovakia.gameapi.modules.stats.StatsModule;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.PlayerManager;
@@ -102,7 +103,7 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion {
                 if (rank < 0 || rank >= 15) return null;
 
                 List<Map.Entry<String, Integer>> topList = statsModule.getStatsTable()
-                        .topStats(stat.getName(), 15)
+                        .topStats(stat.getName(), 15, StatPeriod.LIFETIME)
                         .entrySet().stream()
                         .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                         .limit(15)

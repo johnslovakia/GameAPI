@@ -414,13 +414,11 @@ public class MapSettingsListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onFoodchange(FoodLevelChangeEvent e){
-        if (!(e.getEntity() instanceof Player)){
-            return;
-        }
+        if (!(e.getEntity() instanceof Player player)) return;
 
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer((Player) e.getEntity());
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         if (!gamePlayer.isInGame()) return;
 
         AreaSettings settings = AreaManager.getActiveSettings(gamePlayer);

@@ -5,12 +5,15 @@ import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.modules.game.team.GameTeam;
 import cz.johnslovakia.gameapi.modules.game.team.TeamModule;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
+import cz.johnslovakia.gameapi.modules.resources.Resource;
+import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.modules.serverManagement.gameData.GameDataManager;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.utils.Logger;
 
+import cz.johnslovakia.gameapi.utils.StringUtils;
 import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import lombok.Getter;
 import lombok.Setter;
@@ -83,31 +86,49 @@ public class GameMap {
     public void voteForMap(Player player) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
 
-        int votes = 1;
-        if (player.hasPermission("vip.2votes")){
-            votes = 2;
-        }else if (player.hasPermission("vip.3votes")){
-            votes = 3;
-        }
-
-        if (!game.getModule(MapModule.class).isEnabledVoting() || !(game.getState().equals(GameState.WAITING) || game.getState().equals(GameState.STARTING))){
-            ModuleManager.getModule(MessageModule.class).get(player, "chat.map.vote_ended")
-                    .send();
+        if (!game.getModule(MapModule.class).isEnabledVoting() ||
+                !(game.getState().equals(GameState.WAITING) || game.getState().equals(GameState.STARTING))) {
+            ModuleManager.getModule(MessageModule.class).get(player, "chat.map.vote_ended").send();
             player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 20.0F, 20.0F);
             return;
         }
 
+        int freeVotes = 1;
+        if (player.hasPermission("vip.3votes")) {
+            freeVotes = 3;
+        } else if (player.hasPermission("vip.2votes")) {
+            freeVotes = 2;
+        }
 
-        if (game.getModule(MapModule.class).getTotalPlayerVotes(gamePlayer) >= votes) {
+        int allowedVotes = 3;
+        int currentVotes = game.getModule(MapModule.class).getTotalPlayerVotes(gamePlayer);
+
+        if (currentVotes >= allowedVotes) {
             ModuleManager.getModule(MessageModule.class).get(player, "chat.map.no_more_votes")
                     .send();
-            player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 20.0F, 20.0F);
             return;
+        }
+
+        if (currentVotes >= freeVotes) {
+            int[] votePrices = {150, 200};
+            int cost = votePrices[currentVotes - freeVotes];
+            ResourcesModule resourcesModule = ModuleManager.getModule(ResourcesModule.class);
+            Resource resource = resourcesModule.getResourceByName("Coins");
+
+            int balance = resourcesModule.getPlayerBalanceCached(player, resource);
+            if (balance < cost) {
+                ModuleManager.getModule(MessageModule.class).get(player, "chat.dont_have_enough")
+                        .replace("%need_more%", StringUtils.betterNumberFormat((long) (cost - balance)))
+                        .replace("%economy_name%", resource.getDisplayName())
+                        .send();
+                return;
+            }
+
+            resourcesModule.withdraw(player, resource, cost);
         }
 
         game.getModule(MapModule.class).addPlayerVote(gamePlayer, this);
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 20.0F, 20.0F);
-
         ModuleManager.getModule(MessageModule.class).get(player, "chat.map.vote")
                 .replace("%map%", getName())
                 .replace("%votes%", "" + getVotes())
