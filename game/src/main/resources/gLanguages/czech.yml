@@ -1,5 +1,5 @@
-﻿inventory.item.close: "§7Klikni pro zavření"
-nventory.item.go_back: "§7Klikni pro návrat"
+inventory.item.close: "§7Klikni pro zavření"
+inventory.item.go_back: "§7Klikni pro návrat"
 inventory.info_item.kit_inventory.name: "§fOhledně kitů"
 inventory.info_item.kit_inventory.lore: "§7Kity poskytují hráčům předměty/newline/§7, které dostanou na začátku hry."
 inventory.info_item.quests_inventory.name: "§fÚkoly"

@@ -68,6 +68,7 @@ public class MessageModule implements Module, Listener {
                         File check = File.createTempFile("cFile", ".yml");
                         FileUtils.copyInputStreamToFile(in, check);
                         checkMessages(check, mainFile);
+                        check.delete();
                     }
                 }
 
@@ -168,7 +169,12 @@ public class MessageModule implements Module, Listener {
             }
 
             String line;
+            boolean firstLine = true;
             while ((line = br.readLine()) != null) {
+                if (firstLine) {
+                    line = stripBOM(line);
+                    firstLine = false;
+                }
                 //if (line.trim().isEmpty() || line.trim().startsWith("#")) continue;
 
                 int colonIndex = line.indexOf(':');
@@ -190,7 +196,12 @@ public class MessageModule implements Module, Listener {
     private boolean containsKey(File file, String key) throws IOException {
         try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
             String line;
+            boolean firstLine = true;
             while ((line = reader.readLine()) != null) {
+                if (firstLine) {
+                    line = stripBOM(line);
+                    firstLine = false;
+                }
                 if (line.startsWith(key + ":")) {
                     return true;
                 }
@@ -202,9 +213,14 @@ public class MessageModule implements Module, Listener {
     private void loadMessagesFromFile(File file) {
         String nr = "\n";
 
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
             String line;
+            boolean firstLine = true;
             while ((line = br.readLine()) != null) {
+                if (firstLine) {
+                    line = stripBOM(line);
+                    firstLine = false;
+                }
                 int colonIndex = line.indexOf(':');
                 if (colonIndex != -1) {
                     String key = line.substring(0, colonIndex).trim();
@@ -316,5 +332,12 @@ public class MessageModule implements Module, Listener {
         }
 
         return messagesList;
+    }
+
+    private static String stripBOM(String line) {
+        if (line != null && !line.isEmpty() && line.charAt(0) == '\uFEFF') {
+            return line.substring(1);
+        }
+        return line;
     }
 }
