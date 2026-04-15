@@ -6,6 +6,7 @@ import cz.johnslovakia.gameapi.database.RedisManager;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.listeners.TestServerListener;
+import cz.johnslovakia.gameapi.modules.migrations.MigrationManager;
 import cz.johnslovakia.gameapi.modules.perks.PerkManager;
 import cz.johnslovakia.gameapi.modules.quests.QuestManager;
 import cz.johnslovakia.gameapi.modules.serverManagement.IMinigame;
@@ -27,12 +28,12 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.net.URISyntaxException;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.jar.JarFile;
 
 @Getter @Setter
 public abstract class Minigame {
@@ -55,6 +56,9 @@ public abstract class Minigame {
     private List<JSONProperty<GameInstance>> properties = new ArrayList<>();
     private Map<String, InputStreamWithName> languageFiles = new HashMap<>();
 
+    @Getter
+    private MigrationManager migrationManager;
+
     @Setter
     private QuestManager questManager;
     @Setter
@@ -67,6 +71,7 @@ public abstract class Minigame {
         this.plugin = plugin;
         this.name = name;
         this.moduleManager = new ModuleManager(plugin);
+        this.migrationManager = new MigrationManager(plugin);
 
         this.updateChecker = new UpdateChecker(this, "https://raw.githubusercontent.com/johnslovakia/GameAPI/master/updateChecker/" + name + ".json");
 
@@ -88,10 +93,50 @@ public abstract class Minigame {
         this.settings = builder.build();
     }
 
+    /**
+     * Manually registers a language file for this minigame.
+     * Auto-detection via JAR scanning is preferred; only use this for edge cases.
+     *
+     * @deprecated Languages are now auto-detected from the {@code languages/} directory in the
+     *             plugin's JAR. You only need to call this if auto-detection does not find your file.
+     */
+    @Deprecated
     public void addLanguage(String languageName, InputStreamWithName... languages){
         for (InputStreamWithName language : languages){
             this.languageFiles.put(languageName, language);
         }
+    }
+
+    /**
+     * Returns the set of language names available for this minigame.
+     *
+     * <p>Names are discovered by scanning the {@code languages/} directory inside the plugin's JAR.
+     * Any languages registered via the now-deprecated {@link #addLanguage} are included as well.</p>
+     *
+     * @return a mutable, ordered set of language names (e.g. {@code "english"}, {@code "czech"})
+     */
+    public Set<String> detectLanguageNames() {
+        Set<String> names = new LinkedHashSet<>(languageFiles.keySet());
+
+        try {
+            File jarFile = new File(plugin.getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+            try (JarFile jar = new JarFile(jarFile)) {
+                jar.stream()
+                        .filter(entry -> entry.getName().startsWith("languages/") && entry.getName().endsWith(".yml"))
+                        .map(entry -> {
+                            String stripped = entry.getName().substring("languages/".length());
+                            return stripped.replace(".yml", "");
+                        })
+                        .filter(n -> !n.isEmpty() && !n.contains("/"))
+                        .forEach(names::add);
+            }
+        } catch (URISyntaxException e) {
+            Logger.log("Could not resolve plugin JAR path for language auto-detection: " + e.getMessage(), Logger.LogType.WARNING);
+        } catch (Exception e) {
+            Logger.log("Could not auto-scan languages from plugin JAR: " + e.getMessage(), Logger.LogType.WARNING);
+        }
+
+        return names;
     }
 
     public void setDatabase(Database database) {

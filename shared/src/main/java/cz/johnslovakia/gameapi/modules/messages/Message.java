@@ -54,7 +54,10 @@ public class Message {
         isDirty = true;
     }
 
-    public int getAudienceSize(){
+    /**
+     * Returns the number of recipients this message is built for.
+     */
+    public int getAudienceSize() {
         return rawMessages.size();
     }
 
@@ -123,7 +126,7 @@ public class Message {
 
         for (PlayerIdentity gamePlayer : rawMessages.keySet()) {
             if (validator == null || validator.test(gamePlayer)) {
-                String addMessage = ModuleManager.getModule(MessageModule.class).get(gamePlayer, translateKey).getRawTranslated();
+                String addMessage = ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, translateKey).toRawString();
                 if (!addMessage.startsWith(" ")){
                     addMessage = " " + addMessage;
                 }
@@ -196,23 +199,43 @@ public class Message {
         isDirty = false;
     }
 
-    public Component getTranslated() {
+    /**
+     * Returns the rendered {@link Component} for this message.
+     * Only valid when the audience size is exactly 1.
+     */
+    public Component toComponent() {
         if (getAudienceSize() != 1) {
-            return Component.text("§cIncorrect use of 'getTranslated()' – use only for 1 player.");
+            return Component.text("§cIncorrect use of 'toComponent()' – use only for 1 player.");
         }
         buildComponentsIfDirty();
         return messages.values().stream().toList().get(0);
     }
 
-    public String getRawTranslated() {
+    /**
+     * Returns the raw (legacy-formatted) string for this message.
+     * Only valid when the audience size is exactly 1.
+     */
+    public String toRawString() {
         if (getAudienceSize() != 1) {
-            return "§cIncorrect use of 'getRawTranslated()' – use only for 1 player.";
+            return "§cIncorrect use of 'toRawString()' – use only for 1 player.";
         }
         return rawMessages.values().stream().toList().get(0);
     }
 
+    /** @deprecated Use {@link #toComponent()} instead. */
+    @Deprecated
+    public Component getTranslated() {
+        return toComponent();
+    }
+
+    /** @deprecated Use {@link #toRawString()} instead. */
+    @Deprecated
+    public String getRawTranslated() {
+        return toRawString();
+    }
+
     public void addToItemLore(ItemBuilder itemBuilder) {
-        itemBuilder.addLoreLine(getTranslated());
+        itemBuilder.addLoreLine(toComponent());
     }
 
     public void send() {
