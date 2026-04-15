@@ -71,19 +71,19 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
                 if (!getAllMembers().contains(gamePlayer)) {
                     if (game.getState().equals(GameState.INGAME)) {
                         if (isDead()) {
-                            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.team.dead")
+                            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.team.dead")
                                     .send();
                             quitPlayer(gamePlayer);
                             return false;
                         }
                     }
                     if(isFull()){
-                        ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.team.full")
+                        ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.team.full")
                                 .send();
                         return false;
                     }
                     if (!game.getModule(TeamModule.class).getTeamAllowEnter(this)) {
-                        ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.team.balancing.cant_join")
+                        ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.team.balancing.cant_join")
                                 .send();
                         return false;
                     }
@@ -149,25 +149,25 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
                     player.setDisplayName(getChatColor() + player.getName());
 
                     if (!cause.equals(TeamJoinCause.AUTO)) {
-                        ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.team.join")
+                        ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.team.join")
                                 .replace("%team%", getChatColor() + getName())
                                 .send();
                     }
 
                     if (cause.equals(TeamJoinCause.PARTY)){
-                        ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.party.team_join")
+                        ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.party.team_join")
                                 .send();
                     }else if (cause.equals(TeamJoinCause.PARTY_OTHER_TEAM)){
-                        ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.party.other_team_join")
+                        ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.party.other_team_join")
                                 .send();
                     }
                     return true;
                 } else {
-                    ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.team.already_joined")
+                    ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.team.already_joined")
                             .send();
                 }
             }else{
-                ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.not_allowed")
+                ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.not_allowed")
                         .send();
             }
             return false;

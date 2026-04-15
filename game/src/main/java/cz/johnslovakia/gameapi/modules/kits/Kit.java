@@ -87,7 +87,7 @@ public class Kit implements Listener{
 
 
         if (kitManager.hasKitPermission(gamePlayer, this)) {
-            ModuleManager.getModule(MessageModule.class).get(player, "chat.kit.activated_vip")
+            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.kit.activated_vip")
                     .replace("%kit%", getName())
                     .replace("%saved%", StringUtils.betterNumberFormat(getPrice()))
                     .replace("%economy_name%", resource.getDisplayName())
@@ -96,12 +96,12 @@ public class Kit implements Listener{
             resourcesModule.withdraw(gamePlayer.getOnlinePlayer(), resource, getPrice());
 
             int balance = resourcesModule.getPlayerBalanceCached(player, resource);
-            ModuleManager.getModule(MessageModule.class).get(player, "chat.kit.activated")
+            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.kit.activated")
                     .replace("%kit%", getName())
                     .replace("%price%", StringUtils.betterNumberFormat(getPrice()))
                     .replace("%economy_name%", resource.getDisplayName())
                     .send();
-            ModuleManager.getModule(MessageModule.class).get(player, "chat.current_balance")
+            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.current_balance")
                     .replace("%kit%", getName())
                     .replace("%balance%", StringUtils.betterNumberFormat(balance))
                     .replace("%economy_name%", resource.getDisplayName())
@@ -120,7 +120,7 @@ public class Kit implements Listener{
         gamePlayer.getGamePlayer().getGameSession().setSelectedKit(kitManager.getDefaultKit() != null ? kitManager.getDefaultKit() : null);
 
         if (message) {
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.kit.unselected")
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.kit.unselected")
                     .replace("%kit%", getName())
                     .send();
         }
@@ -152,7 +152,7 @@ public class Kit implements Listener{
 
             if (gamePlayer.hasKit() && gamePlayer.getGameSession().getSelectedKit().equals(this)) {
                 if (kitManager.getDefaultKit() != null && !kitManager.getDefaultKit().equals(this))
-                    ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.kit.already_selected")
+                    ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.kit.already_selected")
                             .send();
                 return;
             }
@@ -163,11 +163,11 @@ public class Kit implements Listener{
                     || (gamePlayer.getGame().getState() == GameState.INGAME
                     && gamePlayer.getGameSession().getPurchasedKitsThisGame() != null
                     && gamePlayer.getGameSession().getPurchasedKitsThisGame().contains(this))) {
-                ModuleManager.getModule(MessageModule.class).get(player, "chat.kit.selected")
+                ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.kit.selected")
                         .replace("%kit%", getName())
                         .send();
                 if (!(player.hasPermission("kits.free") || getPrice() == 0 || kitManager.hasKitPermission(gamePlayer, this))) {
-                    ModuleManager.getModule(MessageModule.class).get(player, "chat.kit.balance_deducted")
+                    ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.kit.balance_deducted")
                             .replace("%economy_name%", kitManager.getResource().getName())
                             .send();
                 }
@@ -180,7 +180,7 @@ public class Kit implements Listener{
             if (kitManager.isPurchaseKitForever()) {
                 return;
             }
-            ModuleManager.getModule(MessageModule.class).get(player, "chat.dont_have_enough")
+            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.dont_have_enough")
                     .replace("%need_more%", StringUtils.betterNumberFormat((long) (getPrice() - balance)))
                     .replace("%economy_name%", resource.getDisplayName())
                     .send();

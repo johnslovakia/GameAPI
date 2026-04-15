@@ -159,7 +159,7 @@ public class Utils {
             out.writeUTF("Connect");
             out.writeUTF(server.toLowerCase());
         } catch (Exception exception) {
-            player.kick(ModuleManager.getModule(MessageModule.class).get(player, "kick.offline_server").add(" §8(" + exception.getMessage() + ")§r").getTranslated());
+            player.kick(ModuleManager.getModule(MessageModule.class).getMessage(player, "kick.offline_server").add(" §8(" + exception.getMessage() + ")§r").toComponent());
         }
         player.sendPluginMessage(Core.getInstance().getPlugin(), "BungeeCord", b.toByteArray());
     }

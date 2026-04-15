@@ -125,7 +125,7 @@ public class GameService implements Module {
                     GameInstance memberGame = member.getGame();
                     if (memberGame.getPlayers().size() >= memberGame.getSettings().getMaxPlayers()
                             && !player.hasPermission("game.joinfullserver")) {
-                        ModuleManager.getModule(MessageModule.class).get(player, "chat.party.couldnt_join").send();
+                        ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.party.couldnt_join").send();
                     } else {
                         game = memberGame;
                     }
@@ -157,10 +157,10 @@ public class GameService implements Module {
 
     private void handleNoArena(Player player, GamePlayer gamePlayer, boolean sendToLobbyIfNoArena) {
         if (sendToLobbyIfNoArena) {
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.sending_to_lobby.no_arena_found").send();
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.sending_to_lobby.no_arena_found").send();
             GameUtils.sendToLobby(player, false);
         } else {
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.no_arena_found").send();
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.no_arena_found").send();
         }
     }
 
@@ -285,7 +285,7 @@ public class GameService implements Module {
 
         if (!players.isEmpty()) {
             for (Player p : players) {
-                ModuleManager.getModule(MessageModule.class).get(p, "chat.finding_new_game").send();
+                ModuleManager.getModule(MessageModule.class).getMessage(p, "chat.finding_new_game").send();
                 Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
                     newArena(p, true, true);
                 }, 25L);

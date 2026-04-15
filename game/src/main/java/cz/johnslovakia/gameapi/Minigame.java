@@ -6,7 +6,7 @@ import cz.johnslovakia.gameapi.database.RedisManager;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.listeners.TestServerListener;
-import cz.johnslovakia.gameapi.modules.migrations.MigrationManager;
+import cz.johnslovakia.gameapi.modules.updateTasks.UpdateTaskModule;
 import cz.johnslovakia.gameapi.modules.perks.PerkManager;
 import cz.johnslovakia.gameapi.modules.quests.QuestManager;
 import cz.johnslovakia.gameapi.modules.serverManagement.IMinigame;
@@ -57,7 +57,7 @@ public abstract class Minigame {
     private Map<String, InputStreamWithName> languageFiles = new HashMap<>();
 
     @Getter
-    private MigrationManager migrationManager;
+    private UpdateTaskModule migrationManager;
 
     @Setter
     private QuestManager questManager;
@@ -71,7 +71,7 @@ public abstract class Minigame {
         this.plugin = plugin;
         this.name = name;
         this.moduleManager = new ModuleManager(plugin);
-        this.migrationManager = new MigrationManager(plugin);
+        this.migrationManager = new UpdateTaskModule(plugin);
 
         this.updateChecker = new UpdateChecker(this, "https://raw.githubusercontent.com/johnslovakia/GameAPI/master/updateChecker/" + name + ".json");
 
@@ -122,7 +122,7 @@ public abstract class Minigame {
             File jarFile = new File(plugin.getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
             try (JarFile jar = new JarFile(jarFile)) {
                 jar.stream()
-                        .filter(entry -> entry.getName().startsWith("languages/") && entry.getName().endsWith(".yml"))
+                        .filter(entry -> entry.getName().startsWith("languages/") && entry.getName().endsWith(".yml") && !entry.getName().contains("scoreboard"))
                         .map(entry -> new File(entry.getName()).getName().replace(".yml", ""))
                         .filter(n -> !n.isEmpty() && n.matches("[a-zA-Z0-9_\\-]+"))
                         .forEach(names::add);

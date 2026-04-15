@@ -242,11 +242,11 @@ public class GameInstance implements Terminate{
         for (GamePlayer gamePlayer : getParticipants()){
             ChatColor chatColor = ChatColor.WHITE;
 
-            Message message = ModuleManager.getModule(MessageModule.class).get(gamePlayer, "bossbar.waiting_for_players")
+            Message message = ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "bossbar.waiting_for_players")
                     .replace("%online%", "" + chatColor + getParticipants().size())
                     .replace("%required%", "" + getSettings().getMinPlayers());
 
-            PlayerBossBar playerBossBar = PlayerBossBar.getOrCreateBossBar(gamePlayer.getOnlinePlayer().getUniqueId(), message.getTranslated());
+            PlayerBossBar playerBossBar = PlayerBossBar.getOrCreateBossBar(gamePlayer.getOnlinePlayer().getUniqueId(), message.toComponent());
 
             String oldTitle = StringUtils.colorizer(playerBossBar.getBossBar().name().toString());
             if (!oldTitle.isEmpty()) {
@@ -259,7 +259,7 @@ public class GameInstance implements Terminate{
             }
 
 
-            Component component = message.getTranslated()
+            Component component = message.toComponent()
                     .font(Key.key("jsplugins", "bossbar_offset"));
             playerBossBar.setName(component);
         }
@@ -289,7 +289,7 @@ public class GameInstance implements Terminate{
                 }
                 getModule(MapModule.class).setVoting(true);
             }
-            ModuleManager.getModule(MessageModule.class).get(getParticipants(), "chat.not_enough_players")
+            ModuleManager.getModule(MessageModule.class).getMessage(getParticipants(), "chat.not_enough_players")
                     .send();
             updateWaitingForPlayersBossBar();
         }
@@ -313,12 +313,12 @@ public class GameInstance implements Terminate{
             if (playingArenas != 1) {
                 for (GamePlayer player : getParticipants()){
                     player.getOnlinePlayer().playSound(player.getOnlinePlayer(), Sound.UI_BUTTON_CLICK, 1.0F, 1.0F);
-                    player.getOnlinePlayer().sendMessage(ModuleManager.getModule(MessageModule.class).get(player, "chat.map_won").replace("%map%", a.getName()).replace("%number%", "" + i).getTranslated());
+                    player.getOnlinePlayer().sendMessage(ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.map_won").replace("%map%", a.getName()).replace("%number%", "" + i).toComponent());
                 }
             } else {
                 for (GamePlayer player : getParticipants()){
                     player.getOnlinePlayer().playSound(player.getOnlinePlayer(), Sound.UI_BUTTON_CLICK, 1.0F, 1.0F);
-                    player.getOnlinePlayer().sendMessage(ModuleManager.getModule(MessageModule.class).get(player, "chat.map_won").replace("%map%", a.getName()).getTranslated());
+                    player.getOnlinePlayer().sendMessage(ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.map_won").replace("%map%", a.getName()).toComponent());
                 }
             }
             if (i == playingArenas) break;

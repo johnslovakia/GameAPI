@@ -33,7 +33,7 @@ public class AreaListener implements Listener {
             for (Area area : game.getCurrentMap().getAreas()) {
                 if(area.isBorder()){
                     if (!area.isInArea(e.getBlock().getLocation())){
-                        ModuleManager.getModule(MessageModule.class).get(player, "chat.cant_break").send();
+                        ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.cant_break").send();
                         e.setCancelled(true);
                         return;
                     }
@@ -54,7 +54,7 @@ public class AreaListener implements Listener {
             for (Area area : game.getCurrentMap().getAreas()) {
                 if(area.isBorder()){
                     if (!area.isInArea(e.getBlock().getLocation())){
-                        ModuleManager.getModule(MessageModule.class).get(player, "chat.cant_place").send();
+                        ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.cant_place").send();
                         e.setCancelled(true);
                         return;
                     }
@@ -102,7 +102,7 @@ public class AreaListener implements Listener {
                     direction.normalize().multiply(0.5);
 
                     gamePlayer.getOnlinePlayer().teleport(to.clone().add(direction));
-                    ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.move_border").send();
+                    ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.move_border").send();
                 }
             }
         }

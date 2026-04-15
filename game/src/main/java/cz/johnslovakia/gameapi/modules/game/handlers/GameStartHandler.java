@@ -107,19 +107,19 @@ public class GameStartHandler {
 
             player.sendMessage("");
             if (gameInstance.getSettings().isSendMinigameDescription()) {
-                ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.description")
+                ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.description")
                         .replace("%minigame%", Minigame.getInstance().getFullName())
-                        .replace("%description%", ModuleManager.getModule(MessageModule.class).get(gamePlayer, Minigame.getInstance().getDescriptionTranslateKey()).getTranslated())
+                        .replace("%description%", ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, Minigame.getInstance().getDescriptionTranslateKey()).toComponent())
                         .replace("%map%",
-                                ModuleManager.getModule(MessageModule.class).get(gamePlayer, "chat.description.map")
+                                ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.description.map")
                                         .replace("%map%", gameInstance.getCurrentMap().getName()
                                                 .replace("%authors%", gameInstance.getCurrentMap().getAuthors()))
-                                        .getTranslated())
+                                        .toComponent())
                         .replace("%authors%", gameInstance.getCurrentMap().getAuthors())
                         .send();
             }
             if (gameInstance.getSettings().isUseTeams() && gameInstance.getSettings().getMaxTeamPlayers() > 1) {
-                player.sendMessage(ModuleManager.getModule(MessageModule.class).get(player, "chat.team_chat").getTranslated());
+                player.sendMessage(ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.team_chat").toComponent());
             }
 
             if (gameInstance.getSettings().isUseTeams()){

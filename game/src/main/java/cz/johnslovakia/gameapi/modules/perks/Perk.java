@@ -81,7 +81,7 @@ public class Perk implements Listener{
                 if (balance >= nextLevelPrice){
                     gamePlayer.getPlayerData().setPerkLevel(this, nextLevel.level());
 
-                    ModuleManager.getModule(MessageModule.class).get(player, "chat.perk.purchase")
+                    ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.perk.purchase")
                             .replace("%economy_name%", resource.getDisplayName())
                             .replace("%price%", "" + nextLevelPrice)
                             .replace("%perk%", getName() + " " + StringUtils.numeral(nextLevel.level()))
@@ -94,14 +94,14 @@ public class Perk implements Listener{
                         }
                     }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
                 }else{
-                    ModuleManager.getModule(MessageModule.class).get(player, "chat.dont_have_enough")
+                    ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.dont_have_enough")
                             .replace("%economy_name%", resource.getDisplayName())
                             .replace("%need_more%", "" + (nextLevelPrice - balance))
                             .send();
                     player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
                 }
             }else{
-                ModuleManager.getModule(MessageModule.class).get(player, "chat.perk.max_level")
+                ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.perk.max_level")
                         .send();
                 player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
             }

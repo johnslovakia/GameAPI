@@ -34,11 +34,11 @@ public class VotingInventory {
         item.hideAllFlags();
         item.removeLore();
         item.addLoreLine("");
-        messageModule.get(gamePlayer, "inventory.map.votes")
+        messageModule.getMessage(gamePlayer, "inventory.map.votes")
                 .replace("%votes%", "" + map.getVotes())
                 .addToItemLore(item);
         if (map.getAuthors() != null) {
-            messageModule.get(gamePlayer, "inventory.map.creators")
+            messageModule.getMessage(gamePlayer, "inventory.map.creators")
                     .replace("%creators%", map.getAuthors())
                     .addToItemLore(item);
         }
@@ -47,15 +47,15 @@ public class VotingInventory {
         int freeVotes = getPlayersFreeVotes(gamePlayer);
 
         if (!mapModule.isVoting()){
-            messageModule.get(gamePlayer, "inventory.map.vote_ended")
+            messageModule.getMessage(gamePlayer, "inventory.map.vote_ended")
                     .addToItemLore(item);
         } else if (votes < freeVotes) {
             if (freeVotes - votes > 1) {
-                messageModule.get(gamePlayer, "inventory.map.vote.more_votes")
+                messageModule.getMessage(gamePlayer, "inventory.map.vote.more_votes")
                         .replace("%votes_left%", "" + (freeVotes - votes))
                         .addToItemLore(item);
             } else {
-                messageModule.get(gamePlayer, "inventory.map.vote")
+                messageModule.getMessage(gamePlayer, "inventory.map.vote")
                         .addToItemLore(item);
             }
 
@@ -67,17 +67,17 @@ public class VotingInventory {
             Resource resource = resourcesModule.getResourceByName("Coins");
             int balance = resourcesModule.getPlayerBalanceCached(gamePlayer, resource);
 
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "inventory.map.vote.price")
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.map.vote.price")
                     .replace("%balance%", (balance >= price ? "§a" : "§c") + StringUtils.betterNumberFormat(balance))
                     .replace("%price%", StringUtils.betterNumberFormat(price))
                     .replace("%economy_name%", resource.getDisplayName())
                     .addToItemLore(item);
 
-            messageModule.get(gamePlayer, "inventory.map.vote")
+            messageModule.getMessage(gamePlayer, "inventory.map.vote")
                     .replace("%price%", String.valueOf(price))
                     .addToItemLore(item);
         }else{
-            messageModule.get(gamePlayer, "inventory.map.voted")
+            messageModule.getMessage(gamePlayer, "inventory.map.voted")
                     .addToItemLore(item);
         }
         return item.toItemStack();
@@ -93,15 +93,15 @@ public class VotingInventory {
                     ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
                     close.setCustomModelData(1017);
                     close.hideAllFlags();
-                    close.setName(messageModule.get(player, "inventory.item.close")
-                            .getTranslated());
+                    close.setName(messageModule.getMessage(player, "inventory.item.close")
+                            .toComponent());
 
                     ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
                     info.setCustomModelData(1018);
                     info.hideAllFlags();
-                    info.setName(messageModule.get(player, "inventory.info_item.voting_inventory.name")
-                            .getTranslated());
-                    info.setLore(messageModule.get(player, "inventory.info_item.voting_inventory.lore").getTranslated());
+                    info.setName(messageModule.getMessage(player, "inventory.info_item.voting_inventory.name")
+                            .toComponent());
+                    info.setLore(messageModule.getMessage(player, "inventory.info_item.voting_inventory.lore").toComponent());
 
                     gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> {
                         gui.close(player);

@@ -117,11 +117,11 @@ public class GamePlayer extends Winner implements PlayerIdentity {
     }
 
     public Message createMessage(String translationKey){
-        return ModuleManager.getModule(MessageModule.class).get(this, translationKey);
+        return ModuleManager.getModule(MessageModule.class).getMessage(this, translationKey);
     }
 
     public void sendMessage(String translationKey){
-        ModuleManager.getModule(MessageModule.class).get(this, translationKey).send();
+        ModuleManager.getModule(MessageModule.class).getMessage(this, translationKey).send();
     }
 
     public boolean isRespawning(){

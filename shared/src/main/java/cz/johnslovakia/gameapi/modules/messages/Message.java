@@ -126,7 +126,7 @@ public class Message {
 
         for (PlayerIdentity gamePlayer : rawMessages.keySet()) {
             if (validator == null || validator.test(gamePlayer)) {
-                String addMessage = ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, translateKey).toRawString();
+                String addMessage = ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, translateKey).toString();
                 if (!addMessage.startsWith(" ")){
                     addMessage = " " + addMessage;
                 }
@@ -215,23 +215,11 @@ public class Message {
      * Returns the raw (legacy-formatted) string for this message.
      * Only valid when the audience size is exactly 1.
      */
-    public String toRawString() {
+    public String toString() {
         if (getAudienceSize() != 1) {
-            return "§cIncorrect use of 'toRawString()' – use only for 1 player.";
+            return "§cIncorrect use of 'toString()' – use only for 1 player.";
         }
         return rawMessages.values().stream().toList().get(0);
-    }
-
-    /** @deprecated Use {@link #toComponent()} instead. */
-    @Deprecated
-    public Component getTranslated() {
-        return toComponent();
-    }
-
-    /** @deprecated Use {@link #toRawString()} instead. */
-    @Deprecated
-    public String getRawTranslated() {
-        return toRawString();
     }
 
     public void addToItemLore(ItemBuilder itemBuilder) {

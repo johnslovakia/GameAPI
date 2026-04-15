@@ -49,8 +49,8 @@ public class StartCountdownCommand implements TaskInterface {
         for (GamePlayer gamePlayer : game.getParticipants()){
             PlayerBossBar playerBossBar = PlayerBossBar.getOrCreateBossBar(gamePlayer.getOnlinePlayer().getUniqueId(), Component.text(""));
 
-            Component component = ModuleManager.getModule(MessageModule.class).get(gamePlayer, "bossbar.game_starting_in")
-                            .replace("%time%", Utils.getDurationString(task.getCounter())).getTranslated()
+            Component component = ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "bossbar.game_starting_in")
+                            .replace("%time%", Utils.getDurationString(task.getCounter())).toComponent()
                     .font(Key.key("jsplugins", "bossbar_offset"));
             playerBossBar.setName(component);
         }

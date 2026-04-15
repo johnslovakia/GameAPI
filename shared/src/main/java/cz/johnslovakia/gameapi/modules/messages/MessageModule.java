@@ -47,59 +47,12 @@ public class MessageModule implements Module, Listener {
         this.fileGroups = Arrays.asList(fileGroups);
     }
 
-    /**
-     * Discovers all {@code .yml} language files in {@code resourceDir} inside the JAR loaded by
-     * {@code classLoader} and returns one {@link FileGroup} per file.
-     *
-     * <p>This is the preferred way to initialise {@link MessageModule} in a Lobby plugin or any
-     * plugin that only needs GameAPI's built-in messages:</p>
-     * <pre>{@code
-     * List<FileGroup> groups = MessageModule.discoverFileGroups(
-     *         GameAPI.class.getClassLoader(), "gLanguages");
-     * moduleManager.registerModule(new MessageModule(plugin, groups));
-     * }</pre>
-     *
-     * @param classLoader the classloader whose JAR is scanned (e.g. {@code GameAPI.class.getClassLoader()})
-     * @param resourceDir the resource directory to scan (e.g. {@code "gLanguages"})
-     * @return list of file groups, one per discovered language file
-     */
-    public static List<FileGroup> discoverFileGroups(ClassLoader classLoader, String resourceDir) {
-        List<FileGroup> groups = new ArrayList<>();
-        String prefix = resourceDir.endsWith("/") ? resourceDir : resourceDir + "/";
-        try {
-            URL url = classLoader.getResource(resourceDir);
-            if (url == null) return groups;
-
-            URI uri = url.toURI();
-            if ("jar".equals(uri.getScheme())) {
-                // ssp is like: file:/path/to/plugin.jar!/resourceDir
-                String ssp = uri.getRawSchemeSpecificPart();
-                // Extract the jar file path (the part before the '!' separator)
-                URI jarUri = URI.create(ssp.substring(0, ssp.indexOf('!')));
-                try (JarFile jar = new JarFile(new File(jarUri.getPath()))) {
-                    jar.stream()
-                            .filter(e -> e.getName().startsWith(prefix) && e.getName().endsWith(".yml"))
-                            .forEach(entry -> {
-                                // Use only the base file name to prevent any path traversal from entry names.
-                                String langName = new File(entry.getName()).getName().replace(".yml", "");
-                                if (langName.isEmpty() || !langName.matches("[a-zA-Z0-9_\\-]+")) return;
-                                InputStream stream = classLoader.getResourceAsStream(entry.getName());
-                                if (stream != null) groups.add(new FileGroup(langName, stream));
-                            });
-                }
-            }
-        } catch (Exception e) {
-            // If scanning fails, return whatever was found so far.
-            Logger.log("Failed to auto-scan resource directory '" + resourceDir + "': " + e.getMessage(), Logger.LogType.WARNING);
-        }
-        return groups;
-    }
 
     @Override
     public void initialize() {
         if (fileGroups.isEmpty()) return;
         try {
-            Bukkit.getLogger().log(Level.INFO, "Processing language files...");
+            Logger.info("Processing language files...");
 
             File pluginLanguagesFolder = new File(plugin.getDataFolder(), "languages");
             if (!pluginLanguagesFolder.exists())
@@ -123,7 +76,7 @@ public class MessageModule implements Module, Listener {
                 }
 
                 loadMessagesFromFile(mainFile);
-                Bukkit.getLogger().log(Level.INFO, "Processing of language file " + name + " completed (" + (System.currentTimeMillis() - startTime) + "ms)");
+                Logger.log( "Processing of language file " + name + " completed (" + (System.currentTimeMillis() - startTime) + "ms)", Logger.LogType.INFO);
             }
         } catch (IOException e) {
             Logger.log("Something went wrong when retrieving messages! The following message is for Developers: ", Logger.LogType.ERROR);
@@ -332,9 +285,6 @@ public class MessageModule implements Module, Listener {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Message storage
-    // -------------------------------------------------------------------------
 
     public void addMessage(String name, Language language, String message) {
         if (messages.containsKey(name)) {
@@ -355,9 +305,6 @@ public class MessageModule implements Module, Listener {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Retrieve messages
-    // -------------------------------------------------------------------------
 
     /**
      * Returns a {@link Message} builder for the given player.
@@ -398,9 +345,6 @@ public class MessageModule implements Module, Listener {
         return messages.get(key);
     }
 
-    // -------------------------------------------------------------------------
-    // Existence checks
-    // -------------------------------------------------------------------------
 
     /**
      * Returns {@code true} if any translation exists for the given key.
@@ -425,9 +369,6 @@ public class MessageModule implements Module, Listener {
         return messages.get(name).get(getPlayerLanguage(playerIdentity)) != null;
     }
 
-    // -------------------------------------------------------------------------
-    // Lookup utilities
-    // -------------------------------------------------------------------------
 
     /**
      * Finds all translation values for the key whose value matches the given message string.
@@ -456,14 +397,10 @@ public class MessageModule implements Module, Listener {
         return list;
     }
 
-    // -------------------------------------------------------------------------
-    // File utilities
-    // -------------------------------------------------------------------------
 
     /**
      * Removes the given message key from every language file in
-     * {@code plugins/<plugin>/languages/}. This is useful in migration actions
-     * when a key needs to be reset to its resource default or permanently deleted.
+     * {@code plugins/<plugin>/languages/}.
      *
      * @param key the message key to remove
      */
@@ -510,87 +447,6 @@ public class MessageModule implements Module, Listener {
             Logger.log("Failed to write " + file.getName() + " after key removal: " + e.getMessage(), Logger.LogType.ERROR);
         }
     }
-
-    // -------------------------------------------------------------------------
-    // Deprecated / compatibility aliases
-    // -------------------------------------------------------------------------
-
-    /** @deprecated Use {@link #getMessage(Player, String)} instead. */
-    @Deprecated
-    public Message get(Player player, String key) {
-        return getMessage(player, key);
-    }
-
-    /** @deprecated Use {@link #getMessage(PlayerIdentity, String)} instead. */
-    @Deprecated
-    public Message get(PlayerIdentity playerIdentity, String key) {
-        return getMessage(playerIdentity, key);
-    }
-
-    /** @deprecated Use {@link #getMessage(List, String)} instead. */
-    @Deprecated
-    public Message get(List<? extends PlayerIdentity> audience, String key) {
-        return getMessage(audience, key);
-    }
-
-    /** @deprecated Use {@link #getTranslation(Language, String)} instead. */
-    @Deprecated
-    public String get(Language language, String key) {
-        return getTranslation(language, key);
-    }
-
-    /** @deprecated Use {@link #hasMessage(String)} instead. */
-    @Deprecated
-    public boolean existMessage(String name) {
-        return hasMessage(name);
-    }
-
-    /** @deprecated Use {@link #hasMessage(Language, String)} instead. */
-    @Deprecated
-    public boolean existMessage(Language language, String name) {
-        return hasMessage(language, name);
-    }
-
-    /** @deprecated Use {@link #hasMessage(PlayerIdentity, String)} instead. */
-    @Deprecated
-    public boolean existMessage(PlayerIdentity playerIdentity, String name) {
-        return hasMessage(playerIdentity, name);
-    }
-
-    /** @deprecated Use {@link #findKeyByValue(String)} instead. */
-    @Deprecated
-    public List<String> getMessagesByMSG(String message) {
-        return findKeyByValue(message);
-    }
-
-    /** @deprecated Use {@link #getAllTranslations(String)} instead. */
-    @Deprecated
-    public List<String> getMessagesByName(String name) {
-        return getAllTranslations(name);
-    }
-
-    /** @deprecated Use {@link #syncNewMessages(File, File)} instead. */
-    @Deprecated
-    public void checkMessages(File gFile, File mainFile) {
-        syncNewMessages(gFile, mainFile);
-    }
-
-    // -------------------------------------------------------------------------
-    // DB-backed messages (TODO)
-    // -------------------------------------------------------------------------
-    // TODO: Add support for storing messages in the database so server owners with
-    //       multiple servers don't have to edit language files on every server.
-    //       Suggested approach:
-    //         1. Add an optional flag (e.g. dbBackedMessages = true in MinigameSettings).
-    //         2. On startup, query JSConfigs (or a dedicated `game_messages` table) for
-    //            all messages of this plugin+language combination.
-    //         3. If rows are found, use them instead of (or to override) file-based messages.
-    //         4. Changes in DB then propagate to all servers on next reload.
-    //         5. Provide an admin command to push the current file-based messages to DB.
-
-    // -------------------------------------------------------------------------
-    // Internal helpers
-    // -------------------------------------------------------------------------
 
     private static String stripBOM(String line) {
         if (line != null && !line.isEmpty() && line.charAt(0) == '\uFEFF') {

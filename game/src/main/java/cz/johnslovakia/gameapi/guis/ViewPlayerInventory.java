@@ -39,7 +39,7 @@ public class ViewPlayerInventory implements Listener {
         ItemStack gray = new ItemBuilder(Material.GRAY_STAINED_GLASS).setName(" ").hideAllFlags().toItemStack();
 
         for (int i = 27; i <= 35; i++){
-            inv.setItem(i, new ItemBuilder(Material.GRAY_STAINED_GLASS_PANE).setName(" ").setLore(messageModule.get(gamePlayer.getOnlinePlayer(), "inventory.set_kit_inventory.item.info").getTranslated()).toItemStack());
+            inv.setItem(i, new ItemBuilder(Material.GRAY_STAINED_GLASS_PANE).setName(" ").setLore(messageModule.getMessage(gamePlayer.getOnlinePlayer(), "inventory.set_kit_inventory.item.info").toComponent()).toItemStack());
         }
 
         ItemStack[] hotbarItems = Arrays.copyOfRange(pInv.getContents(), 0, 8);
@@ -53,33 +53,33 @@ public class ViewPlayerInventory implements Listener {
         }
 
 
-        inv.setItem(45, new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1016).setName(messageModule.get(gamePlayer, "inventory.item.go_back").getTranslated()).toItemStack());
+        inv.setItem(45, new ItemBuilder(Material.ECHO_SHARD).setCustomModelData(1016).setName(messageModule.getMessage(gamePlayer, "inventory.item.go_back").toComponent()).toItemStack());
 
 
-        inv.setItem(47, (pInv.getHelmet() != null ? pInv.getHelmet() : new ItemBuilder(Material.BARRIER).setName(messageModule.get(gamePlayer, "inventory.view_player_inventory.no_helmet").getTranslated()).toItemStack()));
-        inv.setItem(48, (pInv.getChestplate() != null ? pInv.getChestplate() : new ItemBuilder(Material.BARRIER).setName(messageModule.get(gamePlayer, "inventory.view_player_inventory.no_chestplate").getTranslated()).toItemStack()));
-        inv.setItem(49, (pInv.getLeggings() != null ? pInv.getLeggings() : new ItemBuilder(Material.BARRIER).setName(messageModule.get(gamePlayer, "inventory.view_player_inventory.no_leggings").getTranslated()).toItemStack()));
-        inv.setItem(50, (pInv.getBoots() != null ? pInv.getBoots() : new ItemBuilder(Material.BARRIER).setName(messageModule.get(gamePlayer, "inventory.view_player_inventory.no_boots").getTranslated()).toItemStack()));
+        inv.setItem(47, (pInv.getHelmet() != null ? pInv.getHelmet() : new ItemBuilder(Material.BARRIER).setName(messageModule.getMessage(gamePlayer, "inventory.view_player_inventory.no_helmet").toComponent()).toItemStack()));
+        inv.setItem(48, (pInv.getChestplate() != null ? pInv.getChestplate() : new ItemBuilder(Material.BARRIER).setName(messageModule.getMessage(gamePlayer, "inventory.view_player_inventory.no_chestplate").toComponent()).toItemStack()));
+        inv.setItem(49, (pInv.getLeggings() != null ? pInv.getLeggings() : new ItemBuilder(Material.BARRIER).setName(messageModule.getMessage(gamePlayer, "inventory.view_player_inventory.no_leggings").toComponent()).toItemStack()));
+        inv.setItem(50, (pInv.getBoots() != null ? pInv.getBoots() : new ItemBuilder(Material.BARRIER).setName(messageModule.getMessage(gamePlayer, "inventory.view_player_inventory.no_boots").toComponent()).toItemStack()));
 
         ItemBuilder inf = new ItemBuilder(Utils.getPlayerHead(target));
         inf.setName((PlayerManager.getGamePlayer(target).getGameSession().getTeam() != null ? PlayerManager.getGamePlayer(target).getGameSession().getTeam().getChatColor() : "§r§b") + target.getName());
-        inf.setLore(messageModule.get(player, "inventory.player_inventory.health")
+        inf.setLore(messageModule.getMessage(player, "inventory.player_inventory.health")
                 .replace("%health%", "" + (int) target.getHealth())
-                .replace("%max_health%", "" + (int) target.getAttribute(Attribute.MAX_HEALTH).getValue()).getTranslated());
-        messageModule.get(player, "inventory.player_inventory.food")
+                .replace("%max_health%", "" + (int) target.getAttribute(Attribute.MAX_HEALTH).getValue()).toComponent());
+        messageModule.getMessage(player, "inventory.player_inventory.food")
                 .replace("%food%", "" + target.getFoodLevel())
                 .addToItemLore(inf);
-        messageModule.get(player, "inventory.player_inventory.experience")
+        messageModule.getMessage(player, "inventory.player_inventory.experience")
                 .replace("%experience%", "" + target.getLevel())
                 .addToItemLore(inf);
         if (KitManager.getKitManager(gamePlayer.getGame()) != null) {
-            messageModule.get(player, "inventory.teleporter.kit")
-                    .replace("%kit%", (PlayerManager.getGamePlayer(target).getGameSession().getSelectedKit()) != null ? net.kyori.adventure.text.Component.text(PlayerManager.getGamePlayer(target).getGameSession().getSelectedKit().getName()) : messageModule.get(player, "word.none_kit").getTranslated())
+            messageModule.getMessage(player, "inventory.teleporter.kit")
+                    .replace("%kit%", (PlayerManager.getGamePlayer(target).getGameSession().getSelectedKit()) != null ? net.kyori.adventure.text.Component.text(PlayerManager.getGamePlayer(target).getGameSession().getSelectedKit().getName()) : messageModule.getMessage(player, "word.none_kit").toComponent())
                     .addToItemLore(inf);
         }
 
         inf.addLoreLine("");
-        messageModule.get(player, "inventory.player_inventory.effects")
+        messageModule.getMessage(player, "inventory.player_inventory.effects")
                 .addToItemLore(inf);
         for(PotionEffect effect : target.getPlayer().getActivePotionEffects()){
             inf.addLoreLine(" §7" + effect.getType().getName().toLowerCase() + " " + (effect.getAmplifier() + 1) + " (" + Utils.getDurationString(effect.getDuration() / 20) + "§7)");

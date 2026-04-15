@@ -55,7 +55,7 @@ public class AbilityItemListener implements Listener {
         abilityItemOptional.ifPresent(abilityItem -> {
             if (abilityItem.getLoreTranslationKey() != null) {
                 ItemBuilder itemBuilder = new ItemBuilder(item.getItemStack());
-                itemBuilder.setLore(ModuleManager.getModule(MessageModule.class).get(gamePlayer, abilityItem.getLoreTranslationKey()).getTranslated());
+                itemBuilder.setLore(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, abilityItem.getLoreTranslationKey()).toComponent());
                 item.setItemStack(itemBuilder.toItemStack());
             }
         });
@@ -81,7 +81,7 @@ public class AbilityItemListener implements Listener {
         abilityItemOptional.ifPresent(abilityItem -> {
             if (abilityItem.getLoreTranslationKey() != null) {
                 ItemBuilder item = new ItemBuilder(itemStack);
-                item.setLore(ModuleManager.getModule(MessageModule.class).get(gamePlayer, abilityItem.getLoreTranslationKey()).getTranslated());
+                item.setLore(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, abilityItem.getLoreTranslationKey()).toComponent());
                 itemStack.lore(item.toItemStack().lore());
             }
 
@@ -379,7 +379,7 @@ public class AbilityItemListener implements Listener {
             boolean itemStackCooldown = !abilityItem.isConsumable() && cooldown.getCooldown() <= 64;
             if (!itemStackCooldown) {
                 ModuleManager.getModule(MessageModule.class)
-                        .get(player, "chat.delay")
+                        .getMessage(player, "chat.delay")
                         .replace("%countdown%", formatCountdown(cooldown.getCountdown(gamePlayer)))
                         .send();
             }
@@ -395,7 +395,7 @@ public class AbilityItemListener implements Listener {
             boolean itemStackCooldown = !abilityItem.isConsumable() && activeCooldownDuration <= 64;
             if (!itemStackCooldown) {
                 ModuleManager.getModule(MessageModule.class)
-                        .get(player, "chat.delay")
+                        .getMessage(player, "chat.delay")
                         .replace("%countdown%", formatCountdown(stagedCooldown.getCountdown(player)))
                         .send();
             }

@@ -39,16 +39,16 @@ public interface Achievement {
             @Override
             public void run() {
                 player.playSound(player, "jsplugins:completed", 20.0F, 20.0F);
-                /*ModuleManager.getModule(MessageModule.class).get(player, "chat.achievements.unlocked")
+                /*ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.achievements.unlocked")
                         .replace("%name%", getName())
-                        .replace("%description%", ModuleManager.getModule(MessageModule.class).get(player, getTranslationKey()).getTranslated())
+                        .replace("%description%", ModuleManager.getModule(MessageModule.class).getMessage(player, getTranslationKey()).toComponent())
                         .send();*/
 
-                Component textComponent = ModuleManager.getModule(MessageModule.class).get(player, "chat.achievements.unlocked")
+                Component textComponent = ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.achievements.unlocked")
                             .replace("%name%", getName())
-                            .replace("%description%", ModuleManager.getModule(MessageModule.class).get(player, getTranslationKey()).getTranslated())
-                            .getTranslated()
-                        .hoverEvent(HoverEvent.showText(ModuleManager.getModule(MessageModule.class).get(player, getTranslationKey()).getTranslated()));
+                            .replace("%description%", ModuleManager.getModule(MessageModule.class).getMessage(player, getTranslationKey()).toComponent())
+                            .toComponent()
+                        .hoverEvent(HoverEvent.showText(ModuleManager.getModule(MessageModule.class).getMessage(player, getTranslationKey()).toComponent()));
                 player.sendMessage(textComponent);
 
                 //

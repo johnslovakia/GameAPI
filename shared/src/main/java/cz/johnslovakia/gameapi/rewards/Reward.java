@@ -149,9 +149,9 @@ public class Reward {
                             .build();
 
                     if (!bonusAppliedToAll && resource.isApplicableBonus()) {
-                        Component bonusComponent = ModuleManager.getModule(MessageModule.class).get(player, "chat.reward.bonus_applied")
+                        Component bonusComponent = ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.reward.bonus_applied")
                                 .replace("%bonus%", String.valueOf(bonus))
-                                .getTranslated();
+                                .toComponent();
 
                         base = base.append(Component.space()).append(bonusComponent);
                     }
@@ -167,16 +167,16 @@ public class Reward {
         }
 
         if (source == null) {
-            ModuleManager.getModule(MessageModule.class).get(player, "chat.resources.linked_to_message_reward")
+            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.resources.linked_to_message_reward")
                     .replace("%rewards%", text)
                     .addAndTranslate("chat.reward.bonus_applied", gp -> bonusAppliedToAll && bonus != 0)
                     .replace("%bonus%", "" + bonus)
                     .send();
         } else {
-            ModuleManager.getModule(MessageModule.class).get(player, "chat.resources.reward")
+            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.resources.reward")
                     .replace("%rewards%", text)
                     .addAndTranslate("chat.reward.bonus_applied", gp -> bonusAppliedToAll && bonus != 0)
-                    .replace("%for_what%", ModuleManager.getModule(MessageModule.class).existMessage(source) ? ModuleManager.getModule(MessageModule.class).get(player, source).getTranslated() : Component.text(source))
+                    .replace("%for_what%", ModuleManager.getModule(MessageModule.class).hasMessage(source) ? ModuleManager.getModule(MessageModule.class).getMessage(player, source).toComponent() : Component.text(source))
                     .replace("%bonus%", "" + bonus)
                     .send();
         }

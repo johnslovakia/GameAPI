@@ -66,15 +66,15 @@ public class ConfirmInventory {
                     ItemBuilder back = new ItemBuilder(Material.ECHO_SHARD);
                     back.setCustomModelData(1016);
                     back.hideAllFlags();
-                    back.setName(ModuleManager.getModule(MessageModule.class).get(player, "inventory.item.go_back")
-                            .getTranslated());
+                    back.setName(ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.item.go_back")
+                            .toComponent());
 
                     ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
                     info.setCustomModelData(1018);
                     info.hideAllFlags();
-                    info.setName(ModuleManager.getModule(MessageModule.class).get(player, "inventory.info_item.confirm_inventory.name")
-                            .getTranslated());
-                    info.setLore(ModuleManager.getModule(MessageModule.class).get(player, "inventory.info_item.confirm_inventory.lore").getTranslated());
+                    info.setName(ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.info_item.confirm_inventory.name")
+                            .toComponent());
+                    info.setLore(ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.info_item.confirm_inventory.lore").toComponent());
 
                     gui.appendElement(0, Component.element(back.toItemStack()).addClick(i -> {
                         cancelAction.accept(PlayerIdentity);
@@ -87,12 +87,12 @@ public class ConfirmInventory {
                     ItemBuilder confirm = new ItemBuilder(Material.MAP);
                     confirm.setCustomModelData(1010);
                     confirm.hideAllFlags();
-                    confirm.setName(ModuleManager.getModule(MessageModule.class).get(player, "inventory.confirm_inventory.confirm.name")
-                            .getTranslated());
+                    confirm.setName(ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.confirm_inventory.confirm.name")
+                            .toComponent());
                     confirm.addLoreLine("");
                     if (!purchaseThisItemInventory && description != null) {
-                        if (ModuleManager.getModule(MessageModule.class).existMessage(description)) {
-                            ModuleManager.getModule(MessageModule.class).get(player, description).addToItemLore(confirm);
+                        if (ModuleManager.getModule(MessageModule.class).hasMessage(description)) {
+                            ModuleManager.getModule(MessageModule.class).getMessage(player, description).addToItemLore(confirm);
                         }else{
                             confirm.addLoreLine(description);
                         }
@@ -100,7 +100,7 @@ public class ConfirmInventory {
                         confirm.addLoreLine("");
                     }else{
                         if (cost.size() > 1) {
-                            ModuleManager.getModule(MessageModule.class).get(PlayerIdentity, "inventory.confirm_inventory.price")
+                            ModuleManager.getModule(MessageModule.class).getMessage(PlayerIdentity, "inventory.confirm_inventory.price")
                                     .replace("%economy_name%", "")
                                     .replace("%price%", "")
                                     .replace("%balance%", "")
@@ -120,7 +120,7 @@ public class ConfirmInventory {
                             int price = entry.getValue();
                             int balance = ModuleManager.getModule(ResourcesModule.class).getPlayerBalanceCached(PlayerIdentity, resource);
 
-                            ModuleManager.getModule(MessageModule.class).get(PlayerIdentity, "inventory.confirm_inventory.price")
+                            ModuleManager.getModule(MessageModule.class).getMessage(PlayerIdentity, "inventory.confirm_inventory.price")
                                     .replace("%balance%", "§a" + StringUtils.betterNumberFormat(balance))
                                     .replace("%price%", StringUtils.betterNumberFormat(price))
                                     .replace("%economy_name%", resource.getDisplayName())
@@ -129,24 +129,24 @@ public class ConfirmInventory {
                         confirm.addLoreLine("");
                     }
 
-                    ModuleManager.getModule(MessageModule.class).get(player, "inventory.confirm_inventory.click_to_confirm")
+                    ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.confirm_inventory.click_to_confirm")
                             .addToItemLore(confirm);
 
                     ItemBuilder cancel = new ItemBuilder(Material.MAP);
                     cancel.setCustomModelData(1010);
                     cancel.hideAllFlags();
-                    cancel.setName(ModuleManager.getModule(MessageModule.class).get(player, "inventory.confirm_inventory.cancel.name")
-                            .getTranslated());
+                    cancel.setName(ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.confirm_inventory.cancel.name")
+                            .toComponent());
                     cancel.addLoreLine("");
                     if (!purchaseThisItemInventory && description != null) {
-                        if (ModuleManager.getModule(MessageModule.class).existMessage(description)) {
-                            ModuleManager.getModule(MessageModule.class).get(player, description).addToItemLore(cancel);
+                        if (ModuleManager.getModule(MessageModule.class).hasMessage(description)) {
+                            ModuleManager.getModule(MessageModule.class).getMessage(player, description).addToItemLore(cancel);
                         }else{
                             cancel.addLoreLine(description);
                         }
                         cancel.addLoreLine("");
                     }
-                    ModuleManager.getModule(MessageModule.class).get(player, "inventory.confirm_inventory.click_to_cancel")
+                    ModuleManager.getModule(MessageModule.class).getMessage(player, "inventory.confirm_inventory.click_to_cancel")
                             .addToItemLore(cancel);
 
                     if (purchaseThisItemInventory){

@@ -63,7 +63,7 @@ public class Cosmetic {
 
         if (hasSelected(playerIdentity)) {
             if (message) {
-                ModuleManager.getModule(MessageModule.class).get(player, "chat.cosmetics.already_selected")
+                ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.cosmetics.already_selected")
                         .send();
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 10.0F, 10.0F);
             }
@@ -76,7 +76,7 @@ public class Cosmetic {
         }
 
         if (message) {
-            ModuleManager.getModule(MessageModule.class).get(player, "chat.cosmetics.select")
+            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.cosmetics.select")
                     .replace("%cosmetic%", getName())
                     .send();
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 10.0F, 10.0F);
@@ -104,7 +104,7 @@ public class Cosmetic {
         if (!missing.isEmpty()) {
             player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
 
-            ModuleManager.getModule(MessageModule.class).get(player, "chat.cosmetic.dont_have_enough")
+            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.cosmetic.dont_have_enough")
                     .replace("%resources%", String.join(", ", missing))
                     .send();
             return;
@@ -125,7 +125,7 @@ public class Cosmetic {
             });
         }
 
-        ModuleManager.getModule(MessageModule.class).get(player, "chat.cosmetics.purchase")
+        ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.cosmetics.purchase")
                 .replace("%cosmetic%", getName())
                 .replace("%resources%", "" + String.join(", ", costStringList))
                 .send();

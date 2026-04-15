@@ -26,8 +26,8 @@ public class Winner {
         }
 
         public Component getTranslatedName(PlayerIdentity playerIdentity) {
-            return ModuleManager.getModule(MessageModule.class).get(playerIdentity, "winnerType." + this.name().toLowerCase())
-                    .getTranslated();
+            return ModuleManager.getModule(MessageModule.class).getMessage(playerIdentity, "winnerType." + this.name().toLowerCase())
+                    .toComponent();
         }
     }
 }

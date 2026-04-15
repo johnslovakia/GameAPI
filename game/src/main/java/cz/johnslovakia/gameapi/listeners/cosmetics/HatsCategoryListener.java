@@ -158,8 +158,8 @@ public class HatsCategoryListener implements Listener {
                 lore.add("");
                 lore.add(LegacyComponentSerializer.legacySection().serialize(
                         ModuleManager.getModule(MessageModule.class)
-                                .get(gamePlayer, "item.hat.q_to_remove")
-                                .getTranslated()));
+                                .getMessage(gamePlayer, "item.hat.q_to_remove")
+                                .toComponent()));
 
                 meta.setLore(lore);
                 helmet.setItemMeta(meta);

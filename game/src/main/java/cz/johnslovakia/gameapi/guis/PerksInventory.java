@@ -48,39 +48,39 @@ public class PerksInventory {
         item.setName((canUpgrade && balance <= nextLevel.price() ? "§c§l" : "§a§l") + perk.getName() + " §8(" + (currentLevel != null ? currentLevel.level()  : "0") + "/" + perk.getLevels().size() + ")");
         item.removeLore();
 
-        if (messageModule.existMessage(perk.getTranslationKey())) {
-            messageModule.get(gamePlayer, perk.getTranslationKey())
+        if (messageModule.hasMessage(perk.getTranslationKey())) {
+            messageModule.getMessage(gamePlayer, perk.getTranslationKey())
                     .replace("%improvement_integer%", String.valueOf((currentLevel != null ? currentLevel.improvement() : 0)))
                     .addToItemLore(item);
             item.addLoreLine("");
         }
         for(PerkLevel level : perk.getLevels()){
-            item.addLoreLine("§7" + level.level() + ". §8- " + (currentLevel != null && currentLevel.level() == level.level() ? "#71c900" : "§7") + level.improvement() + perk.getType().getString() + (currentLevel != null && currentLevel.level() == level.level() ? " §a(" + messageModule.get(gamePlayer, "word.active").getRawTranslated() + ")" : ""));
+            item.addLoreLine("§7" + level.level() + ". §8- " + (currentLevel != null && currentLevel.level() == level.level() ? "#71c900" : "§7") + level.improvement() + perk.getType().getString() + (currentLevel != null && currentLevel.level() == level.level() ? " §a(" + messageModule.getMessage(gamePlayer, "word.active").toString() + ")" : ""));
         }
         item.addLoreLine("");
         if (canUpgrade) {
-            messageModule.get(gamePlayer, "inventory.perks.price")
+            messageModule.getMessage(gamePlayer, "inventory.perks.price")
                     .replace("%balance%", (balance >= nextLevel.price() ? "§a" : "§c") + StringUtils.betterNumberFormat(balance))
                     .replace("%price%", StringUtils.betterNumberFormat(nextLevel.price()))
                     .replace("%economy_name%", resource.getDisplayName())
                     .addToItemLore(item);
             if (balance <= nextLevel.price()){
-                messageModule.get(gamePlayer, "inventory.perks.dont_have_enough")
+                messageModule.getMessage(gamePlayer, "inventory.perks.dont_have_enough")
                         .replace("%economy_name%", resource.getDisplayName())
                         .addToItemLore(item);
             }else {
                 if (currentLevel != null && currentLevel.level() != 0) {
-                    messageModule.get(gamePlayer, "inventory.perks.click_to_upgrade")
+                    messageModule.getMessage(gamePlayer, "inventory.perks.click_to_upgrade")
                             .replace("%economy_name%", resource.getDisplayName())
                             .addToItemLore(item);
                 } else {
-                    messageModule.get(gamePlayer, "inventory.perks.click_to_purchase")
+                    messageModule.getMessage(gamePlayer, "inventory.perks.click_to_purchase")
                             .replace("%economy_name%", resource.getDisplayName())
                             .addToItemLore(item);
                 }
             }
         }else{
-            messageModule.get(gamePlayer, "inventory.perks.reached_max_level")
+            messageModule.getMessage(gamePlayer, "inventory.perks.reached_max_level")
                     .addToItemLore(item);
         }
 
@@ -101,15 +101,15 @@ public class PerksInventory {
                     ItemBuilder close = new ItemBuilder(Material.ECHO_SHARD);
                     close.setCustomModelData(1017);
                     close.hideAllFlags();
-                    close.setName(messageModule.get(player, "inventory.item.close")
-                            .getTranslated());
+                    close.setName(messageModule.getMessage(player, "inventory.item.close")
+                            .toComponent());
 
                     ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
                     info.setCustomModelData(1018);
                     info.hideAllFlags();
-                    info.setName(messageModule.get(player, "inventory.info_item.perks_inventory.name")
-                            .getTranslated());
-                    info.setLore(messageModule.get(player, "inventory.info_item.perks_inventory.lore").getTranslated());
+                    info.setName(messageModule.getMessage(player, "inventory.info_item.perks_inventory.name")
+                            .toComponent());
+                    info.setLore(messageModule.getMessage(player, "inventory.info_item.perks_inventory.lore").toComponent());
 
                     gui.appendElement(0, Component.element(close.toItemStack()).addClick(i -> {
                         gui.close(player);
@@ -127,7 +127,7 @@ public class PerksInventory {
                                         if (balance <= nextLevel.price()) {
                                             player.closeInventory();
                                             player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
-                                            messageModule.get(player, "chat.dont_have_enough")
+                                            messageModule.getMessage(player, "chat.dont_have_enough")
                                                     .replace("%need_more%", "" + (nextLevel.price() - balance))
                                                     .replace("%economy_name%", resource.getDisplayName())
                                                     .send();

@@ -152,7 +152,12 @@ public class TopStatsHologram implements Listener {
     }
 
     private void fetchAndDraw(PlayerIdentity playerIdentity) {
-        List<Stat> stats = statsModule.getStats();
+        StatPeriod period = playerPeriod.getOrDefault(playerIdentity, statsModule.getDefaultDisplayPeriod());
+        List<Stat> stats = statsModule.getStats()
+                .stream()
+                .filter(stat -> period.equals(StatPeriod.LIFETIME)
+                        || !stat.getName().equalsIgnoreCase("Winstreak"))
+                .toList();;
         if (stats.isEmpty()) return;
 
         int currentIndex = playerStatIndex.getOrDefault(playerIdentity, 0);
@@ -162,7 +167,6 @@ public class TopStatsHologram implements Listener {
         }
 
         Stat currentStat = stats.get(currentIndex);
-        StatPeriod period = playerPeriod.getOrDefault(playerIdentity, statsModule.getDefaultDisplayPeriod());
         String ck = cacheKey(currentStat.getName(), period);
         int finalIndex = currentIndex;
 
@@ -279,15 +283,15 @@ public class TopStatsHologram implements Listener {
 
     private Component buildMainComponent(PlayerIdentity playerIdentity, Stat stat, LinkedHashMap<String, Integer> topPlayers, int playerRank, int playerStatValue, StatPeriod period, long cacheRemainingMs) {
         Component periodName = ModuleManager.getModule(MessageModule.class)
-                .get(playerIdentity, period.getTranslationKey()).getTranslated();
+                .getMessage(playerIdentity, period.getTranslationKey()).toComponent();
 
         Component component = ModuleManager.getModule(MessageModule.class)
-                .get(playerIdentity, "hologram.leaderboard.title")
+                .getMessage(playerIdentity, "hologram.leaderboard.title")
                 .replace("%minigame_name%", Minigame.getInstance().getName())
                 .replace("%stat_name%", stat.getTranslated(playerIdentity))
                 .replace("%period_name%", periodName)
                 .replace("§bLifetime", periodName)
-                .getTranslated()
+                .toComponent()
                 .appendNewline();
 
         int maxLineWidth = computeMaxLineWidth(topPlayers);
@@ -317,42 +321,42 @@ public class TopStatsHologram implements Listener {
 
     private Component buildStatSubComponent(PlayerIdentity playerIdentity, int currentIndex, int totalStats) {
         return ModuleManager.getModule(MessageModule.class)
-                .get(playerIdentity, "hologram.leaderboard.click_stat")
+                .getMessage(playerIdentity, "hologram.leaderboard.click_stat")
                 .replace("%currentIndex%", String.valueOf(currentIndex + 1))
                 .replace("%totalStats%", String.valueOf(totalStats))
-                .getTranslated();
+                .toComponent();
     }
 
     private Component buildPeriodSubComponent(PlayerIdentity playerIdentity, StatPeriod period) {
         Component periodName = ModuleManager.getModule(MessageModule.class)
-                .get(playerIdentity, period.getTranslationKey()).getTranslated();
+                .getMessage(playerIdentity, period.getTranslationKey()).toComponent();
 
         return ModuleManager.getModule(MessageModule.class)
-                .get(playerIdentity, "hologram.leaderboard.click_period")
+                .getMessage(playerIdentity, "hologram.leaderboard.click_period")
                 .replace("%period_name%", periodName)
-                .getTranslated();
+                .toComponent();
     }
 
     private String formatCountdown(PlayerIdentity playerIdentity, StatPeriod period, long cacheRemainingMs) {
         //if (period == StatPeriod.LIFETIME) {
             if (cacheRemainingMs <= 0) {
                 return ModuleManager.getModule(MessageModule.class)
-                        .get(playerIdentity, "hologram.leaderboard.refreshing")
-                        .getRawTranslated();
+                        .getMessage(playerIdentity, "hologram.leaderboard.refreshing")
+                        .toString();
             }
             long minutes = cacheRemainingMs / 60000;
             return ModuleManager.getModule(MessageModule.class)
-                    .get(playerIdentity, "hologram.leaderboard.will_update_in")
+                    .getMessage(playerIdentity, "hologram.leaderboard.will_update_in")
                     .replace("%m%", minutes > 0 ? String.valueOf(minutes) : "<1")
                     .replace("%s%", String.valueOf((cacheRemainingMs / 1000) % 60))
-                    .getRawTranslated();
+                    .toString();
         /*}
 
         long resetMs = period.getMillisUntilReset();
         if (resetMs <= 0) {
             return ModuleManager.getModule(MessageModule.class)
                     .get(playerIdentity, "hologram.leaderboard.refreshing")
-                    .getRawTranslated();
+                    .toString();
         }
 
         long totalSeconds = resetMs / 1000;
@@ -363,7 +367,7 @@ public class TopStatsHologram implements Listener {
                 .get(playerIdentity, "hologram.leaderboard.resets_in")
                 .replace("%h%", hours > 0 ? hours + "h " : "")
                 .replace("%m%", minutes + "m")
-                .getRawTranslated();*/
+                .toString();*/
     }
 
     private Component buildRankLine(String playerName, int value, int position, int maxWidth, boolean isPlayerRow) {

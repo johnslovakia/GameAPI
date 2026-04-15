@@ -36,6 +36,22 @@ public class Logger {
         }*/
     }
 
+    public static void info(String message){
+        log(message, LogType.INFO);
+    }
+
+    public static void error(String message){
+        log(message, LogType.ERROR);
+    }
+
+    public static void warning(String message){
+        log(message, LogType.WARNING);
+    }
+
+    public static void debug(String message){
+        log(message, LogType.DEBUG);
+    }
+
     private static void logToFileAsync(String pluginName, String message) {
         Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(), () -> {
             try {

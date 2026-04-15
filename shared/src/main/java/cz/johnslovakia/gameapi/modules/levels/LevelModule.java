@@ -255,7 +255,7 @@ public class LevelModule implements Module, Listener {
             public void run() {
                 if (offlinePlayer.isOnline() && offlinePlayer instanceof Player player) {
                     player.playSound(player, "jsplugins:completed", 20.0F, 20.0F);
-                    ModuleManager.getModule(MessageModule.class).get(player, "chat.level.levelUp")
+                    ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.level.levelUp")
                             .replace("%level%", String.valueOf(newLevel))
                             .send();
                     levelUpBanner(player, newLevel);
@@ -285,7 +285,7 @@ public class LevelModule implements Module, Listener {
                         .color(NamedTextColor.WHITE))
                 .append(ModuleManager.getModule(MessageModule.class)
                         .get(player, "chat.actionbar.level_up")
-                        .getTranslated()
+                        .toComponent()
                         .font(Key.key("minecraft", "default")))
                 .append(getLevelColored(level)
                         .font(Key.key("minecraft", "default")))
@@ -301,7 +301,7 @@ public class LevelModule implements Module, Listener {
     public void levelUpBanner(Player player, int level) {
         LevelEvolution evolution = getLevelEvolution(level);
         Component icon = evolution.getIcon();
-        String rawText = ModuleManager.getModule(MessageModule.class).get(player, "chat.actionbar.level_up").getRawTranslated();
+        String rawText = ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.actionbar.level_up").toString();
         TextColor evolutionColor = evolution.color();
 
         String cleanText = rawText.replaceAll("§[0-9a-fk-or]", "");

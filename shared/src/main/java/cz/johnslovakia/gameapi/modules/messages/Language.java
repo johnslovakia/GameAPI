@@ -15,13 +15,13 @@ public class Language {
 
 
     private final String name;
-    private File file;
+    private final File file;
 
     @Setter
     private boolean defaultLanguage;
 
     public Language(String name) {
-        this.name = name;
+        this(name, null);
     }
 
     public Language(String name, File file) {

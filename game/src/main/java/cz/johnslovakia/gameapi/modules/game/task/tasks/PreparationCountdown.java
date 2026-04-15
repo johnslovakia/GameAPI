@@ -27,8 +27,8 @@ public class PreparationCountdown implements TaskInterface {
         for (GamePlayer gamePlayer : game.getParticipants()){
             PlayerBossBar playerBossBar = PlayerBossBar.getOrCreateBossBar(gamePlayer.getOnlinePlayer().getUniqueId(), Component.text(""));
 
-            Component component = ModuleManager.getModule(MessageModule.class).get(gamePlayer, "bossbar.battle_begings_in")
-                        .replace("%time%", Utils.getDurationString(task.getCounter())).getTranslated()
+            Component component = ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "bossbar.battle_begings_in")
+                        .replace("%time%", Utils.getDurationString(task.getCounter())).toComponent()
                     .font(Key.key("jsplugins", "bossbar_offset"));
             playerBossBar.setName(component);
             
@@ -42,8 +42,8 @@ public class PreparationCountdown implements TaskInterface {
 
             if (task.getCounter() <= 3 && task.getCounter() > 0) {
                 ChatColor[] colors = {ChatColor.GREEN, ChatColor.AQUA, ChatColor.YELLOW};
-                //GameAPI.getInstance().getUserInterface().sendTitle(player, colors[task.getCounter() - 1] + "► " + task.getCounter() + " ◄", ModuleManager.getModule(MessageModule.class).get(player, "title.battle_begings_in.subtitle").getTranslated());
-                player.showTitle(Title.title(Component.text(colors[task.getCounter() - 1] + "► " + task.getCounter() + " ◄"), ModuleManager.getModule(MessageModule.class).get(player, "title.battle_begings_in.subtitle").getTranslated()));
+                //GameAPI.getInstance().getUserInterface().sendTitle(player, colors[task.getCounter() - 1] + "► " + task.getCounter() + " ◄", ModuleManager.getModule(MessageModule.class).getMessage(player, "title.battle_begings_in.subtitle").toComponent());
+                player.showTitle(Title.title(Component.text(colors[task.getCounter() - 1] + "► " + task.getCounter() + " ◄"), ModuleManager.getModule(MessageModule.class).getMessage(player, "title.battle_begings_in.subtitle").toComponent()));
             }
         }
     }
@@ -54,7 +54,7 @@ public class PreparationCountdown implements TaskInterface {
 
         for (GamePlayer gamePlayer : game.getParticipants()) {
             Player player = gamePlayer.getOnlinePlayer();
-            ModuleManager.getModule(MessageModule.class).get(gamePlayer, "title.battle_started")
+            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "title.battle_started")
                     .send();
             player.playSound(player, "jsplugins:gamestart", 20.0F, 20.0F);
 

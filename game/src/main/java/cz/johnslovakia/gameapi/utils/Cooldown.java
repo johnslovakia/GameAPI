@@ -69,7 +69,7 @@ public class Cooldown {
                         endConsumer.accept(Cooldown.this);
                     cleanup(uuid);
                     if (actionbar) {
-                        ModuleManager.getModule(MessageModule.class).get(playerIdentity, "chat.countdown_is_over").send(MessageType.ACTIONBAR);
+                        ModuleManager.getModule(MessageModule.class).getMessage(playerIdentity, "chat.countdown_is_over").send(MessageType.ACTIONBAR);
                     }
                     this.cancel();
                 } else {

@@ -65,8 +65,8 @@ public class CosmeticsInventory implements Listener {
 
         item.removeLore();
 
-        if (PlainTextComponentSerializer.plainText().serialize(messageModule.get(playerIdentity, cosmetic.getRarity().getTranslateKey()).getTranslated()).length() == 1) {
-            item.addLoreLine(net.kyori.adventure.text.Component.text("§7").append(messageModule.get(playerIdentity, cosmetic.getRarity().getTranslateKey()).getTranslated()));
+        if (PlainTextComponentSerializer.plainText().serialize(messageModule.getMessage(playerIdentity, cosmetic.getRarity().getTranslateKey()).toComponent()).length() == 1) {
+            item.addLoreLine(net.kyori.adventure.text.Component.text("§7").append(messageModule.getMessage(playerIdentity, cosmetic.getRarity().getTranslateKey()).toComponent()));
         }
 
         item.addLoreLine("§8" + cosmetic.getCategory().getName());
@@ -74,14 +74,14 @@ public class CosmeticsInventory implements Listener {
 
         item.addLoreLine("");
 
-        if (PlainTextComponentSerializer.plainText().serialize(messageModule.get(playerIdentity, cosmetic.getRarity().getTranslateKey()).getTranslated()).length() > 1) {
-            messageModule.get(playerIdentity, "inventory.cosmetics.rarity")
-                    .replace("%rarity%", messageModule.get(playerIdentity, cosmetic.getRarity().getTranslateKey()).getTranslated())
+        if (PlainTextComponentSerializer.plainText().serialize(messageModule.getMessage(playerIdentity, cosmetic.getRarity().getTranslateKey()).toComponent()).length() > 1) {
+            messageModule.getMessage(playerIdentity, "inventory.cosmetics.rarity")
+                    .replace("%rarity%", messageModule.getMessage(playerIdentity, cosmetic.getRarity().getTranslateKey()).toComponent())
                     .addToItemLore(item);
         }
 
         if (!cosmetic.hasPlayer(playerIdentity)) {
-            messageModule.get(playerIdentity, "inventory.cosmetics.cost").addToItemLore(item);
+            messageModule.getMessage(playerIdentity, "inventory.cosmetics.cost").addToItemLore(item);
 
             for (Map.Entry<Resource, Integer> entry : cosmetic.getCost().entrySet()) {
                 Resource resource = entry.getKey();
@@ -92,7 +92,7 @@ public class CosmeticsInventory implements Listener {
             }
         } else {
             if (playerIdentity.getOnlinePlayer().hasPermission("cosmetics.free")) {
-                messageModule.get(playerIdentity, "inventory.cosmetics.saved")
+                messageModule.getMessage(playerIdentity, "inventory.cosmetics.saved")
                         .replace("%economy_name%", "")
                         .replace("%price%", "")
                         .replace("_", "")
@@ -104,7 +104,7 @@ public class CosmeticsInventory implements Listener {
                     item.addLoreLine(resource.getColor() + " - " + StringUtils.betterNumberFormat(cost) + " " + resource.getDisplayName());
                 }
             } else {
-                messageModule.get(playerIdentity, "inventory.kit.purchased_for")
+                messageModule.getMessage(playerIdentity, "inventory.kit.purchased_for")
                         .replace("%economy_name%", "")
                         .replace("%price%", "")
                         .addToItemLore(item);
@@ -122,20 +122,20 @@ public class CosmeticsInventory implements Listener {
         if (cosmeticsModule.getPlayerSelectedCosmetic(playerIdentity, cosmetic.getCategory()) != null &&
                 cosmeticsModule.getPlayerSelectedCosmetic(playerIdentity, cosmetic.getCategory()).equals(cosmetic)) {
             item.addEnchant(Enchantment.SHARPNESS, 1);
-            messageModule.get(playerIdentity, "inventory.cosmetics.selected").addToItemLore(item);
-            messageModule.get(playerIdentity, "inventory.cosmetics.unselect").addToItemLore(item);
+            messageModule.getMessage(playerIdentity, "inventory.cosmetics.selected").addToItemLore(item);
+            messageModule.getMessage(playerIdentity, "inventory.cosmetics.unselect").addToItemLore(item);
         } else if (cosmetic.hasPlayer(playerIdentity)) {
-            messageModule.get(playerIdentity, "inventory.cosmetics.select").addToItemLore(item);
+            messageModule.getMessage(playerIdentity, "inventory.cosmetics.select").addToItemLore(item);
         } else if (!hasEnough) {
-            messageModule.get(playerIdentity, "inventory.cosmetics.dont_have_enough_resources").addToItemLore(item);
+            messageModule.getMessage(playerIdentity, "inventory.cosmetics.dont_have_enough_resources").addToItemLore(item);
         } else {
-            messageModule.get(playerIdentity, "inventory.cosmetics.purchase").addToItemLore(item);
+            messageModule.getMessage(playerIdentity, "inventory.cosmetics.purchase").addToItemLore(item);
         }
 
         item.hideAllFlags();
 
         if (cosmetic.getPreviewConsumer() != null) {
-            messageModule.get(playerIdentity, "inventory.cosmetics.preview").addToItemLore(item);
+            messageModule.getMessage(playerIdentity, "inventory.cosmetics.preview").addToItemLore(item);
         }
 
         return item.toItemStack();
@@ -166,13 +166,13 @@ public class CosmeticsInventory implements Listener {
                     ItemBuilder back = new ItemBuilder(Material.ECHO_SHARD);
                     back.setCustomModelData(1016);
                     back.hideAllFlags();
-                    back.setName(messageModule.get(player, "inventory.item.go_back").getTranslated());
+                    back.setName(messageModule.getMessage(player, "inventory.item.go_back").toComponent());
 
                     ItemBuilder info = new ItemBuilder(Material.ECHO_SHARD);
                     info.setCustomModelData(1018);
                     info.hideAllFlags();
-                    info.setName(messageModule.get(player, "inventory.info_item.cosmetics_inventory.name").getTranslated());
-                    info.setLore(messageModule.get(player, "inventory.info_item.cosmetics_inventory.lore").getTranslated());
+                    info.setName(messageModule.getMessage(player, "inventory.info_item.cosmetics_inventory.name").toComponent());
+                    info.setLore(messageModule.getMessage(player, "inventory.info_item.cosmetics_inventory.lore").toComponent());
 
                     gui.appendElement(0, Component.element(back.toItemStack()).addClick(i -> {
                         ProfileInventory.openGUI(playerIdentity);
@@ -195,11 +195,11 @@ public class CosmeticsInventory implements Listener {
                                         if (i.getClickType().isLeftClick()) {
                                             if (cosmetic.hasSelected(playerIdentity)) {
                                                 player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
-                                                /*messageModule.get(player, "chat.cosmetics.already_selected")
+                                                /*messageModule.getMessage(player, "chat.cosmetics.already_selected")
                                                         .replace("%cosmetic%", cosmetic.getName())
                                                         .send();*/
                                                 ModuleManager.getModule(CosmeticsModule.class).removePlayerSelectedCosmetic(playerIdentity, category);
-                                                messageModule.get(player, "chat.cosmetics.unselected")
+                                                messageModule.getMessage(player, "chat.cosmetics.unselected")
                                                         .replace("%cosmetic%", cosmetic.getName())
                                                         .send();
                                                 openCategory(playerIdentity, category);
@@ -227,7 +227,7 @@ public class CosmeticsInventory implements Listener {
                                                 if (!hasEnough) {
                                                     if (!missing.isEmpty()) {
                                                         player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 10.0F, 10.0F);
-                                                        messageModule.get(player, "chat.cosmetic.dont_have_enough")
+                                                        messageModule.getMessage(player, "chat.cosmetic.dont_have_enough")
                                                                 .replace("%resources%", String.join(", ", missing))
                                                                 .send();
                                                         return;
