@@ -255,7 +255,7 @@ public class KitInventory implements Listener {
                                                         kit.select(gamePlayer);
                                                     } else {
                                                         kit.select(gamePlayer);
-                                                        if (selectedKit == kit) {
+                                                        if (selectedKit != kit) {
                                                             kit.activate(gamePlayer);
                                                         }
                                                     }

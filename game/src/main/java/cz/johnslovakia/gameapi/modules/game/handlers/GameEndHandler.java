@@ -20,6 +20,7 @@ import cz.johnslovakia.gameapi.modules.levels.PlayerLevelData;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.scores.Score;
+import cz.johnslovakia.gameapi.modules.scores.ScoreGroup;
 import cz.johnslovakia.gameapi.modules.scores.ScoreModule;
 import cz.johnslovakia.gameapi.modules.stats.StatsModule;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardType;
@@ -35,6 +36,7 @@ import cz.johnslovakia.gameapi.utils.*;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
@@ -425,48 +427,93 @@ public class GameEndHandler {
                 }
             }
 
+
             player.sendMessage("");
         }
     }
 
+
     public void sendRewardSummary(){
+        ScoreModule scoreModule = ModuleManager.getModule(ScoreModule.class);
+
         for (GamePlayer gamePlayer : gameInstance.getParticipants()){
             PlayerGameSession session = gamePlayer.getGameSession();
             Player player = gamePlayer.getOnlinePlayer();
 
             ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.rewardsummary.title").send();
 
-            if (!session.earnedSomething()){
+            if (!session.hasEarnedSomething()){
                 ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.rewardsummary.no_rewards")
                         .send();
                 player.sendMessage("");
             }else{
                 gamePlayer.getOnlinePlayer().playSound(player, "jsplugins:gamebonus", 0.8F, 1F);
 
-                for (Map.Entry<Resource, Integer> totalEarnedEntry : session.getTotalEarned().entrySet()){
+                for (Map.Entry<Resource, Integer> totalEarnedEntry : session.getEarnedRewards().entrySet()){
                     Resource resource = totalEarnedEntry.getKey();
+                    //•
+                    Component component = Component.text(" §7• " /*resource.getColor() + " + "*/ + (resource.getImgChar() != null ? resource.getImgChar() + " " : "") + resource.getColor() + totalEarnedEntry.getValue() + " §7" + resource.getDisplayName());
 
-                    Component component = Component.text(" §7• " + (resource.getImgChar() != null ? resource.getImgChar() + " " : "") + resource.getColor() + totalEarnedEntry.getValue() + " §7" + resource.getDisplayName());
-
-
-                    //↳ └ ∟ ‣
                     boolean dailyRewardTrackEnabled = ModuleManager.getInstance().hasModule(DailyRewardTrackModule.class);
-                    Collection<Component> lines = session.getEarnedBySource(resource).entrySet().stream()
+
+                    Map<String, List<Map.Entry<Score, Integer>>> groupedEntries = new LinkedHashMap<>();
+                    List<Map.Entry<Score, Integer>> ungroupedEntries = new ArrayList<>();
+
+                    session.getEarnedRewardsBySource(resource).entrySet().stream()
                             .sorted(Map.Entry.<Score, Integer>comparingByValue(Comparator.reverseOrder())
-                                    .thenComparing(entry -> entry.getKey().getDisplayName(gamePlayer))
-                            )
-                            .map(entry -> {
-                                int score = session.getScore(entry.getKey().getName());
+                                    .thenComparing(entry -> entry.getKey().getDisplayName(gamePlayer)))
+                            .forEach(entry -> {
+                                String gk = entry.getKey().getGroupKey();
+                                if (gk != null) {
+                                    groupedEntries.computeIfAbsent(gk, k -> new ArrayList<>()).add(entry);
+                                } else {
+                                    ungroupedEntries.add(entry);
+                                }
+                            });
 
-                                return Component.text()
-                                                .append(Component.text(dailyRewardTrackEnabled ? "    §7∟ " : ""))
-                                                .append(Component.text((dailyRewardTrackEnabled ? resource.getColor() : "") + "+" + entry.getValue()))
-                                                .append(Component.text(" §7- " + (score > 1 && entry.getKey().hasPluralName() ? score + " " : "") + entry.getKey().getDisplayName(gamePlayer)))
-                                                .asComponent();
+                    List<Component> lines = new ArrayList<>();
 
-                                    }
-                            )
-                            .toList();
+                    for (Map.Entry<Score, Integer> entry : ungroupedEntries) {
+                        int scoreCount = session.getScore(entry.getKey().getName());
+                        lines.add(Component.text()
+                                .append(Component.text(dailyRewardTrackEnabled ? "     §7∟ " : ""))
+                                .append(Component.text(resource.getColor() + "" + entry.getValue()))
+                                .append(Component.text(" §7- " + (scoreCount > 1 && entry.getKey().hasPluralName() ? scoreCount + " " : "") + entry.getKey().getDisplayName(gamePlayer)))
+                                .asComponent());
+                    }
+
+                    for (Map.Entry<String, List<Map.Entry<Score, Integer>>> groupEntry : groupedEntries.entrySet()) {
+                        ScoreGroup scoreGroup = scoreModule.getScoreGroup(groupEntry.getKey()).get();
+
+                        List<Map.Entry<Score, Integer>> groupScores = groupEntry.getValue();
+                        int totalGroupEarned = groupScores.stream()
+                                .mapToInt(Map.Entry::getValue)
+                                .sum();
+
+                        Component groupLine = Component.text() //⤷  ∟  ↳
+                                .append(Component.text(dailyRewardTrackEnabled ? "     §7∟ " : ""))
+                                .append(Component.text(resource.getColor() + "" + totalGroupEarned))
+                                .append(Component.text(" §7- " + scoreGroup.getDisplayName(gamePlayer)))
+                                .hoverEvent(HoverEvent.showText(
+                                        Component.join(
+                                                JoinConfiguration.newlines(),
+                                                groupScores.stream()
+                                                        .sorted(Comparator.comparing(e -> session.getScore(e.getKey().getName())))
+                                                        .map(e -> {
+                                                            int scoreCount = session.getScore(e.getKey().getName());
+                                                            return Component.text()
+                                                                            .append(Component.text((dailyRewardTrackEnabled ? resource.getColor() : "") + "+" + e.getValue()))
+                                                                            .append(Component.text(" §7- " + (scoreCount > 1 && e.getKey().hasPluralName() ? scoreCount + " " : "") + e.getKey().getDisplayName(gamePlayer)))
+                                                                            .asComponent();
+                                                                }
+                                                        ).toList()
+                                        )
+                                ))
+                                .asComponent();
+
+                        lines.add(groupLine);
+                    }
+
 
                     if (!dailyRewardTrackEnabled) {
                         Component hoverComponent = Component.join(JoinConfiguration.newlines(), lines);
@@ -502,16 +549,6 @@ public class GameEndHandler {
                         }
                     }
                 }
-
-                /*List<Resource> resourcesWithFirstDailyWinReward = Minigame.getInstance().getEconomies().stream().filter(resource -> resource.getFirstDailyWinReward() != 0).toList();
-                if (resourcesWithFirstDailyWinReward.size() > 1 && gamePlayer.getPlayerData().grantDailyFirstWinReward()){
-                    player.sendMessage("");
-                    ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.rewardsummary.first_win_reward")
-                            .replace("%minigame%", Minigame.getInstance().getName());
-                    for (Resource resource : resourcesWithFirstDailyWinReward){
-                        player.sendMessage("   §7↳ " + resource.getColor() + resource.getFirstDailyWinReward() + " " + resource.getDisplayName());
-                    }
-                }*/
             }
             player.sendMessage("");
         }

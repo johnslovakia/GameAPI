@@ -126,7 +126,7 @@ public class GamePlayer extends Winner implements PlayerIdentity {
 
     public boolean isRespawning(){
         if (getGame().getSettings().isUseTeams() && getGame().getSettings().isEnabledRespawning()){
-            return getGameSession() != null && !getGameSession().getTeam().isDead();
+            return getGameSession() != null && getGameSession().getTeam() != null && !getGameSession().getTeam().isDead();
         }else{
             return getGame().getSettings().isEnabledRespawning();
         }

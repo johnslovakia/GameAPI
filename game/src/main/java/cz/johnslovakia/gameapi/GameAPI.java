@@ -593,8 +593,6 @@ public class GameAPI{
 
             minigame.setupOther();
 
-            // Run any registered migrations after the plugin is fully set up.
-            minigame.getMigrationManager().runAll();
 
             if (levelModule != null && dailyRewardTrackModule != null){
                 //playerTable.createNewColumn(Type.INT, "Level", "1");

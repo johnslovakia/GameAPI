@@ -33,8 +33,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
@@ -49,42 +49,37 @@ public class PlayerJoinQuitHandler {
         this.gameInstance = gameInstance;
     }
 
-    public void loadLevelData(GamePlayer gamePlayer){
-        Player player = gamePlayer.getOnlinePlayer();
-        LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
-        if (levelModule != null){
-            int players = gameInstance.getParticipants().size();
-            levelModule.loadPlayerData(gamePlayer).thenAccept(data -> {
-                if (data == null) return;
-
-                Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task -> {
-                    if (gameInstance.getState().equals(GameState.WAITING)
-                            || gameInstance.getState().equals(GameState.STARTING)) {
-                        sendPlayerJoinMessage(gamePlayer, players);
-                    }
-                    player.playerListName(levelModule.getPlayerData(gamePlayer).getLevelEvolution().getIcon().append(Component.text(" §r" + player.getName()).font(Key.key("minecraft", "default"))));
-                });
-            });
-        }else{
-            if (gameInstance.getState().equals(GameState.WAITING)
-                    || gameInstance.getState().equals(GameState.STARTING)) {
-                sendPlayerJoinMessage(gamePlayer, gameInstance.getParticipants().size());
-                player.playerListName(Component.text(" §r" + player.getName()));
-            }
-        }
-    }
-
     public void joinPlayer(Player player){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         MinigameSettings settings = gameInstance.getSettings();
 
-        if (gamePlayer.getGame() != null){
+        PlayerGameSession existingSession = gameInstance.getModule(GameSessionModule.class).getPlayerSession(gamePlayer);
+        GamePlayerState previousState = existingSession != null ? existingSession.getState() : GamePlayerState.UNKNOWN;
+
+        if (gamePlayer.getGame() != null && !gamePlayer.getGame().equals(gameInstance)){
             gamePlayer.getGame().quitPlayer(player);
         }
 
-        PlayerGameSession session = gameInstance.getModule(GameSessionModule.class).createPlayerSession(gamePlayer);
+        boolean isRejoin = gameInstance.getState().equals(GameState.INGAME)
+                && previousState.equals(GamePlayerState.DISCONNECTED)
+                && gameInstance.getSettings().isEnabledReJoin();
+
+        PlayerGameSession session;
+        if (isRejoin) {
+            session = existingSession;
+        } else {
+            GameSessionModule gameSessionModule = gameInstance.getModule(GameSessionModule.class);
+            if (gameInstance.getState().equals(GameState.INGAME)) {
+                if (existingSession != null && existingSession.getTeam() != null) {
+                    existingSession.getTeam().quitPlayer(gamePlayer);
+                }
+                gameSessionModule.removePlayerSession(gamePlayer);
+            }
+            session = gameSessionModule.createPlayerSession(gamePlayer);
+        }
 
         List<GamePlayer> participants = gameInstance.getParticipants();
+
         if (gameInstance.getState().equals(GameState.WAITING)
                 || gameInstance.getState().equals(GameState.STARTING)){
             if (participants.size() >= settings.getMaxPlayers()) {
@@ -124,7 +119,6 @@ public class PlayerJoinQuitHandler {
             Location lobbyLocation = gameInstance.getModule(LobbyModule.class).getLobbyLocation().getLocation();
             player.teleport(lobbyLocation);
             Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
-                //Stávalo se, že to hráče neportlo na lobby
                 if (player.getLocation().getWorld() != lobbyLocation.getWorld()){
                     player.teleport(lobbyLocation);
                 }
@@ -135,7 +129,22 @@ public class PlayerJoinQuitHandler {
             session.setState(GamePlayerState.PLAYER);
             Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> gamePlayer.getPlayerData().loadKits());
 
-            loadLevelData(gamePlayer);
+            LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
+            if (levelModule != null){
+                int players = gameInstance.getParticipants().size();
+                levelModule.loadPlayerData(gamePlayer).thenAccept(data -> {
+                    if (data == null) return;
+
+                    Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task -> {
+                        sendPlayerJoinMessage(gamePlayer, players);
+                        player.playerListName(data.getLevelEvolution().getIcon().append(Component.text(" §r" + player.getName()).font(Key.key("minecraft", "default"))));
+
+                    });
+                });
+            }else{
+                sendPlayerJoinMessage(gamePlayer, gameInstance.getParticipants().size());
+                player.playerListName(Component.text(" §r" + player.getName()));
+            }
 
             GameDataManager<GameInstance> gameDataManager = gameInstance.getServerDataManager();
             if (gameDataManager != null) {
@@ -156,7 +165,6 @@ public class PlayerJoinQuitHandler {
 
             GameUtils.hideAndShowPlayers(gameInstance, gamePlayer.getOnlinePlayer());
 
-
             gamePlayer.resetAttributes();
             player.getInventory().clear();
             if (gameInstance.getModule(LobbyModule.class).getInventoryManager() != null){
@@ -164,7 +172,6 @@ public class PlayerJoinQuitHandler {
             }else{
                 player.sendMessage("§cAn error occurred while loading the waiting lobby inventory.");
             }
-
 
             if (gameInstance.getPlayers().size() >= settings.getMinPlayers() && !gameInstance.getState().equals(GameState.STARTING)){
                 gameInstance.setState(GameState.STARTING);
@@ -176,60 +183,68 @@ public class PlayerJoinQuitHandler {
             GameJoinEvent ev = new GameJoinEvent(gameInstance, gamePlayer, GameJoinEvent.JoinType.LOBBY);
             Bukkit.getPluginManager().callEvent(ev);
             return;
-        }else if (gameInstance.getState().equals(GameState.INGAME) && session.getState().equals(GamePlayerState.DISCONNECTED) && gameInstance.getSettings().isEnabledReJoin()){
-            if (gameInstance.getPlayers().size() >= settings.getMaxPlayers()) {
+        } else if (isRejoin) {
+            if (!participants.contains(gamePlayer)) participants.add(gamePlayer);
+            gamePlayer.setGameID(gameInstance.getID());
 
-                participants.add(gamePlayer);
-                gamePlayer.setGameID(gameInstance.getID());
-                loadLevelData(gamePlayer);
+            Location rejoinLocation = (Location) gamePlayer.getMetadata().get("death_location");
+            if (rejoinLocation == null) {
+                rejoinLocation = gameInstance.getCurrentMap().getPlayerToLocation(gamePlayer);
+            }
+            if (rejoinLocation == null && session.getTeam() != null) {
+                rejoinLocation = session.getTeam().getSpawn();
+            }
 
-                Location rejoinLocation = (Location) gamePlayer.getMetadata().get("death_location");
-                if (rejoinLocation == null) {
-                    rejoinLocation = gameInstance.getCurrentMap().getPlayerToLocation(gamePlayer);
-                }
-                if (rejoinLocation == null && session.getTeam() != null) {
-                    rejoinLocation = session.getTeam().getSpawn();
-                }
+            if (rejoinLocation != null) {
+                final Location finalRejoinLocation = rejoinLocation;
 
-                if (rejoinLocation != null) {
-                    Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> gamePlayer.getPlayerData().loadKits());
-                    gamePlayer.setSpectator(false);
-                    gameInstance.getGameStartHandler().preparePlayer(gamePlayer);
-                    session.setState(GamePlayerState.PLAYER);
-                    if (Minigame.getInstance().getSettings().isUseTeams() && session.getTeam() != null){
+                Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> gamePlayer.getPlayerData().loadKits());
+
+                gamePlayer.setSpectator(false);
+                gameInstance.getGameStartHandler().preparePlayer(gamePlayer);
+                session.setState(GamePlayerState.PLAYER);
+
+                LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
+                Runnable afterLevelLoad = () -> {
+                    if (Minigame.getInstance().getSettings().isUseTeams() && session.getTeam() != null) {
                         session.getTeam().rejoin(gamePlayer);
                     }
+                };
 
-                    GameJoinEvent ev = new GameJoinEvent(gameInstance, gamePlayer, GameJoinEvent.JoinType.REJOIN);
-                    Bukkit.getPluginManager().callEvent(ev);
-
-                    player.teleport(rejoinLocation);
-                    return;
+                if (levelModule != null) {
+                    levelModule.loadPlayerData(gamePlayer).thenAccept(data -> {
+                        Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), afterLevelLoad);
+                    });
                 } else {
-                    Logger.log("Could not find rejoin location for " + player.getName(), Logger.LogType.WARNING);
-                    player.sendMessage("§cAn error occurred, you are being sent to the lobby");
+                    afterLevelLoad.run();
                 }
-            }else{
-                ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.join_failed.full_game.rejoin")
-                        .send();
-            }
-        }else if (gameInstance.getState().equals(GameState.INGAME) && settings.isEnabledJoiningAfterStart()){
-            if (gameInstance.getPlayers().size() < settings.getMaxPlayers()) { //>=
 
+                GameJoinEvent ev = new GameJoinEvent(gameInstance, gamePlayer, GameJoinEvent.JoinType.REJOIN);
+                Bukkit.getPluginManager().callEvent(ev);
+
+                player.teleport(finalRejoinLocation);
+                return;
+            } else {
+                Logger.log("Could not find rejoin location for " + player.getName(), Logger.LogType.WARNING);
+                player.sendMessage("§cAn error occurred, you are being sent to the lobby");
+            }
+        } else if (gameInstance.getState().equals(GameState.INGAME) && settings.isEnabledJoiningAfterStart()){
+            player.teleport(GameUtils.getNonRespawnLocation(gameInstance));
+            if (gameInstance.getPlayers().size() < settings.getMaxPlayers()) {
                 participants.add(gamePlayer);
                 gamePlayer.setGameID(gameInstance.getID());
-                player.teleport(GameUtils.getNonRespawnLocation(gameInstance));
-
                 gamePlayer.getGameSession().setState(GamePlayerState.PLAYER);
+
                 Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> {
                     gamePlayer.getPlayerData().loadKits();
 
                     Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task2 -> {
                         LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
                         if (levelModule != null){
-                            levelModule.loadPlayerData(gamePlayer).thenAccept(data -> {
-                                gameInstance.getGameStartHandler().preparePlayer(gamePlayer);
-                            });
+                            levelModule.loadPlayerData(gamePlayer).thenAccept(data ->
+                                    Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), () ->
+                                            gameInstance.getGameStartHandler().preparePlayer(gamePlayer)
+                                    ));
                         }else{
                             gameInstance.getGameStartHandler().preparePlayer(gamePlayer);
                         }
@@ -244,19 +259,21 @@ public class PlayerJoinQuitHandler {
                 ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.join_failed.full_game.game_in_progress")
                         .send();
             }
-        }else if (gameInstance.getState().equals(GameState.INGAME)) {
+        } else if (gameInstance.getState().equals(GameState.INGAME)) {
             participants.add(gamePlayer);
             gamePlayer.setGameID(gameInstance.getID());
             gamePlayer.setSpectator(true);
 
-            loadLevelData(gamePlayer);
+            LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
+            if (levelModule != null) {
+                levelModule.loadPlayerData(gamePlayer);
+            }
 
             GameJoinEvent ev = new GameJoinEvent(gameInstance, gamePlayer, GameJoinEvent.JoinType.SPECTATOR);
             Bukkit.getPluginManager().callEvent(ev);
             return;
         }
-        //player.sendMessage("§cAn error occurred, you are being sent to the lobby");
-        //ModuleManager.getModule(GameService.class).newArena(player, true);
+
         GameUtils.sendToLobby(player);
     }
 
@@ -300,7 +317,10 @@ public class PlayerJoinQuitHandler {
 
         player.teleport(GameUtils.getNonRespawnLocation(gameInstance));
 
-        loadLevelData(gamePlayer);
+        LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
+        if (levelModule != null) {
+            levelModule.loadPlayerData(gamePlayer);
+        }
 
         GameJoinEvent ev = new GameJoinEvent(gameInstance, gamePlayer, GameJoinEvent.JoinType.SPECTATOR);
         Bukkit.getPluginManager().callEvent(ev);
@@ -309,7 +329,6 @@ public class PlayerJoinQuitHandler {
     public void quitPlayer(Player player){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         PlayerGameSession session = gameInstance.getModule(GameSessionModule.class).getPlayerSession(gamePlayer);
-
 
         GameQuitEvent ev = new GameQuitEvent(gameInstance, gamePlayer);
         Bukkit.getPluginManager().callEvent(ev);
@@ -353,8 +372,6 @@ public class PlayerJoinQuitHandler {
                 session.getTeam().quitPlayer(gamePlayer);
             }
             session.setState(GamePlayerState.DISCONNECTED);
-            //gamePlayer.getPlayerData().setGame(null);
-
 
             if (gameInstance.getState().equals(GameState.STARTING)) {
                 gameInstance.checkArenaFullness();
@@ -363,8 +380,13 @@ public class PlayerJoinQuitHandler {
             }
         } else if (gameInstance.getState() == GameState.INGAME){
             if (!gamePlayer.isSpectator()){
+                if (gameInstance.getSettings().isEnabledReJoin()) {
+                    gamePlayer.getMetadata().put("rejoin_inventory", player.getInventory().getContents().clone());
+                    gamePlayer.getMetadata().put("rejoin_armor", player.getInventory().getArmorContents().clone());
+                    gamePlayer.getMetadata().put("rejoin_offhand", player.getInventory().getItemInOffHand().clone());
+                }
+
                 session.setState(GamePlayerState.DISCONNECTED);
-                //player.damage(player.getHealth());
 
                 boolean hasKiller = PVPListener.hasLastDamager(gamePlayer) && (System.currentTimeMillis() - PVPListener.getLastDamager(gamePlayer).getMs()) <= PVPListener.KILL_CREDIT_TIMEOUT_MS;
                 GamePlayer killerGamePlayer = hasKiller ? PVPListener.getLastDamager(gamePlayer).getLastDamager() : null;
@@ -374,10 +396,6 @@ public class PlayerJoinQuitHandler {
                 Bukkit.getPluginManager().callEvent(deathEvent);
 
                 PVPListener.cleanupPlayer(gamePlayer);
-
-                /*boolean killer = PVPListener.hasLastDamager(gamePlayer) && (System.currentTimeMillis() - PVPListener.getLastDamager(gamePlayer).getMs()) <= 12000;
-                GamePlayerDeathEvent deathEvent = new GamePlayerDeathEvent(gamePlayer.getGame(), (killer ? PVPListener.getLastDamager(gamePlayer).getLastDamager() : null), PlayerManager.getGamePlayer(player), null,null);
-                Bukkit.getPluginManager().callEvent(deathEvent);*/
             }else if (!Minigame.getInstance().getSettings().isEnabledReJoin()){
                 GameMap currentMap = gameInstance.getCurrentMap();
                 if (currentMap != null){

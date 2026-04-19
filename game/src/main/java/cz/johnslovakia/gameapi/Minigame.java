@@ -6,6 +6,8 @@ import cz.johnslovakia.gameapi.database.RedisManager;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.listeners.TestServerListener;
+import cz.johnslovakia.gameapi.modules.messages.MessageModule;
+import cz.johnslovakia.gameapi.modules.updateTasks.UpdateTask;
 import cz.johnslovakia.gameapi.modules.updateTasks.UpdateTaskModule;
 import cz.johnslovakia.gameapi.modules.perks.PerkManager;
 import cz.johnslovakia.gameapi.modules.quests.QuestManager;
@@ -56,9 +58,6 @@ public abstract class Minigame {
     private List<JSONProperty<GameInstance>> properties = new ArrayList<>();
     private Map<String, InputStreamWithName> languageFiles = new HashMap<>();
 
-    @Getter
-    private UpdateTaskModule migrationManager;
-
     @Setter
     private QuestManager questManager;
     @Setter
@@ -71,8 +70,6 @@ public abstract class Minigame {
         this.plugin = plugin;
         this.name = name;
         this.moduleManager = new ModuleManager(plugin);
-        this.migrationManager = new UpdateTaskModule(plugin);
-
         this.updateChecker = new UpdateChecker(this, "https://raw.githubusercontent.com/johnslovakia/GameAPI/master/updateChecker/" + name + ".json");
 
         FileConfiguration config = plugin.getConfig();
@@ -80,6 +77,7 @@ public abstract class Minigame {
             this.testServer = true;
             Bukkit.getPluginManager().registerEvents(new TestServerListener(), plugin);
         }
+
     }
 
     public boolean hasSpectatePermission(Player player){

@@ -24,6 +24,7 @@ import java.util.Optional;
 public class ScoreModule implements Module {
 
     private Map<String, Score> scores = new HashMap<>();
+    private Map<String, ScoreGroup> scoreGroups = new HashMap<>();
 
     @Override
     public void initialize() {
@@ -33,6 +34,7 @@ public class ScoreModule implements Module {
     @Override
     public void terminate() {
         scores = null;
+        scoreGroups = null;
     }
 
     public void incrementScore(GamePlayer gamePlayer, String scoreName){
@@ -63,6 +65,13 @@ public class ScoreModule implements Module {
         });
     }
 
+    public void registerScoreGroup(ScoreGroup group) {
+        scoreGroups.put(group.getKey(), group);
+    }
+
+    public Optional<ScoreGroup> getScoreGroup(String key) {
+        return Optional.ofNullable(scoreGroups.get(key));
+    }
 
     public void registerScore(Score score){
         scores.put(score.getName(), score);

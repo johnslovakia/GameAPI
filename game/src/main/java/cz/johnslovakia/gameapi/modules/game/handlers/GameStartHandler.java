@@ -27,6 +27,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 public class GameStartHandler {
 
@@ -47,13 +48,12 @@ public class GameStartHandler {
         GamePreparationEvent ev = new GamePreparationEvent(gameInstance);
         Bukkit.getPluginManager().callEvent(ev);
 
-
         for (GamePlayer gamePlayer : gameInstance.getPlayers()){
             PlayerGameSession session = gamePlayer.getGameSession();
             session.setEnabledMovement(gameInstance.getSettings().isEnabledMovementInPreparation());
             session.setLimited(true);
         }
-    };
+    }
 
     private void prepareGame(){
         if (!gameInstance.getSettings().isChooseRandomMap()) {
@@ -62,7 +62,6 @@ public class GameStartHandler {
             }
             gameInstance.nextArena().setWinned(true);
         }
-
 
         GameMap playingMap = gameInstance.getCurrentMap();
 
@@ -76,7 +75,6 @@ public class GameStartHandler {
                 return;
             }
         }
-
 
         gameInstance.getCurrentMap().getWorld().setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
         gameInstance.getCurrentMap().getWorld().setGameRule(GameRule.LOCATOR_BAR, false);
@@ -105,7 +103,6 @@ public class GameStartHandler {
         if (!rejoin) {
             gamePlayer.resetAttributes();
 
-            player.sendMessage("");
             if (gameInstance.getSettings().isSendMinigameDescription()) {
                 ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.description")
                         .replace("%minigame%", Minigame.getInstance().getFullName())
@@ -125,17 +122,30 @@ public class GameStartHandler {
             if (gameInstance.getSettings().isUseTeams()){
                 if (session.getTeam() == null){
                     GameTeam lowestTeam = gameInstance.getModule(TeamModule.class).getSmallestTeam();
-                    lowestTeam.joinPlayer(gamePlayer, TeamJoinCause.AUTO);
+                    if (lowestTeam != null) {
+                        lowestTeam.joinPlayer(gamePlayer, TeamJoinCause.AUTO);
+
+                        if (gameInstance.getState().equals(GameState.INGAME) && gameInstance.getSettings().isEnabledJoiningAfterStart()) {
+                            player.teleport(lowestTeam.getSpawn());
+                            gameInstance.getCurrentMap().getPlayerToLocation().put(gamePlayer, lowestTeam.getSpawn());
+                        }
+                    }
                 }
-            }
-            if (gameInstance.getState().equals(GameState.INGAME) && gameInstance.getSettings().isEnabledJoiningAfterStart()) {
-                player.teleport(session.getTeam().getSpawn());
-                session.getGameInstance().getCurrentMap().getPlayerToLocation().put(gamePlayer, session.getTeam().getSpawn());
             }
 
             if (session.getSelectedKit() != null) {
                 session.getSelectedKit().activate(gamePlayer);
             }
+
+        } else {
+            ItemStack[] savedContents = (ItemStack[]) gamePlayer.getMetadata().remove("rejoin_inventory");
+            ItemStack[] savedArmor = (ItemStack[]) gamePlayer.getMetadata().remove("rejoin_armor");
+            ItemStack savedOffhand = gamePlayer.getMetadata().remove("rejoin_offhand") != null
+                    ? (ItemStack) gamePlayer.getMetadata().remove("rejoin_offhand") : null;
+
+            if (savedContents != null) player.getInventory().setContents(savedContents);
+            if (savedArmor != null) player.getInventory().setArmorContents(savedArmor);
+            if (savedOffhand != null) player.getInventory().setItemInOffHand(savedOffhand);
         }
     }
 
@@ -168,18 +178,15 @@ public class GameStartHandler {
             gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), "jsplugins:gamestart", 20.0F, 20.0F);
         }
 
-
         if (gameInstance.getModule(LobbyModule.class).getLobbyLocation().getGame() != null) {
             WorldManager.unload(gameInstance.getModule(LobbyModule.class).getLobbyLocation().getWorld());
         }
-
 
         GameStartEvent ev = new GameStartEvent(gameInstance);
         Bukkit.getPluginManager().callEvent(ev);
     }
 
     public void handleGameStart(){
-        //gameInstance.setState(GameState.INGAME);
         if (gameInstance.getSettings().isUsePreperationTask()) {
             startPreparation();
         }else{

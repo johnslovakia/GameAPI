@@ -33,15 +33,15 @@ public class GameSessionModule extends GameModule {
         return session;
     }
 
+    public PlayerGameSession removePlayerSession(PlayerIdentity playerIdentity){
+        return playerSessions.remove(playerIdentity);
+    }
+
     public PlayerGameSession getPlayerSession(PlayerIdentity playerIdentity){
         return playerSessions.get(playerIdentity);
     }
 
     public PlayerGameSession getPlayerSession(Player player){
         return getPlayerSession(PlayerIdentityRegistry.get(player));
-    }
-
-    public PlayerGameSession getPlayerSession(UUID uuid){
-        return getPlayerSession(PlayerIdentityRegistry.get(uuid));
     }
 }

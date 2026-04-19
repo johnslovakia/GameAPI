@@ -23,7 +23,9 @@ import lombok.Getter;
 
 import me.zort.sqllib.SQLDatabaseConnection;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -100,7 +102,7 @@ public class StatsModule implements Module, Listener {
         stats = null;
     }
 
-    @EventHandler
+    @EventHandler (priority = EventPriority.MONITOR)
     public void onPlayerQuit(PlayerQuitEvent e) {
         String nickname = e.getPlayer().getName();
         lifetimeStorage.flushAndInvalidate(nickname);
@@ -122,37 +124,48 @@ public class StatsModule implements Module, Listener {
                 task.cancel();
                 return;
             }
-            if (!e.getGame().getState().equals(GameState.STARTING) && !e.getGame().getState().equals(GameState.WAITING)) {
-                return;
-            }
+            preloadAll(e.getGamePlayer()).thenRun(() -> {
+                if (e.getGame().getState().equals(GameState.STARTING) || e.getGame().getState().equals(GameState.WAITING)) {
+                    ConfigAPI config = new ConfigAPI(
+                            GameAPI.getInstance().getMinigameDataFolder().toString(),
+                            "config.yml",
+                            Minigame.getInstance().getPlugin());
+                    GameInstance game = e.getGame();
 
-            String nickname = e.getGamePlayer().getName();
-            List<CompletableFuture<?>> futures = new ArrayList<>();
-            futures.add(lifetimeStorage.get(nickname));
-            for (StatPeriod period : StatPeriod.values()) {
-                if (period == StatPeriod.LIFETIME) continue;
-                futures.add(periodStorage.get(periodKey(nickname, period)));
-            }
+                    LobbyLocation statsLoc = GameUtils.getLobbyLocation(config.getConfig(), game, "statsHologram");
+                    if (statsLoc != null) {
+                        if (game.getModule(LobbyModule.class).getLobbyLocation().getGame() == null) {
+                            statsLoc.setGame(null);
+                        }
+                        Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), t ->
+                                playerStatsHologram.create(e.getGamePlayer(), statsLoc.getLocation()));
+                    }
 
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenAccept(ignored -> {
-                ConfigAPI config = new ConfigAPI(GameAPI.getInstance().getMinigameDataFolder().toString(), "config.yml", Minigame.getInstance().getPlugin());
-                GameInstance game = e.getGame();
-
-                LobbyLocation statsLoc = GameUtils.getLobbyLocation(config.getConfig(), game, "statsHologram");
-                if (statsLoc != null) {
-                    if (game.getModule(LobbyModule.class).getLobbyLocation().getGame() == null) statsLoc.setGame(null);
-                    Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), t ->
-                            playerStatsHologram.create(e.getGamePlayer(), statsLoc.getLocation()));
-                }
-
-                LobbyLocation topLoc = GameUtils.getLobbyLocation(config.getConfig(), game, "topStatsHologram");
-                if (topLoc != null) {
-                    if (game.getModule(LobbyModule.class).getLobbyLocation().getGame() == null) topLoc.setGame(null);
-                    Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), t ->
-                            topStatsHologram.create(e.getGamePlayer(), topLoc.getLocation()));
+                    LobbyLocation topLoc = GameUtils.getLobbyLocation(config.getConfig(), game, "topStatsHologram");
+                    if (topLoc != null) {
+                        if (game.getModule(LobbyModule.class).getLobbyLocation().getGame() == null) {
+                            topLoc.setGame(null);
+                        }
+                        Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), t ->
+                                topStatsHologram.create(e.getGamePlayer(), topLoc.getLocation()));
+                    }
                 }
             });
         }, 30L);
+    }
+
+    public CompletableFuture<?> preloadAll(OfflinePlayer offlinePlayer) {
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+        futures.add(lifetimeStorage.get(offlinePlayer.getName()));
+        for (StatPeriod period : StatPeriod.values()) {
+            if (period == StatPeriod.LIFETIME) continue;
+            futures.add(periodStorage.get(periodKey(offlinePlayer.getName(), period)));
+        }
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+    }
+
+    public CompletableFuture<?> preloadAll(PlayerIdentity playerIdentity) {
+        return preloadAll(playerIdentity.getOfflinePlayer());
     }
 
     public void removeHolograms(PlayerIdentity playerIdentity) {

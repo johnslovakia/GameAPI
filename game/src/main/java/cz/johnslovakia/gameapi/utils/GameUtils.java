@@ -6,6 +6,7 @@ import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.game.lobby.LobbyLocation;
+import cz.johnslovakia.gameapi.modules.game.map.Area;
 import cz.johnslovakia.gameapi.modules.game.map.GameMap;
 import cz.johnslovakia.gameapi.modules.game.map.MapLocation;
 import cz.johnslovakia.gameapi.modules.game.session.GameSessionModule;
@@ -27,6 +28,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
+import org.jspecify.annotations.NonNull;
 
 import java.util.*;
 
@@ -63,17 +65,17 @@ public class GameUtils {
 
 
 
-    public static Location getNonRespawnLocation(GameInstance game){
+    public static Location getNonRespawnLocation(@NonNull GameInstance game){
         GameMap playingMap = game.getCurrentMap();
         MapLocation spectatorSpawn = playingMap.getSpectatorSpawn();
 
         if (spectatorSpawn == null){
-            if (game.getCurrentMap().getMainArea() != null) {
-                Location center = playingMap.getMainArea().getCenter().add(0, 15, 0);
-                while (center.getBlock().getType().equals(Material.AIR)) {
-                    center.add(0, 1, 0);
-                }
-                return center;
+            Area mainArea = game.getCurrentMap().getMainArea();
+            if (mainArea != null) {
+                Location center = mainArea.getCenter().clone();
+                int y = center.getWorld().getHighestBlockYAt(center);
+
+                return new Location(center.getWorld(), center.getX(), y + 5, center.getZ());
             }else{
                 if (game.getPlayers().get(0) != null){
                     return game.getPlayers().get(0).getOnlinePlayer().getLocation();

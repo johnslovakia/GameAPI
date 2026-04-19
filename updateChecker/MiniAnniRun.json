@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.2.3",
-  "update_message": "Big Fixes and Imrovements",
+  "latest_version": "2.3",
+  "update_message": "Periodic Stats, Improvements & Fixes",
   "update_messages": {
     "2.0": "MAJOR UPDATE: custom resourcepack, 1.21 support and more!",
     "2.0.1": "Support for 1.21.9+ & small bug fixes",
@@ -10,6 +10,7 @@
     "2.2": "New Settings, Improvements, Bug Fixes, and more...",
     "2.2.1": "Big Fixes",
     "2.2.2": "Server Health Monitoring & Fixes",
-    "2.2.3": "Big Fixes and Improvements"
+    "2.2.3": "Big Fixes and Improvements",
+    "2.3": "Periodic Stats, Improvements & Fixes"
   }
 }

@@ -180,7 +180,7 @@ public class JoinQuitListener implements Listener {
             Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
                 if (Bukkit.getPlayer(player.getUniqueId()) == null) PlayerIdentityRegistry.unregister(player.getUniqueId());
             }, 10 * 20L);
-        }else if (gameInstance.getState().equals(GameState.INGAME)/* && !gameInstance.getSettings().isEnabledReJoin()*/){
+        }else if (gameInstance.getState().equals(GameState.INGAME) && !gameInstance.getSettings().isEnabledReJoin()){
             /*Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
                 if (Bukkit.getPlayer(player.getUniqueId()) == null) PlayerIdentityRegistry.unregister(player.getUniqueId());
             }, 20L);*/

@@ -6,6 +6,7 @@ import cz.johnslovakia.gameapi.modules.kits.Kit;
 import cz.johnslovakia.gameapi.modules.game.team.GameTeam;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.resources.ResourceComparator;
+import cz.johnslovakia.gameapi.modules.scores.ScoreGroup;
 import cz.johnslovakia.gameapi.modules.scores.ScoreModule;
 import cz.johnslovakia.gameapi.rewards.PlayerRewardRecord;
 import cz.johnslovakia.gameapi.users.GamePlayerState;
@@ -21,8 +22,6 @@ public class PlayerGameSession {
 
     private final PlayerIdentity playerIdentity;
     private final GameInstance gameInstance;
-    //private final Instant startTime;
-    //private Instant endTime;
 
     private final Map<Score, Integer> scores = new HashMap<>();
     private final Map<Score, List<PlayerRewardRecord>> earnedScoreRewards = new HashMap<>();
@@ -39,7 +38,10 @@ public class PlayerGameSession {
     public PlayerGameSession(PlayerIdentity playerIdentity, GameInstance gameInstance) {
         this.playerIdentity = playerIdentity;
         this.gameInstance = gameInstance;
-        //this.startTime = Instant.now();
+    }
+
+    public boolean hasEarnedSomething(){
+        return !earnedScoreRewards.isEmpty();
     }
 
     public int getScore(String scoreName){
@@ -49,11 +51,7 @@ public class PlayerGameSession {
                 .orElse(0);
     }
 
-    public boolean earnedSomething(){
-        return !earnedScoreRewards.isEmpty();
-    }
-
-    public Map<Resource, Integer> getTotalEarned() {
+    public Map<Resource, Integer> getEarnedRewards() {
         Map<Resource, Integer> total = new TreeMap<>(new ResourceComparator());
 
         earnedScoreRewards.values().stream()
@@ -67,7 +65,7 @@ public class PlayerGameSession {
         return total;
     }
 
-    public Map<Score, Integer> getEarnedBySource(Resource resource) {
+    public Map<Score, Integer> getEarnedRewardsBySource(Resource resource) {
         Map<Score, Integer> breakdown = new HashMap<>();
 
         earnedScoreRewards.forEach((score, records) -> {
@@ -83,20 +81,22 @@ public class PlayerGameSession {
         return breakdown;
     }
 
-    public int getRewardCount(Score score) {
-        List<PlayerRewardRecord> records = earnedScoreRewards.get(score);
-        return records != null ? records.size() : 0;
+    public int getGroupScoreSum(ScoreGroup scoreGroup) {
+        return earnedScoreRewards.keySet().stream()
+                .filter(score -> scoreGroup.getKey().equals(score.getGroupKey()))
+                .mapToInt(score -> getScore(score.getName()))
+                .sum();
     }
+
+    /*public int getGroupRewardedScoreCount(ScoreGroup scoreGroup) {
+        return Math.toIntExact(earnedScoreRewards.keySet().stream()
+                .filter(score -> scoreGroup.getKey().equals(score.getGroupKey()) && getScore(score.getName()) > 0)
+                .count());
+    }*/
+
 
     public void addPurchasedKitThisGame(Kit kit){
         if (purchasedKitsThisGame.contains(kit)) return;
         purchasedKitsThisGame.add(kit);
     }
-
-
-
-    /*public Instant getEndTime() {
-        this.endTime = Instant.now();
-        return endTime;
-    }*/
 }

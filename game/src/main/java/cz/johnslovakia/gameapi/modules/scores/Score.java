@@ -40,6 +40,7 @@ public class Score {
     private final Stat linkedStat;
     private final Reward reward;
     private final int rewardFrequency;
+    private final String groupKey;
     private Set<Trigger<?>> triggers = new HashSet<>();;
 
     private final boolean allowedMessage;
@@ -55,6 +56,7 @@ public class Score {
         this.scoreRanking = builder.scoreRanking;
         this.linkedStat = builder.linkedStat;
         this.rewardLimit = builder.limit;
+        this.groupKey = builder.groupKey;
 
         if (builder.getTriggers() != null){
             this.triggers = builder.getTriggers();
@@ -96,6 +98,10 @@ public class Score {
 
     public boolean hasPluralName(){
         return pluralName != null;
+    }
+
+    public boolean hasGroup() {
+        return groupKey != null;
     }
 
     private boolean checkConditions(PlayerIdentity target) {
@@ -158,7 +164,7 @@ public class Score {
 
     public static final class Builder {
 
-        private String name, displayName, linkRewardMessageKey;
+        private String name, displayName;
         private String pluralName = null;
         @Setter
         private Reward reward;
@@ -168,6 +174,7 @@ public class Score {
         private boolean scoreRanking = false;
         private int limit = 0;
         private Stat linkedStat;
+        private String groupKey = null;
         @Getter
         private Set<Trigger<?>> triggers = new HashSet<>();
 
@@ -238,11 +245,6 @@ public class Score {
             return this;
         }
 
-        public Builder setLinkRewardMessageKey(String linkRewardMessageKey) {
-            this.linkRewardMessageKey = linkRewardMessageKey;
-            return this;
-        }
-
         public Builder setDisplayName(String displayName) {
             this.displayName = displayName;
             return this;
@@ -293,6 +295,19 @@ public class Score {
 
         public Builder setTriggers(Set<Trigger<?>> triggers) {
             this.triggers = triggers;
+            return this;
+        }
+
+        /**
+         * Assigns this score to a {@link ScoreGroup}.
+         * Scores sharing the same group key are collapsed into a single line
+         * in the Reward Summary.
+         *
+         * <p>Make sure to also register the group via
+         * {@link ScoreModule#registerScoreGroup(ScoreGroup)} before the game starts.</p>
+         */
+        public Builder setGroup(String groupKey) {
+            this.groupKey = groupKey;
             return this;
         }
 

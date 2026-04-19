@@ -58,7 +58,7 @@ public class SlimeWorldLoader {
 
 
         SlimePropertyMap properties = new SlimePropertyMap();
-        properties.setValue(SlimeProperties.DIFFICULTY, "hard");
+        properties.setValue(SlimeProperties.DIFFICULTY, "normal");
         properties.setValue(SlimeProperties.PVP, true);
 
         Bukkit.getScheduler().runTaskAsynchronously(bukkitPlugin, () -> {
@@ -111,7 +111,7 @@ public class SlimeWorldLoader {
 
 
         SlimePropertyMap properties = new SlimePropertyMap();
-        properties.setValue(SlimeProperties.DIFFICULTY, "hard");
+        properties.setValue(SlimeProperties.DIFFICULTY, "normal");
 
         Bukkit.getScheduler().runTaskAsynchronously(bukkitPlugin, () -> {
             try {
@@ -169,7 +169,7 @@ public class SlimeWorldLoader {
 
 
         SlimePropertyMap properties = new SlimePropertyMap();
-        properties.setValue(SlimeProperties.DIFFICULTY, "hard");
+        properties.setValue(SlimeProperties.DIFFICULTY, "normal");
 
         Bukkit.getScheduler().runTaskAsynchronously(bukkitPlugin, () -> {
             try {

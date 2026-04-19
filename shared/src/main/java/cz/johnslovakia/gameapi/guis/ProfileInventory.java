@@ -310,7 +310,7 @@ public class ProfileInventory {
                                     unclaimedReward.claim();
                                     player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1F, 1F);
                                     int claimedTier = unclaimedReward.getTier();
-                                    if (claimedTier > dailyMeter.getPlayerDailyClaims(gamePlayer)) {
+                                    if (claimedTier > dailyMeter.getPlayerDailyClaims(gamePlayer) && unclaimedReward.getCreatedAt().toLocalDate().equals(LocalDate.now())) {
                                         dailyMeter.setPlayerDailyRewardsClaim(gamePlayer, claimedTier);
                                     }
                                     openGUI(gamePlayer);

@@ -183,7 +183,7 @@ public class PlayerDeathListener implements Listener {
                     .replace("%player_color%", useTeams ? "" + gamePlayer.getGameSession().getTeam().getChatColor() : "§a")
                     .replace("%killer_color%", useTeams ? "" + killer.getGameSession().getTeam().getChatColor() : "§a")
                     .addAndTranslate(multiKillKey)
-                    .addAndTranslate(e.isFinalKill() ? "word.elimination" : "")
+                    .addAndTranslate(e.isFinalKill() && game.getSettings().isEnabledRespawning() ? "word.elimination" : "")
                     .send();
 
             if (e.getAssists() != null && !e.getAssists().isEmpty()) {
@@ -287,11 +287,11 @@ public class PlayerDeathListener implements Listener {
                             hoverText = hoverText.appendNewline().append(statsComponent);
                         }
 
-                        if (session.earnedSomething()) {
+                        if (session.hasEarnedSomething()) {
                             hoverText = hoverText.appendNewline().appendNewline()
                                     .append(messageModule.getMessage(gamePlayer, "chat.view_statistic.rewards_earned").toComponent());
 
-                            for (Map.Entry<Resource, Integer> entry : session.getTotalEarned().entrySet()) {
+                            for (Map.Entry<Resource, Integer> entry : session.getEarnedRewards().entrySet()) {
                                 Resource resource = entry.getKey();
                                 String imgChar = resource.getImgChar() != null ? resource.getImgChar() + " " : "";
 
@@ -313,7 +313,8 @@ public class PlayerDeathListener implements Listener {
         if (game.hasModule(TeamModule.class)) {
             GameTeam gameTeam = session.getTeam();
             if (gameTeam != null) {
-                if (gameTeam.getAliveMembers().isEmpty()) {
+                if (gameTeam.getAliveMembers().isEmpty() &&
+                        (gameTeam.isDead() || !game.getSettings().isEnabledJoiningAfterStart())) {
                     messageModule.getMessage(game.getParticipants(), "chat.team_eliminated")
                             .replace("%team%", Component.text(gameTeam.getName()).color(gameTeam.getTeamColor().getTextColor()))
                             .send();

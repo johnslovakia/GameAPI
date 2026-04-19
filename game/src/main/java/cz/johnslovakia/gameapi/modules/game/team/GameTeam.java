@@ -13,6 +13,7 @@ import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.GameUtils;
+import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.PartyUtils;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -68,6 +69,10 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
                     || game.getSettings().isEnabledJoiningAfterStart()
                     || cause.equals(TeamJoinCause.REJOIN)) {
 
+                if (game.getState().equals(GameState.INGAME) && game.getSettings().isEnabledJoiningAfterStart() && getAllMembers().contains(gamePlayer)) {
+                    quitPlayer(gamePlayer);
+                }
+
                 if (!getAllMembers().contains(gamePlayer)) {
                     if (game.getState().equals(GameState.INGAME)) {
                         if (isDead()) {
@@ -88,54 +93,26 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
                         return false;
                     }
 
-
-                    if (gameSession.getTeam() != null) {
-                        gameSession.getTeam().quitPlayer(gamePlayer);
-                    }
-
-                    getAllMembers().add(gamePlayer);
+                    if (gameSession.getTeam() != null) gameSession.getTeam().quitPlayer(gamePlayer);
+                    if (!getAllMembers().contains(gamePlayer)) getAllMembers().add(gamePlayer);
                     gameSession.setTeam(this);
 
-                    if (cause.equals(TeamJoinCause.INDIVIDUAL) || cause.equals(TeamJoinCause.AUTO)) {
-                        if (gamePlayer.getParty().isInParty()) {
-                            List<PlayerIdentity> leftedAlone = new ArrayList<>();
-                            for (PlayerIdentity party : gamePlayer.getParty().getAllOnlinePlayers()) {
-                                if (getMembers().size() < game.getSettings().getMaxTeamPlayers()) {
-                                    joinPlayer((GamePlayer) party, TeamJoinCause.PARTY);
-                                } else {
-                                    leftedAlone.add(party);
-                                }
-                            }
-                            if (!leftedAlone.isEmpty()) {
-                                PartyUtils.assignRemainingPartyMembers(leftedAlone);
+                    if ((cause.equals(TeamJoinCause.INDIVIDUAL) || cause.equals(TeamJoinCause.AUTO)) && gamePlayer.getParty().isInParty()) {
+                        List<PlayerIdentity> leftedAlone = new ArrayList<>();
+                        for (PlayerIdentity party : gamePlayer.getParty().getAllOnlinePlayers()) {
+                            if (getMembers().size() < game.getSettings().getMaxTeamPlayers()) {
+                                joinPlayer((GamePlayer) party, TeamJoinCause.PARTY);
+                            } else {
+                                leftedAlone.add(party);
                             }
                         }
-                    }
-
-
-                    if (game.getState() == GameState.WAITING
-                            || game.getState() == GameState.STARTING){
-                        ItemStack[] contents = player.getInventory().getContents();
-                        for (ItemStack item : contents) {
-                            if (item == null || item.getType().equals(Material.AIR)) continue;
-
-                            if (item.getType().toString().toLowerCase().contains("banner")) {
-                                Material newBanner = Material.valueOf(getDyeColor().name() + "_BANNER");
-                                if (newBanner != null) {
-                                    item.setType(newBanner);
-                                    break;
-                                }
-                            }else if (item.getType().toString().toLowerCase().contains("wool")) {
-                                Material colorfulWool = Material.valueOf(getDyeColor().name() + "_WOOL");
-                                if (colorfulWool != null){
-                                    item.setType(colorfulWool);
-                                    break;
-                                }
-                            }
+                        if (!leftedAlone.isEmpty()) {
+                            PartyUtils.assignRemainingPartyMembers(leftedAlone);
                         }
                     }
 
                     GameUtils.setTeamNameTag(player, getName() + "_" + game.getID(), getChatColor());
+
                     LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
                     Component levelIcon = Component.empty();
                     if (levelModule != null && levelModule.getPlayerData(gamePlayer) != null) {
@@ -193,9 +170,7 @@ public class GameTeam extends Winner implements Comparable<GameTeam>{
     }
 
     public void quitPlayer(GamePlayer gamePlayer){
-        if (!isMember(gamePlayer)) {
-            return;
-        }
+        if (!isMember(gamePlayer)) return;
         getAllMembers().remove(gamePlayer);
     }
 

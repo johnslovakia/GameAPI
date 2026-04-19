@@ -39,8 +39,7 @@ public class UnclaimedReward {
         this.data = data;
         this.type = type;
 
-        Gson gson = new GsonBuilder()
-                .create();
+        Gson gson = new GsonBuilder().create();
         this.reward = gson.fromJson(rewardJson, Reward.class);
 
     }
@@ -52,8 +51,7 @@ public class UnclaimedReward {
         this.data = data;
         this.type = type;
 
-        Gson gson = new GsonBuilder()
-                .create();
+        Gson gson = new GsonBuilder().create();
         this.rewardJson = gson.toJson(reward, Reward.class);
     }
 
