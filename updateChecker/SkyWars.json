@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.5.2",
-  "update_message": "Server Health Monitoring & Fixes",
+  "latest_version": "2.6",
+  "update_message": "Periodic Stats, Improvements & Fixes",
   "update_messages": {
     "2.2": "LevelSystem, Changes and Bug Fixes",
     "2.2.1": "Bug Fixes",
@@ -9,6 +9,7 @@
     "2.4": "Customizable Chest Loot, Improvements & Bug Fixes",
     "2.5": "New Settings, Improvements, Bug Fixes, and more...",
     "2.5.1": "Bug Fixes",
-    "2.5.2": "Server Health Monitoring & Fixes"
+    "2.5.2": "Server Health Monitoring & Fixes",
+    "2.6": "Periodic Stats, Improvements & Fixes"
   }
 }
