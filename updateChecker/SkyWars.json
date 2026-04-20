@@ -1,7 +1,6 @@
 {
   "latest_version": "2.5.2",
   "update_message": "Server Health Monitoring & Fixes",
-  "announcement": "Sorry for all the updates this month, most of which were just bug fixes. I know it can be annoying to keep downloading updates.",
   "update_messages": {
     "2.2": "LevelSystem, Changes and Bug Fixes",
     "2.2.1": "Bug Fixes",
