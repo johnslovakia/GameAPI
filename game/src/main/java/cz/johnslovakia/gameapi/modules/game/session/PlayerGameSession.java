@@ -34,10 +34,15 @@ public class PlayerGameSession {
     private boolean enabledPVP = true;
     private boolean enabledMovement = true;
     private boolean limited = false;
+    private boolean participatedAsPlayer = false;
 
     public PlayerGameSession(PlayerIdentity playerIdentity, GameInstance gameInstance) {
         this.playerIdentity = playerIdentity;
         this.gameInstance = gameInstance;
+    }
+
+    public void markAsParticipated() {
+        this.participatedAsPlayer = true;
     }
 
     public boolean hasEarnedSomething(){

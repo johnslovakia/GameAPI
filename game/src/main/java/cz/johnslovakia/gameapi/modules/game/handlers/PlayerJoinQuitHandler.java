@@ -40,6 +40,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class PlayerJoinQuitHandler {
 
@@ -125,7 +126,7 @@ public class PlayerJoinQuitHandler {
                 player.setGameMode(GameMode.ADVENTURE);
             }, 2L);
 
-            participants.add(gamePlayer);
+            gameInstance.addParticipant(gamePlayer);
             session.setState(GamePlayerState.PLAYER);
             Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> gamePlayer.getPlayerData().loadKits());
 
@@ -158,6 +159,7 @@ public class PlayerJoinQuitHandler {
                     if (gameInstance.getRunningMainTask().getCounter() > settings.getReducedTime()) {
                         gameInstance.getRunningMainTask().setCounter(settings.getReducedTime());
                         ModuleManager.getModule(MessageModule.class).getMessage(participants, "chat.time_reduced")
+                                .replace("%reduced%", "" + settings.getReducedTime())
                                 .send();
                     }
                 }
@@ -184,7 +186,7 @@ public class PlayerJoinQuitHandler {
             Bukkit.getPluginManager().callEvent(ev);
             return;
         } else if (isRejoin) {
-            if (!participants.contains(gamePlayer)) participants.add(gamePlayer);
+            if (!participants.contains(gamePlayer)) gameInstance.addParticipant(gamePlayer);
             gamePlayer.setGameID(gameInstance.getID());
 
             Location rejoinLocation = (Location) gamePlayer.getMetadata().get("death_location");
@@ -231,7 +233,7 @@ public class PlayerJoinQuitHandler {
         } else if (gameInstance.getState().equals(GameState.INGAME) && settings.isEnabledJoiningAfterStart()){
             player.teleport(GameUtils.getNonRespawnLocation(gameInstance));
             if (gameInstance.getPlayers().size() < settings.getMaxPlayers()) {
-                participants.add(gamePlayer);
+                gameInstance.addParticipant(gamePlayer);
                 gamePlayer.setGameID(gameInstance.getID());
                 gamePlayer.getGameSession().setState(GamePlayerState.PLAYER);
 
@@ -260,7 +262,7 @@ public class PlayerJoinQuitHandler {
                         .send();
             }
         } else if (gameInstance.getState().equals(GameState.INGAME)) {
-            participants.add(gamePlayer);
+            gameInstance.addParticipant(gamePlayer);
             gamePlayer.setGameID(gameInstance.getID());
             gamePlayer.setSpectator(true);
 
@@ -310,7 +312,7 @@ public class PlayerJoinQuitHandler {
 
         gameInstance.getModule(GameSessionModule.class).createPlayerSession(gamePlayer);
 
-        gameInstance.getParticipants().add(gamePlayer);
+        gameInstance.addParticipant((gamePlayer));
         gamePlayer.setGameID(gameInstance.getID());
         gamePlayer.setSpectator(true);
         GameUtils.hideAndShowPlayers(gameInstance, player);

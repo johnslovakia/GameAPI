@@ -54,6 +54,7 @@ public interface Quest {
     default void addProgress(GamePlayer gamePlayer){
         PlayerData playerData = gamePlayer.getPlayerData();
         PlayerQuestData questData = playerData.getQuestData(this);
+        if (questData.isCompleted()) return;
 
         questData.increaseProgress();
         if (questData.getProgress() >= getCompletionGoal()){

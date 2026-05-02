@@ -271,7 +271,10 @@ public class GameEndHandler {
             } else {
                 statsModule.increasePlayerStat((GamePlayer) winner, "Winstreak", 1);
                 for (GamePlayer loser : gameInstance.getParticipants().stream().filter(gp -> gp != winner).toList()) {
-                    statsModule.setPlayerStat(loser, "Winstreak", 0);
+                    PlayerGameSession session = loser.getGameSession();
+                    if (session != null && session.isParticipatedAsPlayer()) {
+                        statsModule.setPlayerStat(loser, "Winstreak", 0);
+                    }
                 }
             }
         }

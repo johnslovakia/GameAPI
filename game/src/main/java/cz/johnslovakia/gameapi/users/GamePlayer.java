@@ -138,22 +138,24 @@ public class GamePlayer extends Winner implements PlayerIdentity {
 
     public void setSpectator(boolean spectator, boolean teamSelector){
         GameInstance game = getGame();
+        Player onlinePlayer = getOnlinePlayer();
 
         if (spectator){
             getGameSession().setState(GamePlayerState.SPECTATOR);
 
-            getOnlinePlayer().setGameMode(GameMode.ADVENTURE);
+            onlinePlayer.setGameMode(GameMode.ADVENTURE);
+            onlinePlayer.setCollidable(false);
             Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
-                getOnlinePlayer().setAllowFlight(true);
-                getOnlinePlayer().setFlying(true);
+                onlinePlayer.setAllowFlight(true);
+                onlinePlayer.setFlying(true);
             }, 3L);
-            getOnlinePlayer().addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
+            onlinePlayer.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
 
             for (GamePlayer alivePlayer : game.getPlayers()) {
-                alivePlayer.getOnlinePlayer().hidePlayer(Core.getInstance().getPlugin(), getOnlinePlayer());
+                alivePlayer.getOnlinePlayer().hidePlayer(Core.getInstance().getPlugin(), onlinePlayer);
             }
             for (GamePlayer otherSpectator : game.getSpectators()) {
-                otherSpectator.getOnlinePlayer().hidePlayer(Core.getInstance().getPlugin(), getOnlinePlayer());
+                otherSpectator.getOnlinePlayer().hidePlayer(Core.getInstance().getPlugin(), onlinePlayer);
             }
 
             GameMap currentMap = game.getCurrentMap();
@@ -161,7 +163,7 @@ public class GamePlayer extends Winner implements PlayerIdentity {
                 currentMap.getPlayerToLocation().remove(this);
             }
 
-            PlayerInventory inventory = getOnlinePlayer().getInventory();
+            PlayerInventory inventory = onlinePlayer.getInventory();
             inventory.setChestplate(new ItemStack(Material.AIR));
             inventory.setLeggings(new ItemStack(Material.AIR));
             inventory.setBoots(new ItemStack(Material.AIR));
@@ -178,24 +180,25 @@ public class GamePlayer extends Winner implements PlayerIdentity {
 
             for (GamePlayer gamePlayer : game.getPlayers()){
                 if (!gamePlayer.equals(this)){
-                    gamePlayer.getOnlinePlayer().showPlayer(Core.getInstance().getPlugin(), getOnlinePlayer());
+                    gamePlayer.getOnlinePlayer().showPlayer(Core.getInstance().getPlugin(), onlinePlayer);
                 }
             }
             for (GamePlayer otherSpectator : game.getSpectators()) {
-                otherSpectator.getOnlinePlayer().hidePlayer(Core.getInstance().getPlugin(), getOnlinePlayer());
+                otherSpectator.getOnlinePlayer().hidePlayer(Core.getInstance().getPlugin(), onlinePlayer);
             }
 
-            if (getGame().getSpectatorManager().getInventoryManager().getPlayers().contains(getOnlinePlayer())){
+            if (getGame().getSpectatorManager().getInventoryManager().getPlayers().contains(onlinePlayer)){
                 getGame().getSpectatorManager().getInventoryManager().unloadInventory(this);
             }
-            if (getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().getPlayers().contains(getOnlinePlayer())){
+            if (getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().getPlayers().contains(onlinePlayer)){
                 getGame().getSpectatorManager().getWithTeamSelectorInventoryManager().unloadInventory(this);
             }
 
-            getOnlinePlayer().setAllowFlight(false);
-            getOnlinePlayer().setFlying(false);
-            for (PotionEffect potionEffect : getOnlinePlayer().getActivePotionEffects()){
-                getOnlinePlayer().removePotionEffect(potionEffect.getType());
+            onlinePlayer.setAllowFlight(false);
+            onlinePlayer.setFlying(false);
+            onlinePlayer.setCollidable(true);
+            for (PotionEffect potionEffect : onlinePlayer.getActivePotionEffects()){
+                onlinePlayer.removePotionEffect(potionEffect.getType());
             }
         }
     }

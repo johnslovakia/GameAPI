@@ -21,6 +21,7 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.damage.DamageType;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -53,6 +54,19 @@ public class MapSettingsListener implements Listener {
     @EventHandler
     public void onXpPickup(PlayerPickupExperienceEvent e) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
+        if (!gamePlayer.isInGame()) return;
+
+        if (gamePlayer.isSpectator() || gamePlayer.getGame().getState() != GameState.INGAME){
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onTarget(EntityTargetLivingEntityEvent e) {
+        if (!(e.getEntity() instanceof ExperienceOrb)) return;
+        if (!(e.getTarget() instanceof Player player)) return;
+
+        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         if (!gamePlayer.isInGame()) return;
 
         if (gamePlayer.isSpectator() || gamePlayer.getGame().getState() != GameState.INGAME){

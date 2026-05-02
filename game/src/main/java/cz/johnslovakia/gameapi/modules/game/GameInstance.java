@@ -58,7 +58,7 @@ public class GameInstance implements Terminate{
     private BukkitTask updateTask;
 
     private List<GamePlayer> participants = new ArrayList<>();
-    private List<Block> placedBlocks;
+    private Set<Block> placedBlocks;
     private Map<String, Object> metadata = new HashMap<>();
     private List<Placement<?>> placements = new ArrayList<>();
     @Setter
@@ -122,6 +122,10 @@ public class GameInstance implements Terminate{
 
     public void endGame(Winner winner){
         getGameEndHandler().endGame(winner);
+    }
+
+    public void addParticipant(GamePlayer gamePlayer){
+        if (!participants.contains(gamePlayer)) participants.add(gamePlayer);
     }
 
     public <T extends GameModule> T registerModule(T module) {
@@ -417,8 +421,7 @@ public class GameInstance implements Terminate{
     }
 
     public void addBlock(Block block) {
-        if (placedBlocks == null)
-            placedBlocks = new ArrayList<>();
+        if (placedBlocks == null) placedBlocks = new HashSet<>();
 
         if (!containsBlock(block)){
             placedBlocks.add(block);

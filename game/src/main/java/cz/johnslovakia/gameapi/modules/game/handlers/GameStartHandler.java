@@ -101,6 +101,7 @@ public class GameStartHandler {
         }
 
         if (!rejoin) {
+            session.markAsParticipated();
             gamePlayer.resetAttributes();
 
             if (gameInstance.getSettings().isSendMinigameDescription()) {

@@ -8,6 +8,7 @@ import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.game.GameService;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.events.GameQuitEvent;
+import cz.johnslovakia.gameapi.modules.game.session.PlayerGameSession;
 import cz.johnslovakia.gameapi.modules.levels.LevelModule;
 import cz.johnslovakia.gameapi.modules.serverManagement.PendingActionType;
 import cz.johnslovakia.gameapi.modules.serverManagement.PendingServerAction;
@@ -163,7 +164,10 @@ public class JoinQuitListener implements Listener {
         Utils.clearHeadCache(gamePlayer.getUniqueId());
 
         if (game.getState().equals(GameState.INGAME) && !game.getSettings().isUseTeams() && !gamePlayer.isRespawning()){ //TODO: check
-            ModuleManager.getModule(StatsModule.class).setPlayerStat(gamePlayer, "Winstreak", 0);
+            PlayerGameSession session = gamePlayer.getGameSession();
+            if (session != null && session.isParticipatedAsPlayer()) {
+                ModuleManager.getModule(StatsModule.class).setPlayerStat(gamePlayer, "Winstreak", 0);
+            }
         }
     }
 
