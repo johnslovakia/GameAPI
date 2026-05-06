@@ -431,7 +431,7 @@ public class GameAPI{
         JavaPlugin plugin = minigame.getPlugin();
         
         onEnable(minigame);
-        new Core(Core.PluginContext.MINIGAME, plugin, minigame.getDatabase());
+        //new Core(Core.PluginContext.MINIGAME, plugin, minigame.getDatabase());
 
         boolean somethingwrong = false;
         //TODO: something went wrong messages
@@ -446,9 +446,6 @@ public class GameAPI{
         moduleManager.registerModule(new RestartScheduler());
         ResourcesModule resourcesModule = moduleManager.registerModule(new ResourcesModule());
 
-
-        // Auto-discover language names from the minigame JAR (languages/*.yml) and any manually
-        // registered entries. Then also pick up user-created language files on the server disk.
         Set<String> languageNames = minigame.detectLanguageNames();
 
         File serverLanguagesFolder = new File(plugin.getDataFolder(), "languages");
@@ -461,14 +458,12 @@ public class GameAPI{
             }
         }
 
-        // Set the default language from MinigameSettings.
         String defaultLangName = minigame.getSettings().getDefaultLanguage();
 
         List<FileGroup> fileGroups = new ArrayList<>();
         for (String langName : languageNames) {
             List<InputStream> streams = new ArrayList<>();
 
-            // Prefer a manually registered stream; fall back to the plugin resource.
             InputStreamWithName registered = minigame.getLanguageFiles().get(langName);
             if (registered != null) {
                 streams.add(registered.inputStream());
@@ -477,7 +472,6 @@ public class GameAPI{
                 if (minigameStream != null) streams.add(minigameStream);
             }
 
-            // Always merge with GameAPI's built-in gLanguages if available.
             InputStream gLangStream = GameAPI.class.getClassLoader().getResourceAsStream("gLanguages/" + langName + ".yml");
             if (gLangStream != null) streams.add(gLangStream);
 
@@ -485,7 +479,6 @@ public class GameAPI{
                 fileGroups.add(new FileGroup(langName, streams));
             }
 
-            // Register the Language object and mark the default.
             Language lang = Language.getLanguage(langName);
             if (lang == null) {
                 lang = Language.addLanguage(new Language(langName));
@@ -500,7 +493,6 @@ public class GameAPI{
 
 
         try{
-            //TODO: vyřešit název
             boolean bungeecord = ModuleManager.getModule(ServerRegistry.class) != null &&
                             (ModuleManager.getModule(ServerRegistry.class).getServerDataMySQL() != null
                                     || ModuleManager.getModule(ServerRegistry.class).getServerDataRedis() != null);

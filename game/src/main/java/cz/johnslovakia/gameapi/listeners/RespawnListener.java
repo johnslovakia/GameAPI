@@ -28,6 +28,7 @@ public class RespawnListener implements Listener {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         if (!gamePlayer.isInGame()) return;
         GameInstance game = PlayerManager.getGamePlayer(player).getGame();
+
         if (!game.getState().equals(GameState.INGAME)) {
             if (game.getState().equals(GameState.WAITING) || game.getState().equals(GameState.STARTING)) {
                 LobbyModule lobbyModule = game.getModule(LobbyModule.class);
@@ -62,8 +63,14 @@ public class RespawnListener implements Listener {
                     int second = game.getSettings().getRespawnCooldown();
                     @Override
                     public void run() {
+                        if (!player.isOnline() || gamePlayer.getGame() == null) {
+                            this.cancel();
+                            return;
+                        }
+
                         if (second == 0) {
                             player.teleport(playingMap.getPlayerToLocation(gamePlayer));
+                            this.cancel();
                         }else{
                             ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "title.respawn")
                                     .replace("%time%", "" + second)
@@ -76,8 +83,24 @@ public class RespawnListener implements Listener {
         }else if (player.getLastDamageCause() == null || (player.getLastDamageCause() != null && player.getLastDamageCause().getCause().equals(EntityDamageEvent.DamageCause.VOID)) || gamePlayer.getMetadata().containsKey("diedInVoid")){
             e.setRespawnLocation(GameUtils.getNonRespawnLocation(game));
         }else{
-            e.setRespawnLocation((Location) gamePlayer.getMetadata().get("death_location"));
-            gamePlayer.getMetadata().remove("death_location");
+            Location deathLoc = (Location) gamePlayer.getMetadata().get("death_location");
+            if (deathLoc != null) {
+                e.setRespawnLocation(deathLoc);
+                gamePlayer.getMetadata().remove("death_location");
+            } else {
+                e.setRespawnLocation(GameUtils.getNonRespawnLocation(game));
+            }
+        }
+
+        if (gamePlayer.getMetadata().containsKey("pending_spectator_visuals")) {
+            boolean teamSelector = (boolean) gamePlayer.getMetadata().remove("pending_spectator_visuals");
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (!player.isOnline()) return;
+                    gamePlayer.applySpectatorVisuals(teamSelector);
+                }
+            }.runTaskLater(Minigame.getInstance().getPlugin(), 1L);
         }
     }
 }

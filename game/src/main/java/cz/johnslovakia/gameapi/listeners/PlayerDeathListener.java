@@ -3,6 +3,7 @@ package cz.johnslovakia.gameapi.listeners;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import cz.johnslovakia.gameapi.Minigame;
+import cz.johnslovakia.gameapi.WinCondition;
 import cz.johnslovakia.gameapi.events.PlayerEliminationEvent;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.events.GamePlayerDeathEvent;
@@ -241,6 +242,7 @@ public class PlayerDeathListener implements Listener {
                 messageModule.getMessage(gamePlayer, "title.spectator")
                         .send();
                 gamePlayer.setSpectator(true);
+                //gamePlayer.getMetadata().put("pending_spectator", true);
             }
 
             PlayerEliminationEvent ev = new PlayerEliminationEvent(gamePlayer, e.getKiller(), e.getAssists(), placement);
@@ -333,13 +335,14 @@ public class PlayerDeathListener implements Listener {
             }
         }
 
-        Minigame.EndGame endGame = Minigame.getInstance().getEndGameFunction();
-        if (endGame != null && endGame.validator().test(game)) {
+        WinCondition winCondition = Minigame.getInstance().getWinCondition();
+
+        if (winCondition != null && winCondition.shouldEnd(game)) {
             new BukkitRunnable() {
                 @Override
                 public void run() {
                     if (!game.getState().equals(GameState.INGAME)) return;
-                    endGame.response().accept(game);
+                    winCondition.resolve(game);
                 }
             }.runTaskLater(Minigame.getInstance().getPlugin(), 2L);
         }

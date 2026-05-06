@@ -306,10 +306,12 @@ public class GameEndHandler {
                     Player player = gamePlayer.getOnlinePlayer();
 
                     if (winner != null) {
-                        ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.winstreak")
-                                .replace("%old_winstreak%", "" + oldWinstreaks.get(gamePlayer))
-                                .replace("%new_winstreak%", (statsModule.getPlayerStat(gamePlayer, "Winstreak") == 0 ? "§c" : "§a") + statsModule.getPlayerStat(gamePlayer, "Winstreak"))
-                                .send();
+                        if (session.isParticipatedAsPlayer()) {
+                            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.winstreak")
+                                    .replace("%old_winstreak%", "" + oldWinstreaks.get(gamePlayer))
+                                    .replace("%new_winstreak%", (statsModule.getPlayerStat(gamePlayer, "Winstreak") == 0 ? "§c" : "§a") + statsModule.getPlayerStat(gamePlayer, "Winstreak"))
+                                    .send();
+                        }
                     }
 
 

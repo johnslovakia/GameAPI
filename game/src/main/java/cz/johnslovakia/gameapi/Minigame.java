@@ -29,6 +29,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.net.URISyntaxException;
@@ -51,7 +52,7 @@ public abstract class Minigame {
     private UpdateChecker updateChecker;
     private MinigameSettings settings;
     private Database database;
-    private EndGame endGameFunction;
+    private WinCondition winCondition;
     private MinigameTable minigameTable;
     private String descriptionTranslateKey;
 
@@ -85,8 +86,16 @@ public abstract class Minigame {
         return player.hasPermission(permission);
     }
 
-    public void updateSettings(Consumer<MinigameSettings.Builder> updater) {
-        MinigameSettings.Builder builder = this.settings.toBuilder();
+    @NotNull
+    public final MinigameConfigurator configure() {
+        return new MinigameConfigurator(this);
+    }
+
+    public void updateSettings(@NotNull Consumer<MinigameSettings.Builder> updater) {
+        if (settings == null) {
+            throw new IllegalStateException("Call configure().settings(MinigameSettings) before updateSettings(...).");
+        }
+        MinigameSettings.Builder builder = settings.toBuilder();
         updater.accept(builder);
         this.settings = builder.build();
     }
@@ -168,22 +177,6 @@ public abstract class Minigame {
         }
     }
 
-    //TODO: rewrite
-    public Minigame setServerDataMySQL(Database serverDataMySQL) {
-        ServerRegistry registry = moduleManager.registerModule(new ServerRegistry(serverDataMySQL));
-        registry.addMinigame(new IMinigame(registry, getFullName()));
-        return this;
-    }
-
-    //TODO: rewrite
-    public Minigame setServerDataRedis(RedisManager serverDataRedis) {
-        ServerRegistry registry = moduleManager.registerModule(new ServerRegistry(serverDataRedis));
-        registry.addMinigame(new IMinigame(registry, getFullName()));
-        //moduleManager.registerModule(new ServerRegistry(serverDataRedis));
-        return this;
-    }
-
-
     public String getFullName(){
         return fullName == null ? name : fullName;
     }
@@ -191,6 +184,4 @@ public abstract class Minigame {
     public abstract void setupPlayerScores();
     public abstract GameInstance setupGame(String name);
     public abstract void setupOther();
-
-    public record EndGame(Predicate<GameInstance> validator, Consumer<GameInstance> response) {}
 }

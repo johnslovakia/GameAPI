@@ -224,7 +224,7 @@ public class PVPListener implements Listener {
     }
 
 
-    @EventHandler
+    /*@EventHandler
     public void forceRespawn(PlayerDeathEvent e) {
         if (e.isCancelled()) return;
 
@@ -235,11 +235,11 @@ public class PVPListener implements Listener {
         Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(
                 Minigame.getInstance().getPlugin(), () -> {
                     if (!player.isOnline()) return;
-                    player.spigot().respawn();
+                    //player.spigot().respawn(); replaced with gamerule
                     player.setFireTicks(0);
-                }, 2L
+                }, 5L
         );
-    }
+    }*/
 
     @EventHandler (priority = EventPriority.LOWEST)
     public void onPlayerDeath(PlayerDeathEvent e){
@@ -250,7 +250,7 @@ public class PVPListener implements Listener {
         GameInstance game = gamePlayer.getGame();
         if (!game.getState().equals(GameState.INGAME)) return;
         if (gamePlayer.isSpectator()) {
-            e.setCancelled(true);
+            //e.setCancelled(true);
             return;
         }
 
@@ -259,11 +259,6 @@ public class PVPListener implements Listener {
                         item.hasItemMeta() &&
                         item.getItemMeta().hasCustomModelData()
         );
-
-        if (gamePlayer.getGameSession().getState().equals(GamePlayerState.DISCONNECTED)){
-            e.setKeepInventory(true);
-            e.setKeepLevel(true);
-        }
 
         gamePlayer.getMetadata().put("death_location", player.getLocation());
 

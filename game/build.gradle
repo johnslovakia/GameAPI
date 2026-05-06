@@ -57,7 +57,7 @@ shadowJar {
             dep.moduleGroup == 'org.apache.commons' && dep.moduleName == 'commons-pool2'
         }
         include { dep ->
-            dep.moduleGroup == 'com.github.cryptomorin' && dep.moduleName == 'XSeries'
+            dep.moduleGroup == 'com.github.TeamHRLive' && dep.moduleName == 'XSeries'
         }
         include { dep ->
             dep.moduleGroup == 'com.infernalsuite.asp' && dep.moduleName == 'mysql-loader'

@@ -75,7 +75,6 @@ public class QuestManager {
 
     public void check(GamePlayer gamePlayer){
         PlayerData playerData = gamePlayer.getPlayerData();
-
         playerData.getQuestData().removeIf(this::shouldReset);
 
 
@@ -117,22 +116,20 @@ public class QuestManager {
                 .filter(r -> r.getQuestName().equals(data.getQuest().getName())
                         && r.getQuestType().equals(data.getQuest().getType()))
                 .findFirst();
-        if (unclaimedReward.isPresent())
-            return false;
+        if (unclaimedReward.isPresent()) return false;
 
 
         LocalDate today = LocalDate.now();
         LocalDate startDate = data.getStartDate();
-        if (startDate == null)
-            return true;
+        if (startDate == null) return true;
 
         if (data.getQuest().getType().equals(QuestType.WEEKLY)) {
-            WeekFields weekFields = WeekFields.of(Locale.getDefault());
+            WeekFields weekFields = WeekFields.ISO;//WeekFields.of(Locale.getDefault());
             int startWeek = startDate.get(weekFields.weekOfWeekBasedYear());
             int currentWeek = today.get(weekFields.weekOfWeekBasedYear());
 
-            int startYear = startDate.getYear();
-            int currentYear = today.getYear();
+            int startYear = startDate.get(weekFields.weekBasedYear());
+            int currentYear = today.get(weekFields.weekBasedYear());
 
             return startWeek != currentWeek || startYear != currentYear;
         } else {
@@ -148,8 +145,9 @@ public class QuestManager {
         for(Method method : quest.getClass().getDeclaredMethods()){
 
             if(!method.isAnnotationPresent(Condition.class)) continue;
-            if(!method.getReturnType().equals(boolean.class))
-                if(method.getParameterCount() > 1) continue;
+//            if(!method.getReturnType().equals(boolean.class))
+//                if(method.getParameterCount() > 1) continue;
+            if (!method.getReturnType().equals(boolean.class) || method.getParameterCount() > 1) continue;
             method.setAccessible(true);
 
             Condition condition = method.getAnnotation(Condition.class);
@@ -182,7 +180,7 @@ public class QuestManager {
                 for (PlayerIdentity playerIdentity : trigger.compute(clazz.cast(event))) {
                     if (checkConditions(quest, playerIdentity)) {
                         trigger.getResponse().accept(playerIdentity);
-                        return;
+                        //return;
                     }
                 }
             }

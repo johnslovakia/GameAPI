@@ -148,7 +148,7 @@ public class Reward {
                             .append(Component.text(resource.getColor() + resource.getDisplayName()))
                             .build();
 
-                    if (!bonusAppliedToAll && resource.isApplicableBonus()) {
+                    if (!bonusAppliedToAll && resource.isApplicableBonus() && bonus != 0) {
                         Component bonusComponent = ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.reward.bonus_applied")
                                 .replace("%bonus%", String.valueOf(bonus))
                                 .toComponent();

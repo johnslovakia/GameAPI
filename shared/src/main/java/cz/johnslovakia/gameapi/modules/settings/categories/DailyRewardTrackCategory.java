@@ -6,10 +6,7 @@ import cz.johnslovakia.gameapi.modules.dailyRewardTrack.DailyRewardTrackModule;
 import cz.johnslovakia.gameapi.modules.dailyRewardTrack.DailyRewardTier;
 import cz.johnslovakia.gameapi.modules.levels.LevelModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
-import cz.johnslovakia.gameapi.modules.settings.SettingCategory;
-import cz.johnslovakia.gameapi.modules.settings.SettingItem;
-import cz.johnslovakia.gameapi.modules.settings.SettingPageGUI;
-import cz.johnslovakia.gameapi.modules.settings.SettingsModule;
+import cz.johnslovakia.gameapi.modules.settings.*;
 import cz.johnslovakia.gameapi.rewards.RewardItem;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
@@ -34,9 +31,30 @@ public class DailyRewardTrackCategory implements SettingCategory {
     }
 
     private static void openMain(Player player) {
+        List<BottomAction> actions = List.of(
+                new BottomAction(8, new ItemBuilder(Material.BARRIER)
+                        .setName("§cRestore default settings")
+                        .removeLore()
+                        .addLoreLine("")
+                        .addLoreLine("§c► Click to restore default settings")
+                        .toItemStack(), p -> {
+                    new ConfirmInventory(PlayerIdentityRegistry.get(p), "§cRestore default settings", playerIdentity -> {
+                        DailyRewardTrackModule dailyRewardTrackModule = DailyRewardTrackModule.createDefault();
+
+                        DailyRewardTrackModule.saveDailyRewardTrackModule(dailyRewardTrackModule);
+                        ModuleManager.getInstance().destroyModule(DailyRewardTrackModule.class);
+                        ModuleManager.getInstance().registerModule(dailyRewardTrackModule);
+
+                        openMain(p);
+                        p.sendMessage("§cDaily Reward Track settings were reset to default. Changes may not apply until the server is restarted.");
+                    }, playerIdentity -> openMain(playerIdentity.getOnlinePlayer())).openGUI();
+                })
+        );
+
         SettingPageGUI.open(player, "Daily Reward Track",
                 DailyRewardTrackCategory::buildMainItems,
-                p -> ModuleManager.getModule(SettingsModule.class).open(p));
+                p -> ModuleManager.getModule(SettingsModule.class).open(p),
+                actions);
     }
 
     private static List<SettingItem> buildMainItems() {
@@ -85,24 +103,6 @@ public class DailyRewardTrackCategory implements SettingCategory {
 
             items.add(SettingItem.navigate(b.toItemStack(), ctx -> openTierEditor(ctx.player, idx)));
         }
-
-        items.add(SettingItem.navigate(new ItemBuilder(Material.BARRIER)
-                .setName("§cRestore default settings")
-                .removeLore()
-                .addLoreLine("")
-                .addLoreLine("§c► Click to restore default settings")
-                .toItemStack(), ctx -> {
-            new ConfirmInventory(PlayerIdentityRegistry.get(ctx.player), "§cRestore default settings", playerIdentity -> {
-                DailyRewardTrackModule dailyRewardTrackModule = DailyRewardTrackModule.createDefault();
-
-                DailyRewardTrackModule.saveDailyRewardTrackModule(dailyRewardTrackModule);
-                ModuleManager.getInstance().destroyModule(DailyRewardTrackModule.class);
-                ModuleManager.getInstance().registerModule(dailyRewardTrackModule);
-
-                openMain(ctx.player);
-                ctx.player.sendMessage("§cYou have restored the Daily Reward Track to default. Server restart recommended.");
-            }, playerIdentity -> openMain(playerIdentity.getOnlinePlayer())).openGUI();
-        }));
 
         return items;
     }

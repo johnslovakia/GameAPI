@@ -67,7 +67,7 @@ public class StringUtils {
     }
 
     public static String betterNumberFormat(long number) {
-        NumberFormat numberFormat = NumberFormat.getInstance(Locale.US);
+        NumberFormat numberFormat = NumberFormat.getInstance(Locale.getDefault());
         return numberFormat.format(number);
     }
 

@@ -32,10 +32,8 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.time.temporal.WeekFields;
+import java.util.*;
 
 public class QuestInventory {
 
@@ -46,11 +44,12 @@ public class QuestInventory {
         int bonus = getBonus(gamePlayer);
 
         LocalDate today = LocalDate.now();
-        LocalDate nextMonday = today.with(DayOfWeek.MONDAY);
-        if (!today.isBefore(nextMonday)) {
-            nextMonday = nextMonday.plusWeeks(1);
+        WeekFields weekFields = WeekFields.ISO;//WeekFields.of(Locale.getDefault());
+        LocalDate nextWeekStart = today.with(weekFields.dayOfWeek(), 1);
+        if (!today.isBefore(nextWeekStart)) {
+            nextWeekStart = nextWeekStart.plusWeeks(1);
         }
-        LocalDateTime nextMondayStart = nextMonday.atStartOfDay();
+        LocalDateTime nextWeekStartTime = nextWeekStart.atStartOfDay();
 
 
         Optional<QuestUnclaimedReward> unclaimedReward = ModuleManager.getModule(UnclaimedRewardsModule.class)
@@ -103,7 +102,7 @@ public class QuestInventory {
         || (quest.getType() == QuestType.WEEKLY && !unclaimedReward.get().getCreatedAt().toLocalDate().equals(LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))))) {
             item.addLoreLine("");
             ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "inventory.quests.resets_in")
-                    .replace("%time%", (quest.getType().equals(QuestType.WEEKLY) ? StringUtils.getTimeLeftUntil(nextMondayStart) : StringUtils.getTimeLeftUntil(LocalDate.now().plusDays(1).atStartOfDay())))
+                    .replace("%time%", (quest.getType().equals(QuestType.WEEKLY) ? StringUtils.getTimeLeftUntil(nextWeekStartTime) : StringUtils.getTimeLeftUntil(LocalDate.now().plusDays(1).atStartOfDay())))
                     .addToItemLore(item);
         }
 

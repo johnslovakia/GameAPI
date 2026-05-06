@@ -168,7 +168,6 @@ public class MessageModule implements Module, Listener {
 
             if (!serverFile.exists()) return;
 
-            // Ensure the server file ends with a newline before appending.
             try (RandomAccessFile raf = new RandomAccessFile(serverFile, "rw")) {
                 if (raf.length() != 0) {
                     raf.seek(raf.length() - 1);
@@ -179,8 +178,6 @@ public class MessageModule implements Module, Listener {
                 }
             }
 
-            // Buffer lines from the resource file so we can write comment/blank lines
-            // that precede a new key together with that key.
             List<String> pendingLines = new ArrayList<>();
             String line;
             boolean firstLine = true;
@@ -192,9 +189,6 @@ public class MessageModule implements Module, Listener {
                 }
 
                 String trimmed = line.trim();
-
-                // Accumulate comment and blank lines; they will be flushed together with
-                // the next new key so the server file keeps the same visual grouping.
                 if (trimmed.isEmpty() || trimmed.startsWith("#")) {
                     pendingLines.add(line);
                     continue;
@@ -202,7 +196,6 @@ public class MessageModule implements Module, Listener {
 
                 int colonIndex = line.indexOf(':');
                 if (colonIndex == -1) {
-                    // Not a key=value line and not a comment — skip.
                     pendingLines.clear();
                     continue;
                 }
@@ -210,12 +203,10 @@ public class MessageModule implements Module, Listener {
                 String key = line.substring(0, colonIndex).trim();
 
                 if (containsKey(serverFile, key)) {
-                    // Key already present: discard buffered comments for this key.
                     pendingLines.clear();
                     continue;
                 }
 
-                // New key: write the buffered comment/blank lines followed by the key line.
                 try (BufferedWriter writer = new BufferedWriter(
                         new OutputStreamWriter(new FileOutputStream(serverFile, true), StandardCharsets.UTF_8))) {
                     for (String pending : pendingLines) {
@@ -453,5 +444,28 @@ public class MessageModule implements Module, Listener {
             return line.substring(1);
         }
         return line;
+    }
+
+    public void reloadMessages() {
+        messages = new HashMap<>();
+
+        File pluginLanguagesFolder = new File(plugin.getDataFolder(), "languages");
+        if (!pluginLanguagesFolder.exists()) {
+            Logger.log("Languages folder does not exist, nothing to reload.", Logger.LogType.WARNING);
+            return;
+        }
+
+        File[] files = pluginLanguagesFolder.listFiles((dir, name) -> name.endsWith(".yml"));
+        if (files == null || files.length == 0) {
+            Logger.log("No language files found to reload.", Logger.LogType.WARNING);
+            return;
+        }
+
+        Logger.info("Reloading language files...");
+        for (File file : files) {
+            long startTime = System.currentTimeMillis();
+            loadMessagesFromFile(file);
+            Logger.log("Reloaded language file " + file.getName() + " (" + (System.currentTimeMillis() - startTime) + "ms)", Logger.LogType.INFO);
+        }
     }
 }

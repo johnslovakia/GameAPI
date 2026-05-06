@@ -2,14 +2,13 @@ package cz.johnslovakia.gameapi.modules.settings.categories;
 
 import cz.johnslovakia.gameapi.guis.ConfirmInventory;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
+import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticPrices;
+import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
 import cz.johnslovakia.gameapi.modules.levels.LevelModule;
 import cz.johnslovakia.gameapi.modules.levels.LevelRange;
 import cz.johnslovakia.gameapi.modules.levels.LevelReward;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
-import cz.johnslovakia.gameapi.modules.settings.SettingCategory;
-import cz.johnslovakia.gameapi.modules.settings.SettingItem;
-import cz.johnslovakia.gameapi.modules.settings.SettingPageGUI;
-import cz.johnslovakia.gameapi.modules.settings.SettingsModule;
+import cz.johnslovakia.gameapi.modules.settings.*;
 import cz.johnslovakia.gameapi.rewards.Reward;
 import cz.johnslovakia.gameapi.rewards.RewardItem;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
@@ -35,48 +34,50 @@ public class LevelModuleCategory implements SettingCategory {
     public void open(Player player) { openSubMenu(player); }
 
     private static void openSubMenu(Player player) {
-        SettingPageGUI.open(player, "Level System", () -> List.of(
-
-                SettingItem.navigate(
-                        new ItemBuilder(Material.EXPERIENCE_BOTTLE)
-                                .setName("§fLevel Ranges")
-                                .removeLore()
-                                .addLoreLine("§7Base XP, XP scaling and per-range reward.")
-                                .addLoreLine("")
-                                .addLoreLine("§a► Click to open")
-                                .toItemStack(),
-                        ctx -> openRangeList(ctx.player)
-                ),
-
-                SettingItem.navigate(
-                        new ItemBuilder(Material.GOLD_INGOT)
-                                .setName("§fLevel Rewards")
-                                .removeLore()
-                                .addLoreLine("§7Edit reward amounts per level group.")
-                                .addLoreLine("")
-                                .addLoreLine("§a► Click to open")
-                                .toItemStack(),
-                        ctx -> openRewardEditor(ctx.player)
-                ),
-
-                SettingItem.navigate(new ItemBuilder(Material.BARRIER)
+        List<BottomAction> actions = List.of(
+                new BottomAction(8, new ItemBuilder(Material.BARRIER)
                         .setName("§cRestore default settings")
                         .removeLore()
                         .addLoreLine("")
                         .addLoreLine("§c► Click to restore default settings")
-                        .toItemStack(), ctx -> {
-                    new ConfirmInventory(PlayerIdentityRegistry.get(ctx.player), "§cRestore default settings", playerIdentity -> {
+                        .toItemStack(), p -> {
+                    new ConfirmInventory(PlayerIdentityRegistry.get(p), "§cRestore default settings", playerIdentity -> {
                         LevelModule levelModule = LevelModule.createDefault();
                         LevelModule.saveLevelModule(levelModule);
                         ModuleManager.getInstance().destroyModule(LevelModule.class);
                         ModuleManager.getInstance().registerModule(levelModule);
 
-                        ctx.player.sendMessage("§cYou have restored the Level System to default. Server restart recommended.");
-                        openSubMenu(ctx.player);
+                        p.sendMessage("§cLevel system settings were reset to default. Changes may not apply until the server is restarted.");
+                        openSubMenu(p);
                     }, playerIdentity -> openSubMenu(playerIdentity.getOnlinePlayer())).openGUI();
                 })
+        );
 
-        ), p -> ModuleManager.getModule(SettingsModule.class).open(p));
+        SettingPageGUI.open(player, "Level System", () -> List.of(
+
+                        SettingItem.navigate(
+                                new ItemBuilder(Material.EXPERIENCE_BOTTLE)
+                                        .setName("§fLevel Ranges")
+                                        .removeLore()
+                                        .addLoreLine("§7Base XP, XP scaling and per-range reward.")
+                                        .addLoreLine("")
+                                        .addLoreLine("§a► Click to open")
+                                        .toItemStack(),
+                                ctx -> openRangeList(ctx.player)
+                        ),
+
+                        SettingItem.navigate(
+                                new ItemBuilder(Material.GOLD_INGOT)
+                                        .setName("§fLevel Rewards")
+                                        .removeLore()
+                                        .addLoreLine("§7Edit reward amounts per level group.")
+                                        .addLoreLine("")
+                                        .addLoreLine("§a► Click to open")
+                                        .toItemStack(),
+                                ctx -> openRewardEditor(ctx.player)
+                        )
+                ), p -> ModuleManager.getModule(SettingsModule.class).open(p),
+                actions);
     }
 
 

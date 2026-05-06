@@ -26,7 +26,6 @@ import lombok.NoArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -38,6 +37,8 @@ public class GameService implements Module {
     private Map<String, GameInstance> games = new HashMap<>();
     private List<String> ids = new ArrayList<>();
 
+    private final Map<String, List<Runnable>> onGameRegistered = new HashMap<>();
+
     @Override
     public void initialize() {}
 
@@ -45,6 +46,7 @@ public class GameService implements Module {
     public void terminate() {
         games = null;
         ids = null;
+        onGameRegistered.clear();
     }
 
     public void registerGame(GameInstance game) {
@@ -52,15 +54,27 @@ public class GameService implements Module {
         if (scheduler != null && scheduler.isRestartPending()) {
             Logger.log("Game registration blocked — restart pending. (" + game.getID() + ")",
                     Logger.LogType.WARNING);
+            onGameRegistered.remove(game.getName());
             return;
         }
 
         game.finishSetup(success -> {
             if (!success) {
                 Logger.log("Game (" + game.getID() + ") setup failed.", Logger.LogType.INFO);
+                onGameRegistered.remove(game.getName());
             } else {
                 games.put(game.getID(), game);
                 Logger.log("Added Game " + game.getID(), Logger.LogType.INFO);
+                List<Runnable> callbacks = onGameRegistered.remove(game.getName());
+                if (callbacks != null && !callbacks.isEmpty()) {
+                    for (Runnable callback : callbacks) {
+                        try {
+                            callback.run();
+                        } catch (Exception e) {
+                            Logger.log("registerGame: Error running callback: " + e.getMessage(), Logger.LogType.ERROR);
+                        }
+                    }
+                }
             }
         });
     }
@@ -95,26 +109,27 @@ public class GameService implements Module {
         if (ev.isCancelled()) return;
 
         if (includeOtherServers && isBungeecord()) {
-            findBestRemoteServer(gamePlayer).thenAccept(best -> {
+            String currentServer = Minigame.getInstance().getSettings().getServerName();
+            findBestServerGlobally(gamePlayer).thenAccept(best -> {
                 Bukkit.getScheduler().runTask(Core.getInstance().getPlugin(), () -> {
-                    if (best != null) {
-                        Logger.log("newArena(): Sending " + player.getName() + " to server: " + best.getBungeecordServerName(), Logger.LogType.DEBUG);
-                        best.sendPlayerToServer(player);
-                        Bukkit.getScheduler().runTaskLater(Core.getInstance().getPlugin(), task -> {
-                            if (player.isOnline()) newArena(player, true, false);
-                        }, 50L);
+                    if (best == null) {
+                        handleNoArena(player, gamePlayer, sendToLobbyIfNoArena);
+                        return;
+                    }
+                    if (best.getBungeecordServerName().equalsIgnoreCase(currentServer)) {
+                        tryLocalOrFallback(player, gamePlayer, sendToLobbyIfNoArena);
                     } else {
-                        tryLocalOrFallback(player, gamePlayer, sendToLobbyIfNoArena, includeOtherServers);
+                        best.sendPlayerToServer(player);
                     }
                 });
             });
             return;
         }
 
-        tryLocalOrFallback(player, gamePlayer, sendToLobbyIfNoArena, includeOtherServers);
+        tryLocalOrFallback(player, gamePlayer, sendToLobbyIfNoArena);
     }
 
-    private void tryLocalOrFallback(Player player, GamePlayer gamePlayer, boolean sendToLobbyIfNoArena, boolean includeOtherServers) {
+    private void tryLocalOrFallback(Player player, GamePlayer gamePlayer, boolean sendToLobbyIfNoArena) {
         GameInstance game = getHighestGame(player);
 
         if (gamePlayer.getParty().isInParty()) {
@@ -126,6 +141,7 @@ public class GameService implements Module {
                     if (memberGame.getPlayers().size() >= memberGame.getSettings().getMaxPlayers()
                             && !player.hasPermission("game.joinfullserver")) {
                         ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.party.couldnt_join").send();
+                        //game = null;
                     } else {
                         game = memberGame;
                     }
@@ -136,19 +152,6 @@ public class GameService implements Module {
 
         if (game != null) {
             game.joinPlayer(player);
-            return;
-        }
-
-        if (includeOtherServers && isBungeecord()) {
-            findBestRemoteServer(gamePlayer).thenAccept(best -> {
-                Bukkit.getScheduler().runTask(Core.getInstance().getPlugin(), () -> {
-                    if (best != null) {
-                        best.sendPlayerToServer(player);
-                    } else {
-                        handleNoArena(player, gamePlayer, sendToLobbyIfNoArena);
-                    }
-                });
-            });
             return;
         }
 
@@ -166,8 +169,7 @@ public class GameService implements Module {
 
     private boolean isBungeecord() {
         ServerRegistry registry = ModuleManager.getModule(ServerRegistry.class);
-        return registry != null
-                && (registry.getServerDataMySQL() != null || registry.getServerDataRedis() != null);
+        return registry != null && (registry.getServerDataMySQL() != null || registry.getServerDataRedis() != null);
     }
 
     private CompletableFuture<IGame> findBestRemoteServer(GamePlayer gamePlayer) {
@@ -183,7 +185,15 @@ public class GameService implements Module {
             }
             return null;
         })).orElseGet(() -> CompletableFuture.completedFuture(null));
+    }
 
+    private CompletableFuture<IGame> findBestServerGlobally(GamePlayer gamePlayer) {
+        ServerRegistry registry = ModuleManager.getModule(ServerRegistry.class);
+        if (registry == null) return CompletableFuture.completedFuture(null);
+        Optional<IMinigame> minigameOpt = registry.getMinigame(Minigame.getInstance().getFullName());
+        return minigameOpt
+                .map(iMinigame -> iMinigame.getBestServer(gamePlayer))
+                .orElseGet(() -> CompletableFuture.completedFuture(null));
     }
 
     public GameInstance getHighestGame(Player player) {
@@ -212,12 +222,9 @@ public class GameService implements Module {
         RestartScheduler scheduler = ModuleManager.getModule(RestartScheduler.class);
         boolean restartPending = scheduler != null && scheduler.isRestartPending();
 
-        if (toResetGame.getSettings().isRestartServerAfterEnd()
-                && Minigame.getInstance().getSettings().getGamesPerServer() == 1) {
-
+        if (toResetGame.getSettings().isRestartServerAfterEnd() && Minigame.getInstance().getSettings().getGamesPerServer() == 1) {
             ServerRegistry dataManager = ModuleManager.getModule(ServerRegistry.class);
-            boolean bungeecord = dataManager != null &&
-                    (dataManager.getServerDataMySQL() != null || dataManager.getServerDataRedis() != null);
+            boolean bungeecord = dataManager != null && (dataManager.getServerDataMySQL() != null || dataManager.getServerDataRedis() != null);
 
             if (bungeecord) {
                 Optional<IMinigame> iMinigame = dataManager.getMinigame(Minigame.getInstance().getFullName());
@@ -249,6 +256,8 @@ public class GameService implements Module {
                                 }, 80L);
                             });
                 }
+            } else {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "restart");
             }
             return;
         }
@@ -265,32 +274,36 @@ public class GameService implements Module {
                     players.add(gamePlayer.getOnlinePlayer());
                 } else {
                     LevelModule levelModule = ModuleManager.getModule(LevelModule.class);
-                    if (levelModule != null) {
-                        levelModule.getCache().remove(gamePlayer.getName());
-                    }
+                    if (levelModule != null) levelModule.getCache().remove(gamePlayer.getName());
                     PlayerIdentityRegistry.unregister(gamePlayer.getUniqueId());
                 }
             });
         }
 
+        for (Player p : players) {
+            ModuleManager.getModule(MessageModule.class).getMessage(p, "chat.finding_new_game").send();
+        }
+
         GameInstance newGame = null;
         if (!restartPending) {
+            if (!players.isEmpty()) {
+                List<Runnable> callbacks = onGameRegistered.computeIfAbsent(gameName, k -> new ArrayList<>());
+                for (Player p : players) {
+                    callbacks.add(() -> {
+                        if (p.isOnline()) newArena(p, true, true);
+                    });
+                }
+            }
             newGame = Minigame.getInstance().setupGame(gameName);
         } else {
             Logger.log("[RestartScheduler] Skipping new game creation for '" + gameName + "' — restart pending.", Logger.LogType.INFO);
+            for (Player p : players) {
+                if (p.isOnline()) GameUtils.sendToLobby(p, false);
+            }
         }
 
         GameResetEvent ev = new GameResetEvent(toResetGame, newGame);
         Bukkit.getPluginManager().callEvent(ev);
-
-        if (!players.isEmpty()) {
-            for (Player p : players) {
-                ModuleManager.getModule(MessageModule.class).getMessage(p, "chat.finding_new_game").send();
-                Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
-                    newArena(p, true, true);
-                }, 25L);
-            }
-        }
 
         if (toResetGame.getCurrentMap() != null) {
             GameMap mapToUnload = toResetGame.getCurrentMap();
@@ -310,6 +323,7 @@ public class GameService implements Module {
             }, 70L);
         } else {
             Logger.log("resetGame: getCurrentMap() is null! Skipping world deletion. The world will be deleted on restart.", Logger.LogType.WARNING);
+            toResetGame.terminate();
         }
     }
 
@@ -349,9 +363,7 @@ public class GameService implements Module {
     }
 
     public void addID(String id) {
-        if (!ids.contains(id)) {
-            ids.add(id);
-        }
+        if (!ids.contains(id)) ids.add(id);
     }
 
     public boolean isDuplicate(String id) {

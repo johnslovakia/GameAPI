@@ -6,16 +6,15 @@ import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticPrices;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
-import cz.johnslovakia.gameapi.modules.settings.SettingCategory;
-import cz.johnslovakia.gameapi.modules.settings.SettingItem;
-import cz.johnslovakia.gameapi.modules.settings.SettingPageGUI;
-import cz.johnslovakia.gameapi.modules.settings.SettingsModule;
+import cz.johnslovakia.gameapi.modules.settings.*;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,9 +47,27 @@ public class CosmeticsCategory implements SettingCategory {
     };
 
     public static void openTypeList(Player player) {
+        List<BottomAction> actions = List.of(
+                new BottomAction(8, new ItemBuilder(Material.BARRIER)
+                        .setName("§cRestore default settings")
+                        .removeLore()
+                        .addLoreLine("")
+                        .addLoreLine("§c► Click to restore default settings")
+                        .toItemStack(), p -> {
+                    new ConfirmInventory(PlayerIdentityRegistry.get(p), "§cRestore default settings", playerIdentity -> {
+                        CosmeticPrices defaultPrices = new CosmeticPrices();
+                        ModuleManager.getModule(CosmeticsModule.class).savePrices(defaultPrices);
+
+                        p.sendMessage("§cCosmetic prices were reset to default. Changes may not apply until the server is restarted.");
+                        openTypeList(p);
+                    }, playerIdentity -> openTypeList(playerIdentity.getOnlinePlayer())).openGUI();
+                })
+        );
+
         SettingPageGUI.open(player, "Cosmetics Prices",
                 () -> buildTypeItems(player),
-                p -> ModuleManager.getModule(SettingsModule.class).open(p));
+                p -> ModuleManager.getModule(SettingsModule.class).open(p),
+                actions);
     }
 
     private static List<SettingItem> buildTypeItems(Player player) {
@@ -72,21 +89,6 @@ public class CosmeticsCategory implements SettingCategory {
             b.addLoreLine("§a► Click to edit");
             items.add(SettingItem.navigate(b.toItemStack(), ctx -> openRarityEditor(ctx.player, type)));
         }
-
-        items.add(SettingItem.navigate(new ItemBuilder(Material.BARRIER)
-                .setName("§cRestore default settings")
-                .removeLore()
-                .addLoreLine("")
-                .addLoreLine("§c► Click to restore default settings")
-                .toItemStack(), ctx -> {
-            new ConfirmInventory(PlayerIdentityRegistry.get(ctx.player), "§cRestore default settings", playerIdentity -> {
-                CosmeticPrices defaultPrices = new CosmeticPrices();
-                ModuleManager.getModule(CosmeticsModule.class).savePrices(defaultPrices);
-
-                ctx.player.sendMessage("§cYou have restored the Cosmetic Prices to default. Server restart recommended.");
-                openTypeList(ctx.player);
-            }, playerIdentity -> openTypeList(playerIdentity.getOnlinePlayer())).openGUI();
-        }));
 
         return items;
     }

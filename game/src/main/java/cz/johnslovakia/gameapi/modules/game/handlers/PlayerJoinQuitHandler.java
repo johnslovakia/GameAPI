@@ -57,9 +57,12 @@ public class PlayerJoinQuitHandler {
         PlayerGameSession existingSession = gameInstance.getModule(GameSessionModule.class).getPlayerSession(gamePlayer);
         GamePlayerState previousState = existingSession != null ? existingSession.getState() : GamePlayerState.UNKNOWN;
 
-        if (gamePlayer.getGame() != null && !gamePlayer.getGame().equals(gameInstance)){
-            gamePlayer.getGame().quitPlayer(player);
+        GameInstance currentGame = gamePlayer.getGame();
+        if (currentGame != null) {
+            if (currentGame.getID().equals(gameInstance.getID())) return;
+            currentGame.quitPlayer(player);
         }
+
 
         boolean isRejoin = gameInstance.getState().equals(GameState.INGAME)
                 && previousState.equals(GamePlayerState.DISCONNECTED)

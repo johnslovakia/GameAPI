@@ -54,9 +54,9 @@ public class MapSettingsListener implements Listener {
     @EventHandler
     public void onXpPickup(PlayerPickupExperienceEvent e) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
-        if (!gamePlayer.isInGame()) return;
+        if (gamePlayer == null) return;
 
-        if (gamePlayer.isSpectator() || gamePlayer.getGame().getState() != GameState.INGAME){
+        if (gamePlayer.isSpectator() || !gamePlayer.isInGame() || gamePlayer.getGame().getState() != GameState.INGAME){
             e.setCancelled(true);
         }
     }
@@ -67,9 +67,9 @@ public class MapSettingsListener implements Listener {
         if (!(e.getTarget() instanceof Player player)) return;
 
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        if (!gamePlayer.isInGame()) return;
+        if (gamePlayer == null) return;
 
-        if (gamePlayer.isSpectator() || gamePlayer.getGame().getState() != GameState.INGAME){
+        if (gamePlayer.isSpectator() || !gamePlayer.isInGame() || gamePlayer.getGame().getState() != GameState.INGAME) {
             e.setCancelled(true);
         }
     }
