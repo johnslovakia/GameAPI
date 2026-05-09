@@ -443,7 +443,7 @@ public class MapSettingsListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    /*@EventHandler(priority = EventPriority.LOWEST)
     public void playerDeath(PlayerDeathEvent e){
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getEntity());
         if (!gamePlayer.isInGame()) return;
@@ -457,7 +457,7 @@ public class MapSettingsListener implements Listener {
             }
             e.setDeathMessage("");
         }
-    }
+    }*/
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onItemDurabilityChange(PlayerItemDamageEvent e){

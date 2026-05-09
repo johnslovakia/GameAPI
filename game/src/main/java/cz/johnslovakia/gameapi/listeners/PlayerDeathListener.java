@@ -41,6 +41,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
@@ -170,7 +171,7 @@ public class PlayerDeathListener implements Listener {
             if (gamePlayer.isOnline()) {
                 messageModule.getMessage(gamePlayer, "title.spectator").send();
                 gamePlayer.setSpectator(true);
-                player.teleport(GameUtils.getNonRespawnLocation(game));
+                //player.teleport(GameUtils.getNonRespawnLocation(game));
             }
 
             PlayerEliminationEvent ev = new PlayerEliminationEvent(gamePlayer, e.getKiller(), e.getAssists(), placement);
@@ -227,10 +228,10 @@ public class PlayerDeathListener implements Listener {
                     }
                 }.runTaskLater(Minigame.getInstance().getPlugin(), 30L);
             }
-
-        } else {
-            handleIngameRespawn(gamePlayer, player, game);
         }
+
+        handleRespawn(gamePlayer);
+
 
         if (game.hasModule(TeamModule.class)) {
             GameTeam gameTeam = session.getTeam();
@@ -268,7 +269,9 @@ public class PlayerDeathListener implements Listener {
         }
     }
 
-    private void handleIngameRespawn(GamePlayer gamePlayer, Player player, GameInstance game) {
+    private void handleRespawn(GamePlayer gamePlayer) {
+        Player player = gamePlayer.getOnlinePlayer();
+        GameInstance game = gamePlayer.getGame();
         GameMap playingMap = game.getCurrentMap();
 
         new BukkitRunnable() {
@@ -280,34 +283,44 @@ public class PlayerDeathListener implements Listener {
             }
         }.runTaskLater(Minigame.getInstance().getPlugin(), 5L);
 
-        int cooldown = game.getSettings().getRespawnCooldown();
+        if (gamePlayer.isRespawning()){
+            if (game.getSettings().getRespawnCooldown() == -1) {
+                Location location = playingMap.getPlayerToLocation(gamePlayer);
+                player.teleport(location);
+            }else{
+                player.teleport(GameUtils.getNonRespawnLocation(game));
 
-        if (cooldown == -1) {
-            player.teleport(getActiveRespawnLocation(gamePlayer, playingMap, game));
-        } else {
+                new BukkitRunnable(){
+                    int second = game.getSettings().getRespawnCooldown();
+                    @Override
+                    public void run() {
+                        if (!player.isOnline() || gamePlayer.getGame() == null) {
+                            this.cancel();
+                            return;
+                        }
+
+                        if (second == 0) {
+                            player.teleport(playingMap.getPlayerToLocation(gamePlayer));
+                            this.cancel();
+                        }else{
+                            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "title.respawn")
+                                    .replace("%time%", "" + second)
+                                    .send();
+                        }
+                        second--;
+                    }
+                }.runTaskTimer(Minigame.getInstance().getPlugin(), 0L, 20L);
+            }
+        }else if (player.getLastDamageCause() == null || (player.getLastDamageCause() != null && player.getLastDamageCause().getCause().equals(EntityDamageEvent.DamageCause.VOID)) || gamePlayer.getMetadata().containsKey("diedInVoid")){
             player.teleport(GameUtils.getNonRespawnLocation(game));
-
-            new BukkitRunnable() {
-                int second = cooldown;
-
-                @Override
-                public void run() {
-                    if (!player.isOnline() || gamePlayer.getGame() == null) {
-                        this.cancel();
-                        return;
-                    }
-                    if (second == 0) {
-                        player.teleport(getActiveRespawnLocation(gamePlayer, playingMap, game));
-                        this.cancel();
-                    } else {
-                        ModuleManager.getModule(MessageModule.class)
-                                .getMessage(gamePlayer, "title.respawn")
-                                .replace("%time%", "" + second)
-                                .send();
-                    }
-                    second--;
-                }
-            }.runTaskTimer(Minigame.getInstance().getPlugin(), 0L, 20L);
+        }else{
+            Location deathLoc = (Location) gamePlayer.getMetadata().get("death_location");
+            if (deathLoc != null) {
+                player.teleport(deathLoc);
+                gamePlayer.getMetadata().remove("death_location");
+            } else {
+                player.teleport(GameUtils.getNonRespawnLocation(game));
+            }
         }
     }
 

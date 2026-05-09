@@ -215,21 +215,26 @@ public class PVPListener implements Listener {
         Location deathLoc = player.getLocation();
         gamePlayer.getMetadata().put("death_location", deathLoc);
 
-        List<ItemStack> drops = new ArrayList<>(e.getDrops());
-        drops.removeIf(item ->
-                item != null
-                && item.getType() == Material.CARVED_PUMPKIN
-                && item.hasItemMeta()
-                && item.getItemMeta().hasCustomModelData()
-        );
 
-        for (ItemStack drop : drops) {
-            if (drop != null && drop.getType() != Material.AIR) {
-                player.getWorld().dropItemNaturally(deathLoc, drop);
+        List<ItemStack> drops = new ArrayList<>(e.getDrops());
+        drops.removeIf(item -> item != null && item.getType() == Material.CARVED_PUMPKIN
+                && item.hasItemMeta() && item.getItemMeta().hasCustomModelData());
+
+
+        AreaSettings settings = AreaManager.getActiveSettings(gamePlayer);
+        if(settings != null) {
+            if(!settings.isKeepInventory()){
+                player.getInventory().clear();
+            }
+            if (settings.isDropItemsOnDeath()){
+                for (ItemStack drop : drops) {
+                    if (drop != null && drop.getType() != Material.AIR) {
+                        player.getWorld().dropItemNaturally(deathLoc, drop);
+                    }
+                }
             }
         }
 
-        player.getInventory().clear();
         player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
         player.setFireTicks(0);
         player.setArrowsInBody(0);

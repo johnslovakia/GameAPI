@@ -43,7 +43,7 @@ public class RespawnListener implements Listener {
         GameMap playingMap = game.getCurrentMap();
 
 
-        player.setVisualFire(false);
+        /*player.setVisualFire(false);
 
         new BukkitRunnable(){
             @Override
@@ -101,6 +101,6 @@ public class RespawnListener implements Listener {
                     gamePlayer.applySpectatorVisuals(teamSelector);
                 }
             }.runTaskLater(Minigame.getInstance().getPlugin(), 1L);
-        }
+        }*/
     }
 }
