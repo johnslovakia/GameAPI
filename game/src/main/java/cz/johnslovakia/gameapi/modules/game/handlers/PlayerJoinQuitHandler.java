@@ -24,6 +24,7 @@ import cz.johnslovakia.gameapi.modules.game.task.tasks.StartCountdown;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.GamePlayerState;
 import cz.johnslovakia.gameapi.users.PlayerManager;
+import cz.johnslovakia.gameapi.utils.CollisionManager;
 import cz.johnslovakia.gameapi.utils.GameUtils;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.PlayerBossBar;
@@ -168,9 +169,10 @@ public class PlayerJoinQuitHandler {
                 }
             }
 
-            GameUtils.hideAndShowPlayers(gameInstance, gamePlayer.getOnlinePlayer());
+            GameUtils.hideAndShowPlayers(gameInstance, player);
 
             gamePlayer.resetAttributes();
+            CollisionManager.disableCollision(player);
             player.getInventory().clear();
             if (gameInstance.getModule(LobbyModule.class).getInventoryManager() != null){
                 gameInstance.getModule(LobbyModule.class).getInventoryManager().give(gamePlayer);

@@ -26,8 +26,8 @@ public class InteractListener implements Listener {
 
         Block block = e.getClickedBlock();
 
-        if (!gamePlayer.isInGame()) return;
-        if (!gamePlayer.isSpectator() || block == null) return;
+        if (!gamePlayer.isInGame() || block == null) return;
+        if (!gamePlayer.isSpectator()) return;
 
         if (block.getType() == Material.CHEST) {
             Chest chest = (Chest) block.getState();

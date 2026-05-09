@@ -15,6 +15,5 @@ public class WorldListener implements Listener {
         e.getWorld().setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
         e.getWorld().setGameRule(GameRule.LOCATOR_BAR, false);
         e.getWorld().setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
-        e.getWorld().setKeepSpawnInMemory(false);
     }
 }

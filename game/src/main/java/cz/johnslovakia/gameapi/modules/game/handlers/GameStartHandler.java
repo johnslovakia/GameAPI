@@ -21,6 +21,7 @@ import cz.johnslovakia.gameapi.modules.game.task.tasks.GameCountdown;
 import cz.johnslovakia.gameapi.modules.game.task.tasks.PreparationCountdown;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.GamePlayerState;
+import cz.johnslovakia.gameapi.utils.CollisionManager;bug
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import org.bukkit.Bukkit;
@@ -94,6 +95,7 @@ public class GameStartHandler {
         PlayerGameSession session = gamePlayer.getGameSession();
         boolean rejoin = session.getState().equals(GamePlayerState.DISCONNECTED);
         Player player = gamePlayer.getOnlinePlayer();
+        CollisionManager.enableCollision(player);
 
         InventoryBuilder inventoryManager = InventoryBuilder.getPlayerCurrentInventory(gamePlayer);
         if (inventoryManager != null) {
@@ -172,7 +174,9 @@ public class GameStartHandler {
         }
 
         for (GamePlayer gamePlayer : gameInstance.getParticipants()){
+            Player player = gamePlayer.getOnlinePlayer();
             PlayerGameSession session = gamePlayer.getGameSession();
+
             session.setEnabledMovement(true);
             session.setLimited(false);
 

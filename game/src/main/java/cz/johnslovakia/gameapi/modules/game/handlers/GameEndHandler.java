@@ -106,6 +106,7 @@ public class GameEndHandler {
             session.setLimited(false);
             session.setEnabledMovement(true);
             gamePlayer.setSpectator(false);
+            CollisionManager.disableCollision(player);
             player.setGameMode(GameMode.ADVENTURE);
 
 

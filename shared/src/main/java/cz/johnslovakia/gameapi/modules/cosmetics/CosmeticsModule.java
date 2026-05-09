@@ -160,16 +160,17 @@ public class CosmeticsModule implements Listener, Module {
 
 
     public void loadPlayerCosmetics(PlayerIdentity playerIdentity) {
+        String playerName = playerIdentity.getName();
         try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
             if (connection == null) {
-                Logger.log("Database connection is null when loading cosmetics for " + playerIdentity.getOnlinePlayer().getName(), Logger.LogType.ERROR);
-                playerIdentity.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (0)");
+                Logger.log("Database connection is null when loading cosmetics for " + playerName, Logger.LogType.ERROR);
+                sendSync(playerIdentity, "Can't get your cosmetics data. Sorry for the inconvenience. (0)");
                 return;
             }
 
             Optional<Row> result = connection.select()
                     .from(PlayerTable.TABLE_NAME)
-                    .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
+                    .where().isEqual("Nickname", playerName)
                     .obtainOne();
             if (result.isEmpty()) return;
 
@@ -177,35 +178,64 @@ public class CosmeticsModule implements Listener, Module {
                 String jsonString = result.get().getString("Cosmetics");
                 if (jsonString != null) {
                     JSONObject jsonObject = new JSONObject(jsonString);
+                    List<Cosmetic> purchased = null;
+                    Map<CosmeticsCategory, Cosmetic> selected = new HashMap<>();
 
+                    if (jsonObject.has("purchased") && !jsonObject.getJSONArray("purchased").isEmpty()) {
+                        purchased = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("purchased"));
+                    }
+                    List<Cosmetic> selectedCosmetics = jsonObject.has("selected") && !jsonObject.getJSONArray("selected").isEmpty()
+                            ? CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("selected"))
+                            : Collections.emptyList();
                     for (CosmeticsCategory category : getCategories()) {
-                        if (jsonObject.has("purchased") && !jsonObject.getJSONArray("purchased").isEmpty()) {
-                            purchasedCosmetics.put(playerIdentity, CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("purchased")));
-                        }
+                        List<Cosmetic> cosmetics = selectedCosmetics.stream()
+                                .filter(c -> getCategory(c) != null && getCategory(c).equals(category))
+                                .toList();
 
-                        if (jsonObject.has("selected") && !jsonObject.getJSONArray("selected").isEmpty()) {
-                            List<Cosmetic> cosmetics = CosmeticsStorage.parseJsonArrayToList(jsonObject.getJSONArray("selected"))
-                                    .stream()
-                                    .filter(c -> getCategory(c) != null && getCategory(c).equals(category))
-                                    .toList();
-
-                            if (!cosmetics.isEmpty()) {
-                                cosmetics.get(0).select(playerIdentity, false);
-                            }
+                        if (!cosmetics.isEmpty()) {
+                            selected.put(category, cosmetics.get(0));
                         }
                     }
+
+                    List<Cosmetic> purchasedToApply = purchased;
+                    Bukkit.getScheduler().runTask(Core.getInstance().getPlugin(), () -> {
+                        if (playerIdentity.getOnlinePlayer() == null) return;
+                        if (purchasedToApply != null) {
+                            purchasedCosmetics.put(playerIdentity, purchasedToApply);
+                        }
+                        if (!selected.isEmpty()) {
+                            Map<CosmeticsCategory, Cosmetic> selectedByCategory = this.selectedCosmetics.computeIfAbsent(playerIdentity, key -> new HashMap<>());
+                            selected.forEach((category, cosmetic) -> {
+                                selectedByCategory.put(category, cosmetic);
+                                if (!category.getName().equalsIgnoreCase("Hats") || isShowHats()) {
+                                    if (cosmetic.getSelectConsumer() != null) {
+                                        cosmetic.getSelectConsumer().accept(playerIdentity);
+                                    }
+                                }
+                            });
+                        }
+                    });
                 }
             } catch (Exception exception) {
-                Logger.log("I can't get cosmetics data for player " + playerIdentity.getOnlinePlayer().getName() + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
-                playerIdentity.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (2)");
+                Logger.log("I can't get cosmetics data for player " + playerName + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
+                sendSync(playerIdentity, "Can't get your cosmetics data. Sorry for the inconvenience. (2)");
                 exception.printStackTrace();
             }
 
         } catch (Exception e) {
-            Logger.log("Failed to load cosmetics data for player " + playerIdentity.getOnlinePlayer().getName() + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
-            playerIdentity.getOnlinePlayer().sendMessage("Can't get your cosmetics data. Sorry for the inconvenience. (SQL)");
+            Logger.log("Failed to load cosmetics data for player " + playerName + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
+            sendSync(playerIdentity, "Can't get your cosmetics data. Sorry for the inconvenience. (SQL)");
             e.printStackTrace();
         }
+    }
+
+    private void sendSync(PlayerIdentity playerIdentity, String message) {
+        Bukkit.getScheduler().runTask(Core.getInstance().getPlugin(), () -> {
+            Player player = playerIdentity.getOnlinePlayer();
+            if (player != null && player.isOnline()) {
+                player.sendMessage(message);
+            }
+        });
     }
 
     @EventHandler

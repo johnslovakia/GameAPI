@@ -151,19 +151,6 @@ public class PlayerDeathListener implements Listener {
         MessageModule messageModule = ModuleManager.getModule(MessageModule.class);
         boolean useTeams = game.getSettings().isUseTeams();
 
-        if (!game.getState().equals(GameState.INGAME)) {
-            e.setCancelled(true);
-            if (game.getState().equals(GameState.WAITING) || game.getState().equals(GameState.STARTING)) {
-                LobbyModule lobbyModule = game.getModule(LobbyModule.class);
-                if (lobbyModule != null && lobbyModule.getLobbyLocation() != null) {
-                    player.teleport(lobbyModule.getLobbyLocation().getLocation());
-                }
-            } else{
-                player.teleport(GameUtils.getNonRespawnLocation(game));
-            }
-            return;
-        }
-
         if (e.getKiller() != null && e.getKiller() != gamePlayer) {
             GamePlayer killer = e.getKiller();
             UUID killerId = killer.getOfflinePlayer().getUniqueId();

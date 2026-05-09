@@ -77,8 +77,9 @@ public class GameUtils {
 
                 return new Location(center.getWorld(), center.getX(), y + 5, center.getZ());
             }else{
-                if (game.getPlayers().get(0) != null){
-                    return game.getPlayers().get(0).getOnlinePlayer().getLocation();
+                List<GamePlayer> alivePlayers = game.getPlayers();
+                if (!alivePlayers.isEmpty() && alivePlayers.get(0).getOnlinePlayer() != null){
+                    return alivePlayers.get(0).getOnlinePlayer().getLocation();
                 }else{
                     return new Location(game.getCurrentMap().getWorld(), 0, 90, 0);
                 }

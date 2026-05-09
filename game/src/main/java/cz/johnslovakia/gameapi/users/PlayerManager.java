@@ -1,12 +1,11 @@
 package cz.johnslovakia.gameapi.users;
 
 import org.bukkit.OfflinePlayer;
-
 public class PlayerManager {
 
     public static GamePlayer register(OfflinePlayer offlinePlayer){
         GamePlayer gamePlayer = new GamePlayer(offlinePlayer);
-        PlayerIdentityRegistry.register(new GamePlayer(offlinePlayer));
+        PlayerIdentityRegistry.register(gamePlayer);
         return gamePlayer;
     }
 

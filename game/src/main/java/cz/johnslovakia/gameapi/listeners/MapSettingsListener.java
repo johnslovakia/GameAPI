@@ -40,7 +40,6 @@ import java.util.*;
 
 public class MapSettingsListener implements Listener {
 
-
     @EventHandler
     public void onArrowPickup(PlayerPickupArrowEvent e) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
@@ -499,7 +498,7 @@ public class MapSettingsListener implements Listener {
             GamePlayer damager = PlayerManager.getGamePlayer((Player) e.getDamager());
             if (!damager.isInGame()) return;
             GameInstance game = damager.getGame();
-            ;
+
             if (damager.isSpectator()) {
                 e.setCancelled(true);
                 return;

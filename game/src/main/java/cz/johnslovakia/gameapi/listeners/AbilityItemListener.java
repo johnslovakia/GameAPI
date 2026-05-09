@@ -19,6 +19,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -43,18 +44,18 @@ public class AbilityItemListener implements Listener {
         if (game == null) return;
         if (game.getState() != GameState.INGAME || game.isPreparation()) return;
 
-        if (e.getItem().getItemStack().getItemMeta() == null) return;
         Item item = e.getItem();
+        ItemStack itemStack = item.getItemStack();
+        if (itemStack.getItemMeta() == null) return;
+        if (!AbilityItem.isAbilityItem(itemStack)) return;
 
-        if (!AbilityItem.isAbilityItem(e.getItem().getItemStack())) return;
-
-        ItemMeta meta = item.getItemStack().getItemMeta();
+        ItemMeta meta = itemStack.getItemMeta();
         if (meta == null) return;
 
-        Optional<AbilityItem> abilityItemOptional = AbilityItem.getAbilityItem(item.getItemStack());
+        Optional<AbilityItem> abilityItemOptional = AbilityItem.getAbilityItem(itemStack);
         abilityItemOptional.ifPresent(abilityItem -> {
             if (abilityItem.getLoreTranslationKey() != null) {
-                ItemBuilder itemBuilder = new ItemBuilder(item.getItemStack());
+                ItemBuilder itemBuilder = new ItemBuilder(itemStack);
                 itemBuilder.setLore(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, abilityItem.getLoreTranslationKey()).toComponent());
                 item.setItemStack(itemBuilder.toItemStack());
             }
@@ -122,7 +123,7 @@ public class AbilityItemListener implements Listener {
     }
 
     @EventHandler
-    public void onInventoryClose(org.bukkit.event.inventory.InventoryCloseEvent e) {
+    public void onInventoryClose(InventoryCloseEvent e) {
         if (!(e.getPlayer() instanceof Player player)) return;
 
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
@@ -372,8 +373,7 @@ public class AbilityItemListener implements Listener {
         return String.valueOf(Math.round(value * 10.0) / 10.0);
     }
 
-    private boolean handleCooldownBlock(AbilityItem abilityItem, AbilityItem.Action action,
-                                         GamePlayer gamePlayer, Player player) {
+    private boolean handleCooldownBlock(AbilityItem abilityItem, AbilityItem.Action action, GamePlayer gamePlayer, Player player) {
         Cooldown cooldown = abilityItem.getCooldown(action);
         if (cooldown != null && cooldown.contains(gamePlayer)) {
             boolean itemStackCooldown = !abilityItem.isConsumable() && cooldown.getCooldown() <= 64;
@@ -405,8 +405,7 @@ public class AbilityItemListener implements Listener {
         return false;
     }
 
-    private void startCooldown(AbilityItem abilityItem, AbilityItem.Action action,
-                                GamePlayer gamePlayer, ItemStack item) {
+    private void startCooldown(AbilityItem abilityItem, AbilityItem.Action action, GamePlayer gamePlayer, ItemStack item) {
         Cooldown cooldown = abilityItem.getCooldown(action);
         if (cooldown != null) {
             boolean itemStackCooldown = !abilityItem.isConsumable() && cooldown.getCooldown() <= 64;

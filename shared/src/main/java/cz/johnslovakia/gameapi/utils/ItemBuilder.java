@@ -170,7 +170,6 @@ public class ItemBuilder {
      * Set the displayname of the item.
      * @param name The name to change it to.
      */
-    @Deprecated
     public ItemBuilder setName(String name){
         ItemMeta im = is.getItemMeta();
         im.setDisplayName(StringUtils.colorizer(name));
@@ -284,6 +283,7 @@ public class ItemBuilder {
         List<String> finalLore = new ArrayList<>();
 
         for (String line : lore){
+            line = StringUtils.colorizer(line);
             if (line.contains("\n")){
                 String[] arrSplit = line.split("\n");
                 finalLore.addAll(Arrays.asList(arrSplit));
@@ -315,7 +315,7 @@ public class ItemBuilder {
         is.setItemMeta(im);*/
         return setLore(
                 Arrays.stream(lore)
-                        .map(c -> LegacyComponentSerializer.legacySection().serialize(c))
+                        .map(c -> StringUtils.colorizer(LegacyComponentSerializer.legacySection().serialize(c)))
                         .toArray(String[]::new)
         );
     }

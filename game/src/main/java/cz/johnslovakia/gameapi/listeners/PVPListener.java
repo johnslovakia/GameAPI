@@ -202,44 +202,29 @@ public class PVPListener implements Listener {
         victim.setVelocity(direction.multiply(0.7));
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void entityDamage(EntityDamageEvent e) {
+        if (e instanceof EntityDamageByEntityEvent) return;
         if (e.getEntity() instanceof Player player) {
             GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
             if (!gamePlayer.isInGame()) return;
             GameInstance game = gamePlayer.getGame();
             if (game.getState() == GameState.INGAME) {
-                if (gamePlayer.isSpectator() && (e.getCause().equals(EntityDamageEvent.DamageCause.VOID)  || e.getDamageSource().getDamageType().equals(DamageType.OUT_OF_WORLD))){
+                if (gamePlayer.isSpectator() && (e.getCause().equals(EntityDamageEvent.DamageCause.VOID) || e.getDamageSource().getDamageType().equals(DamageType.OUT_OF_WORLD))){
                     e.setCancelled(true);
                     player.teleport(GameUtils.getNonRespawnLocation(game));
                     return;
                 }
                 PlayerDamageByPlayerEvent ev = new PlayerDamageByPlayerEvent(game, null, PlayerManager.getGamePlayer(player), e.getCause());
                 Bukkit.getPluginManager().callEvent(ev);
-                if (ev.isCancelled()) e.setCancelled(true);
+                if (ev.isCancelled()) {
+                    e.setCancelled(true);
+                }
             }else{
                 e.setCancelled(true);
             }
         }
     }
-
-
-    /*@EventHandler
-    public void forceRespawn(PlayerDeathEvent e) {
-        if (e.isCancelled()) return;
-
-        Player player = e.getEntity();
-        GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
-        if (gamePlayer == null || !gamePlayer.isInGame()) return;
-
-        Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(
-                Minigame.getInstance().getPlugin(), () -> {
-                    if (!player.isOnline()) return;
-                    //player.spigot().respawn(); replaced with gamerule
-                    player.setFireTicks(0);
-                }, 5L
-        );
-    }*/
 
     @EventHandler (priority = EventPriority.LOWEST)
     public void onPlayerDeath(PlayerDeathEvent e){
@@ -301,9 +286,7 @@ public class PVPListener implements Listener {
             }
         }
 
-
         cleanupPlayer(gamePlayer);
-
         e.setDeathMessage(null);
     }
 
