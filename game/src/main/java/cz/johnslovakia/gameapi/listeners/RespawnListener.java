@@ -10,7 +10,6 @@ import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.users.GamePlayer;
-import cz.johnslovakia.gameapi.users.GamePlayerState;
 import cz.johnslovakia.gameapi.utils.GameUtils;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -42,20 +41,21 @@ public class RespawnListener implements Listener {
             return;
         }
         GameMap playingMap = game.getCurrentMap();
-        boolean respawning = gamePlayer.isRespawning();
+
+
+        /*player.setVisualFire(false);
 
         new BukkitRunnable(){
             @Override
             public void run() {
-                if (!player.isOnline()) return;
                 player.setFireTicks(0);
-                player.setArrowsInBody(0);
             }
-        }.runTaskLater(Minigame.getInstance().getPlugin(), 5L);
+        }.runTaskLater(Minigame.getInstance().getPlugin(), 1L);
 
-        if (respawning){
+        if (gamePlayer.isRespawning()){
             if (game.getSettings().getRespawnCooldown() == -1) {
-                e.setRespawnLocation(getActiveRespawnLocation(gamePlayer, playingMap, game));
+                Location location = playingMap.getPlayerToLocation(gamePlayer);
+                e.setRespawnLocation(location);
             }else{
                 e.setRespawnLocation(GameUtils.getNonRespawnLocation(game));
 
@@ -69,7 +69,7 @@ public class RespawnListener implements Listener {
                         }
 
                         if (second == 0) {
-                            player.teleport(getActiveRespawnLocation(gamePlayer, playingMap, game));
+                            player.teleport(playingMap.getPlayerToLocation(gamePlayer));
                             this.cancel();
                         }else{
                             ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "title.respawn")
@@ -92,23 +92,15 @@ public class RespawnListener implements Listener {
             }
         }
 
-        if (gamePlayer.isSpectator() && gamePlayer.getMetadata().containsKey("pending_spectator_visuals")) {
+        if (gamePlayer.getMetadata().containsKey("pending_spectator_visuals")) {
             boolean teamSelector = (boolean) gamePlayer.getMetadata().remove("pending_spectator_visuals");
-            gamePlayer.scheduleSpectatorVisuals(teamSelector, 5L);
-        } else if (!gamePlayer.isSpectator()) {
-            gamePlayer.getMetadata().remove("pending_spectator_visuals");
-        }
-    }
-
-    private Location getActiveRespawnLocation(GamePlayer gamePlayer, GameMap playingMap, GameInstance game) {
-        Location location = playingMap.getPlayerToLocation(gamePlayer);
-        if (location != null) return location;
-
-        if (gamePlayer.getGameSession() != null && gamePlayer.getGameSession().getTeam() != null) {
-            location = gamePlayer.getGameSession().getTeam().getSpawn();
-            if (location != null) return location;
-        }
-
-        return GameUtils.getNonRespawnLocation(game);
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (!player.isOnline()) return;
+                    gamePlayer.applySpectatorVisuals(teamSelector);
+                }
+            }.runTaskLater(Minigame.getInstance().getPlugin(), 1L);
+        }*/
     }
 }

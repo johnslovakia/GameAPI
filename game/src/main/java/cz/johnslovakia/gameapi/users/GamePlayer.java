@@ -21,7 +21,6 @@ import cz.johnslovakia.gameapi.users.parties.PartyInterface;
 import cz.johnslovakia.gameapi.users.parties.FriendSystemHook;
 import cz.johnslovakia.gameapi.users.parties.PartyAndFriendsHook;
 
-import cz.johnslovakia.gameapi.utils.CollisionManager;
 import cz.johnslovakia.gameapi.utils.Logger;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,7 +32,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
 
@@ -82,6 +80,9 @@ public class GamePlayer extends Winner implements PlayerIdentity {
         if (plugin.getVaultChat() != null) {
             String g = plugin.getVaultPerms().getPrimaryGroup(Bukkit.getPlayer(getOnlinePlayer().getName()));
             prefix = plugin.getVaultChat().getGroupPrefix(world, g);
+            /*if (!prefix.endsWith(" ")){
+                prefix = prefix + " ";
+            }*/
         }
         return prefix;
     }
@@ -138,7 +139,6 @@ public class GamePlayer extends Winner implements PlayerIdentity {
     public void setSpectator(boolean spectator, boolean teamSelector){
         GameInstance game = getGame();
         Player onlinePlayer = getOnlinePlayer();
-        if (game == null || onlinePlayer == null || getGameSession() == null) return;
 
         if (spectator){
             getGameSession().setState(GamePlayerState.SPECTATOR);
@@ -148,15 +148,32 @@ public class GamePlayer extends Winner implements PlayerIdentity {
                 currentMap.getPlayerToLocation().remove(this);
             }
 
-            if (onlinePlayer.isDead()) {
-                getMetadata().put("pending_spectator_visuals", teamSelector);
-            } else {
-                scheduleSpectatorVisuals(teamSelector, 2L);
+            onlinePlayer.setGameMode(GameMode.ADVENTURE);
+            onlinePlayer.setAllowFlight(true);
+            onlinePlayer.setFlying(true);
+            onlinePlayer.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
+
+            for (GamePlayer alivePlayer : game.getPlayers()) {
+                alivePlayer.getOnlinePlayer().hidePlayer(Core.getInstance().getPlugin(), onlinePlayer);
+            }
+            for (GamePlayer otherSpectator : game.getSpectators()) {
+                otherSpectator.getOnlinePlayer().hidePlayer(Core.getInstance().getPlugin(), onlinePlayer);
+            }
+
+            PlayerInventory inventory = onlinePlayer.getInventory();
+            inventory.setChestplate(new ItemStack(Material.AIR));
+            inventory.setLeggings(new ItemStack(Material.AIR));
+            inventory.setBoots(new ItemStack(Material.AIR));
+
+            if (game.getState().equals(GameState.INGAME)) {
+                if (teamSelector) {
+                    game.getSpectatorManager().getWithTeamSelectorInventoryManager().give(this);
+                } else {
+                    game.getSpectatorManager().getInventoryManager().give(this);
+                }
             }
         }else{
             getGameSession().setState(GamePlayerState.PLAYER);
-
-            getMetadata().remove("pending_spectator_visuals");
 
             for (GamePlayer gamePlayer : game.getPlayers()){
                 if (!gamePlayer.equals(this)){
@@ -176,81 +193,8 @@ public class GamePlayer extends Winner implements PlayerIdentity {
 
             onlinePlayer.setAllowFlight(false);
             onlinePlayer.setFlying(false);
-            CollisionManager.enableCollision(getOnlinePlayer());
             for (PotionEffect potionEffect : onlinePlayer.getActivePotionEffects()){
                 onlinePlayer.removePotionEffect(potionEffect.getType());
-            }
-        }
-    }
-
-    public void scheduleSpectatorVisuals(boolean teamSelector, long delayTicks) {
-        Player onlinePlayer = getOnlinePlayer();
-        if (onlinePlayer == null) return;
-
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!onlinePlayer.isOnline() || !isSpectator()) return;
-                if (onlinePlayer.isDead()) {
-                    getMetadata().put("pending_spectator_visuals", teamSelector);
-                    return;
-                }
-                applySpectatorVisuals(teamSelector);
-            }
-        }.runTaskLater(Minigame.getInstance().getPlugin(), delayTicks);
-    }
-
-    public void applySpectatorVisuals(boolean teamSelector){
-        GameInstance game = getGame();
-        if (game == null) return;
-        Player onlinePlayer = getOnlinePlayer();
-        if (onlinePlayer == null || !onlinePlayer.isOnline() || onlinePlayer.isDead()) {
-            getMetadata().put("pending_spectator_visuals", teamSelector);
-            return;
-        }
-
-        CollisionManager.disableCollision(onlinePlayer);
-
-        for (GamePlayer alivePlayer : game.getPlayers()) {
-            Player aliveOnlinePlayer = alivePlayer.getOnlinePlayer();
-            if (aliveOnlinePlayer != null && aliveOnlinePlayer.isOnline() && !alivePlayer.equals(this)) {
-                aliveOnlinePlayer.hidePlayer(Core.getInstance().getPlugin(), onlinePlayer);
-            }
-        }
-        for (GamePlayer otherSpectator : game.getSpectators()) {
-            Player spectatorOnlinePlayer = otherSpectator.getOnlinePlayer();
-            if (spectatorOnlinePlayer != null && spectatorOnlinePlayer.isOnline() && !otherSpectator.equals(this)) {
-                spectatorOnlinePlayer.hidePlayer(Core.getInstance().getPlugin(), onlinePlayer);
-            }
-        }
-
-        applySpectatorAttributes(teamSelector);
-    }
-
-    public void applySpectatorAttributes(boolean teamSelector){
-        GameInstance game = getGame();
-        if (game == null) return;
-        Player onlinePlayer = getOnlinePlayer();
-        if (onlinePlayer == null || !onlinePlayer.isOnline() || onlinePlayer.isDead()) {
-            getMetadata().put("pending_spectator_visuals", teamSelector);
-            return;
-        }
-
-        onlinePlayer.setGameMode(GameMode.ADVENTURE);
-        onlinePlayer.setAllowFlight(true);
-        onlinePlayer.setFlying(true);
-        onlinePlayer.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
-
-        PlayerInventory inventory = onlinePlayer.getInventory();
-        inventory.setChestplate(new ItemStack(Material.AIR));
-        inventory.setLeggings(new ItemStack(Material.AIR));
-        inventory.setBoots(new ItemStack(Material.AIR));
-
-        if (game.getState().equals(GameState.INGAME)) {
-            if (teamSelector) {
-                game.getSpectatorManager().getWithTeamSelectorInventoryManager().give(this);
-            } else {
-                game.getSpectatorManager().getInventoryManager().give(this);
             }
         }
     }
@@ -268,11 +212,12 @@ public class GamePlayer extends Winner implements PlayerIdentity {
         getOnlinePlayer().setAllowFlight(false);
         getOnlinePlayer().setFlying(false);
         getOnlinePlayer().setFireTicks(0);
-        getOnlinePlayer().setMaximumNoDamageTicks(20);
         getOnlinePlayer().setGameMode(GameMode.SURVIVAL);
         getOnlinePlayer().setInvulnerable(false);
         for(PotionEffect effect : getOnlinePlayer().getActivePotionEffects()){
-            if (effect.getType().equals(PotionEffectType.BLINDNESS)) continue;
+            if (effect.getType().equals(PotionEffectType.BLINDNESS)){
+                continue;
+            }
             getOnlinePlayer().removePotionEffect(effect.getType());
         }
     }
