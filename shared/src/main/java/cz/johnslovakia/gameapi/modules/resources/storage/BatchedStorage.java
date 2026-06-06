@@ -43,7 +43,10 @@ public class BatchedStorage implements ResourceStorage {
         this.playerQuitListener = new Listener() {
             @EventHandler
             public void onQuit(PlayerQuitEvent event) {
-                storage.flushAndInvalidate(event.getPlayer().getName());
+                CachedBatchStorage<String, Integer> current = storage;
+                if (current != null) {
+                    current.flushAndInvalidate(event.getPlayer().getName());
+                }
             }
         };
         Bukkit.getPluginManager().registerEvents(playerQuitListener, Core.getInstance().getPlugin());
@@ -161,36 +164,65 @@ public class BatchedStorage implements ResourceStorage {
     
     @Override
     public void deposit(OfflinePlayer player, int amount) {
-        storage.modify(player.getName(), amount);
+        CachedBatchStorage<String, Integer> current = storage;
+        if (current != null) {
+            current.modify(player.getName(), amount);
+        }
     }
 
     @Override
     public void withdraw(OfflinePlayer player, int amount) {
-        storage.modify(player.getName(), -amount);
+        CachedBatchStorage<String, Integer> current = storage;
+        if (current != null) {
+            current.modify(player.getName(), -amount);
+        }
     }
 
     @Override
     public CompletableFuture<Integer> getBalance(OfflinePlayer player) {
-        return storage.get(player.getName());
+        CachedBatchStorage<String, Integer> current = storage;
+        return current != null ? current.get(player.getName()) : CompletableFuture.completedFuture(0);
     }
 
     @Override
     public int getBalanceCached(OfflinePlayer player) {
-        Integer cached = storage.getCached(player.getName());
+        CachedBatchStorage<String, Integer> current = storage;
+        if (current == null) return 0;
+
+        Integer cached = current.getCached(player.getName());
         return cached != null ? cached : 0;
     }
 
     @Override
     public CompletableFuture<Void> preload(Iterable<? extends OfflinePlayer> players) {
+        CachedBatchStorage<String, Integer> current = storage;
+        if (current == null) return CompletableFuture.completedFuture(null);
+
         Set<String> nicknames = new HashSet<>();
         players.forEach(p -> nicknames.add(p.getName()));
-        return storage.preload(nicknames);
+        return current.preload(nicknames);
     }
 
     @Override
     public void shutdown() {
+        shutdown(false);
+    }
+
+    @Override
+    public void shutdownSilently() {
+        shutdown(true);
+    }
+
+    private void shutdown(boolean silent) {
         HandlerList.unregisterAll(playerQuitListener);
-        storage.shutdown();
-        storage = null;
+        CachedBatchStorage<String, Integer> current = storage;
+        if (current != null) {
+            storage = null;
+            if (silent) {
+                current.shutdownSilently();
+            } else {
+                current.shutdown();
+            }
+        }
     }
 }

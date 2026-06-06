@@ -25,6 +25,7 @@ import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.StringUtils;
 import cz.johnslovakia.gameapi.utils.Utils;
+import cz.johnslovakia.gameapi.utils.VipBonusUtils;
 
 import me.zort.containr.Component;
 import me.zort.containr.Element;
@@ -46,21 +47,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ProfileInventory {
 
     private static final Set<UUID> claimingDailyReward = ConcurrentHashMap.newKeySet();
-
-    private static int getBonus(PlayerIdentity gamePlayer) {
-        if (gamePlayer.getMetadata().get("quest_reward_bonus") == null) {
-            List<Integer> percentages = Arrays.asList(5, 7, 10, 12, 15, 17, 20, 25, 30, 35, 40, 45, 50, 75, 100);
-            for (Integer percent : percentages) {
-                if (gamePlayer.getOnlinePlayer().hasPermission("vip.bonus" + percent)) {
-                    gamePlayer.getMetadata().put("quest_reward_bonus", percent);
-                    return percent;
-                }
-            }
-            return 0;
-        }
-        return (int) gamePlayer.getMetadata().get("quest_reward_bonus");
-    }
-
 
     public static void openGUI(PlayerIdentity gamePlayer) {
         String verChar;
@@ -118,7 +104,7 @@ public class ProfileInventory {
                     }).build());
 
 
-                    int bonus = getBonus(gamePlayer);
+                    int bonus = VipBonusUtils.getRewardBonus(gamePlayer);
 
 
                     if (ModuleManager.getInstance().hasModule(LevelModule.class)) {
@@ -172,14 +158,14 @@ public class ProfileInventory {
                             if (levelUpUnclaimedReward.isEmpty()) {
                                 for (RewardItem rewardItem : levelModule.getRewardForLevel(levelProgress.getLevel() + 1).getRewardItems()) {
                                     Resource resource = rewardItem.getResource();
-                                    level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.getMessage(gamePlayer, "word.chance").toComponent()) + ")" : ""));
+                                    level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? StringUtils.betterNumberFormat(rewardItem.getAmount()) : StringUtils.betterNumberFormat(rewardItem.getRandomMinRange()) + "-" + StringUtils.betterNumberFormat(rewardItem.getRandomMaxRange())) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.getMessage(gamePlayer, "word.chance").toComponent()) + ")" : ""));
                                     if (bonus != 0 && resource.isApplicableBonus())
                                         level.addLoreLine(messageModule.getMessage(gamePlayer, "inventory.profile_menu.your_level.bonus").replace("%bonus%", "" + bonus).toComponent());
                                 }
                             } else {
                                 for (RewardItem rewardItem : levelUpUnclaimedReward.get().getReward().getRewardItems()) {
                                     Resource resource = rewardItem.getResource();
-                                    level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.getMessage(gamePlayer, "word.chance").toComponent()) + ")" : ""));
+                                    level.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? StringUtils.betterNumberFormat(rewardItem.getAmount()) : StringUtils.betterNumberFormat(rewardItem.getRandomMinRange()) + "-" + StringUtils.betterNumberFormat(rewardItem.getRandomMaxRange())) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.getMessage(gamePlayer, "word.chance").toComponent()) + ")" : ""));
                                     if (bonus != 0 && resource.isApplicableBonus())
                                         level.addLoreLine(messageModule.getMessage(gamePlayer, "inventory.profile_menu.your_level.bonus").replace("%bonus%", "" + bonus).toComponent());
                                 }
@@ -257,14 +243,14 @@ public class ProfileInventory {
                             if (dailyMeterUnclaimedReward.isEmpty()) {
                                 for (RewardItem rewardItem : dailyMeterClaim.reward().getRewardItems()) {
                                     Resource resource = rewardItem.getResource();
-                                    dailyRewardTrack.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.getMessage(gamePlayer, "word.chance").toComponent()) + ")" : ""));
+                                    dailyRewardTrack.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? StringUtils.betterNumberFormat(rewardItem.getAmount()) : StringUtils.betterNumberFormat(rewardItem.getRandomMinRange()) + "-" + StringUtils.betterNumberFormat(rewardItem.getRandomMaxRange())) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.getMessage(gamePlayer, "word.chance").toComponent()) + ")" : ""));
                                     if (bonus != 0 && resource.isApplicableBonus())
                                         dailyRewardTrack.addLoreLine(messageModule.getMessage(gamePlayer, "inventory.profile_menu.daily_reward_track.bonus").replace("%bonus%", "" + bonus).toComponent());
                                 }
                             } else {
                                 for (RewardItem rewardItem : dailyMeterUnclaimedReward.get().getReward().getRewardItems()) {
                                     Resource resource = rewardItem.getResource();
-                                    dailyRewardTrack.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? rewardItem.getAmount() : rewardItem.getRandomMinRange() + "-" + rewardItem.getRandomMaxRange()) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.getMessage(gamePlayer, "word.chance").toComponent()) + ")" : ""));
+                                    dailyRewardTrack.addLoreLine(" " + resource.getColor() + "+ " + (!rewardItem.hasRandomAmount() ? StringUtils.betterNumberFormat(rewardItem.getAmount()) : StringUtils.betterNumberFormat(rewardItem.getRandomMinRange()) + "-" + StringUtils.betterNumberFormat(rewardItem.getRandomMaxRange())) + " " + resource.getDisplayName() + (rewardItem.getChance() != 100 ? " §7(" + rewardItem.getChance() + "% " + LegacyComponentSerializer.legacySection().serialize(messageModule.getMessage(gamePlayer, "word.chance").toComponent()) + ")" : ""));
                                     if (bonus != 0 && resource.isApplicableBonus())
                                         dailyRewardTrack.addLoreLine(messageModule.getMessage(gamePlayer, "inventory.profile_menu.daily_reward_track.bonus").replace("%bonus%", "" + bonus).toComponent());
                                 }

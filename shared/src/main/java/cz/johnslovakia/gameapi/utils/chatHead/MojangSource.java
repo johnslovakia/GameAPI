@@ -12,7 +12,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Base64;
-import java.util.Objects;
 
 /**
  * SkinSource implementation to retrieve heads from Mojang.
@@ -20,6 +19,8 @@ import java.util.Objects;
 //https://github.com/OGminso/ChatHeadFont/tree/main
 public class MojangSource extends SkinSource {
 
+    private static final String FALLBACK_SKIN_UUID = "9cb6a52c55bc456b9513f4cf19cdf9e3";
+    private static final String UNAVAILABLE_SKIN = "Unable to retrieve player skin URL.";
 
     public MojangSource(boolean useUUIDWhenRetrieve) {
         super(SkinSourceEnum.MOJANG, true, useUUIDWhenRetrieve);
@@ -35,12 +36,12 @@ public class MojangSource extends SkinSource {
     @Override
     public BaseComponent[] getHead(OfflinePlayer player, boolean overlay) {
 
-        String skin = getPlayerSkinFromMojang((useUUIDWhenRetrieve() ? player.getUniqueId().toString() : getUUIDFromName(player)));
-        if (Objects.equals(skin, "Unable to retrieve player skin URL.")){
-            return toBaseComponent(getPixelColorsFromSkin(getPlayerSkinFromMojang("9cb6a52c-55bc-456b-9513-f4cf19cdf9e3"), overlay));
-        }else {
-            return toBaseComponent(getPixelColorsFromSkin(getPlayerSkinFromMojang(player.getUniqueId().toString()), overlay));
+        String lookupId = useUUIDWhenRetrieve() ? player.getUniqueId().toString().replace("-", "") : getUUIDFromName(player);
+        String skin = getPlayerSkinFromMojang(lookupId);
+        if (UNAVAILABLE_SKIN.equals(skin)) {
+            skin = getPlayerSkinFromMojang(FALLBACK_SKIN_UUID, false);
         }
+        return toBaseComponent(getPixelColorsFromSkin(skin, overlay));
 
     }
 
@@ -61,7 +62,7 @@ public class MojangSource extends SkinSource {
 
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
-                return getPlayerSkinFromMojang("9cb6a52c-55bc-456b-9513-f4cf19cdf9e3");
+                return FALLBACK_SKIN_UUID;
             }
 
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
@@ -80,7 +81,7 @@ public class MojangSource extends SkinSource {
             }
         } catch (IOException | JSONException e) {
             e.printStackTrace();
-            return "";
+            return FALLBACK_SKIN_UUID;
         }
 
     }
@@ -95,6 +96,14 @@ public class MojangSource extends SkinSource {
      * @return A string representing the URL of the player's skin.
      */
     private String getPlayerSkinFromMojang(String uuid) {
+        return getPlayerSkinFromMojang(uuid, true);
+    }
+
+    private String getPlayerSkinFromMojang(String uuid, boolean allowFallback) {
+        if (uuid == null || uuid.isBlank()) {
+            return UNAVAILABLE_SKIN;
+        }
+
         try {
             // Construct the URL for fetching player's profile information from Mojang's session server
             URL url = new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + uuid);
@@ -105,7 +114,10 @@ public class MojangSource extends SkinSource {
 
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
-                return getPlayerSkinFromMojang("9cb6a52c-55bc-456b-9513-f4cf19cdf9e3");
+                if (allowFallback && !FALLBACK_SKIN_UUID.equals(uuid)) {
+                    return getPlayerSkinFromMojang(FALLBACK_SKIN_UUID, false);
+                }
+                return UNAVAILABLE_SKIN;
             }
 
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
@@ -138,7 +150,7 @@ public class MojangSource extends SkinSource {
         } catch (IOException | JSONException ignored) {
             //e.printStackTrace();
         }
-        return "Unable to retrieve player skin URL."; //TODO Add error handling
+        return UNAVAILABLE_SKIN; //TODO Add error handling
     }
 
 

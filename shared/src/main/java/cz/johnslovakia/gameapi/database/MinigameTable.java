@@ -86,18 +86,11 @@ public class MinigameTable {
 
     public void newUser(PlayerIdentity playerIdentity) {
         try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getPool().getResource()) {
-
-            Optional<Row> result = connection.select()
-                    .from(namespace)
-                    .where()
-                    .isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
-                    .obtainOne();
-
-            if (result.isEmpty()) {
-                connection.insert()
-                        .into(namespace, "Nickname")
-                        .values(playerIdentity.getOnlinePlayer().getName())
-                        .execute();
+            String sql = "INSERT INTO `" + namespace + "` (`Nickname`) VALUES (?) " +
+                    "ON DUPLICATE KEY UPDATE `Nickname` = `Nickname`";
+            try (PreparedStatement stmt = connection.getConnection().prepareStatement(sql)) {
+                stmt.setString(1, playerIdentity.getName());
+                stmt.executeUpdate();
             }
 
         } catch (SQLException e) {

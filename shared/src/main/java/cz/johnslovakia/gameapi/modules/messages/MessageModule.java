@@ -24,6 +24,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.jar.JarFile;
@@ -36,6 +37,7 @@ public class MessageModule implements Module, Listener {
 
     private Map<String, Map<Language, String>> messages = new HashMap<>();
     private ConcurrentMap<PlayerIdentity, Language> playerLanguages = new ConcurrentHashMap<>();
+    private ConcurrentMap<UUID, CompletableFuture<Language>> languageLoads = new ConcurrentHashMap<>();
 
     public MessageModule(JavaPlugin plugin, List<FileGroup> fileGroups) {
         this.plugin = plugin;
@@ -89,6 +91,7 @@ public class MessageModule implements Module, Listener {
         fileGroups = null;
         messages = null;
         playerLanguages = null;
+        languageLoads = null;
     }
 
     public void setPlayerLanguage(PlayerIdentity playerIdentity, Language language) {
@@ -105,7 +108,7 @@ public class MessageModule implements Module, Listener {
                 QueryResult result = connection.update()
                         .table(PlayerTable.TABLE_NAME)
                         .set("Language", language.getName())
-                        .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
+                        .where().isEqual("Nickname", playerIdentity.getName())
                         .execute();
 
                 if (result.isSuccessful()) {
@@ -123,35 +126,71 @@ public class MessageModule implements Module, Listener {
                 }
 
             } catch (Exception e) {
-                Logger.log("Failed to set language for " + playerIdentity.getOnlinePlayer().getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+                Logger.log("Failed to set language for " + playerIdentity.getName() + ": " + e.getMessage(), Logger.LogType.ERROR);
                 e.printStackTrace();
             }
         });
     }
 
     public Language getPlayerLanguage(PlayerIdentity playerIdentity) {
-        return playerLanguages.computeIfAbsent(playerIdentity, player -> {
-            try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
-                if (connection == null) return Language.getDefaultLanguage();
+        if (playerIdentity == null) return Language.getDefaultLanguage();
 
-                Optional<Row> result = connection.select()
-                        .from(PlayerTable.TABLE_NAME)
-                        .where().isEqual("Nickname", player.getOnlinePlayer().getName())
-                        .obtainOne();
+        Language cached = playerLanguages.get(playerIdentity);
+        if (cached != null) return cached;
 
-                return result
-                        .map(row -> Language.getLanguage(row.getString("Language")))
-                        .orElse(Language.getDefaultLanguage());
-            } catch (Exception e) {
-                e.printStackTrace();
-                return Language.getDefaultLanguage();
-            }
-        });
+        CompletableFuture<Language> load = preloadPlayerLanguage(playerIdentity);
+        if (Bukkit.isPrimaryThread()) {
+            return Language.getDefaultLanguage();
+        }
+        return load.join();
+    }
+
+    public CompletableFuture<Language> preloadPlayerLanguage(PlayerIdentity playerIdentity) {
+        if (playerIdentity == null) return CompletableFuture.completedFuture(Language.getDefaultLanguage());
+
+        Language cached = playerLanguages.get(playerIdentity);
+        if (cached != null) return CompletableFuture.completedFuture(cached);
+
+        return languageLoads.computeIfAbsent(playerIdentity.getUniqueId(), uuid ->
+                CompletableFuture.supplyAsync(() -> loadPlayerLanguage(playerIdentity))
+                        .handle((language, ex) -> {
+                            languageLoads.remove(uuid);
+                            if (ex != null) {
+                                Logger.log("Failed to load language for " + playerIdentity.getName() + ": " + ex.getMessage(), Logger.LogType.ERROR);
+                                return Language.getDefaultLanguage();
+                            }
+
+                            Language safeLanguage = language != null ? language : Language.getDefaultLanguage();
+                            playerLanguages.put(playerIdentity, safeLanguage);
+                            return safeLanguage;
+                        })
+        );
+    }
+
+    private Language loadPlayerLanguage(PlayerIdentity playerIdentity) {
+        if (Core.getInstance().getDatabase() == null) return Language.getDefaultLanguage();
+
+        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
+            if (connection == null) return Language.getDefaultLanguage();
+
+            Optional<Row> result = connection.select()
+                    .from(PlayerTable.TABLE_NAME)
+                    .where().isEqual("Nickname", playerIdentity.getName())
+                    .obtainOne();
+
+            return result
+                    .map(row -> Language.getLanguage(row.getString("Language")))
+                    .orElse(Language.getDefaultLanguage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Language.getDefaultLanguage();
+        }
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent e) {
         playerLanguages.remove(PlayerIdentityRegistry.get(e.getPlayer()));
+        languageLoads.remove(e.getPlayer().getUniqueId());
     }
 
     /**

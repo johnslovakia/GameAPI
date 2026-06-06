@@ -487,7 +487,7 @@ public class MapSettingsListener implements Listener {
     public void onSwap(PlayerSwapHandItemsEvent e) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(e.getPlayer());
 
-        if (!gamePlayer.getGame().getState().equals(GameState.INGAME)) {
+        if (!gamePlayer.getGame().getState().equals(GameState.INGAME) || gamePlayer.isSpectator()) {
             e.setCancelled(true);
         }
     }

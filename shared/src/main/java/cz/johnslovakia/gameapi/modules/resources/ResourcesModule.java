@@ -24,6 +24,12 @@ public class ResourcesModule implements Module, Listener {
 
     @Override
     public void initialize() {
+        for (ResourceDefinition definition : ResourceRegistry.loadDefinitions()) {
+            Resource resource = definition.toResource();
+            if (resource != null) {
+                registerResource(false, resource);
+            }
+        }
     }
 
     @Override
@@ -57,7 +63,32 @@ public class ResourcesModule implements Module, Listener {
 
 
     public void registerResource(Resource... resources) {
-        this.resources.addAll(List.of(resources));
+        registerResource(true, resources);
+    }
+
+    private void registerResource(boolean publish, Resource... resources) {
+        for (Resource resource : resources) {
+            Resource previous = getResourceByName(resource.getName());
+            if (previous != null) {
+                if (previous == resource) {
+                    if (publish && resource.getDefinition() != null) {
+                        ResourceRegistry.saveDefinition(resource.getDefinition());
+                    }
+                    continue;
+                }
+
+                this.resources.remove(previous);
+                if (previous.getResourceInterface() != null) {
+                    previous.getResourceInterface().shutdownSilently();
+                }
+            }
+
+            this.resources.add(resource);
+
+            if (publish && resource.getDefinition() != null) {
+                ResourceRegistry.saveDefinition(resource.getDefinition());
+            }
+        }
     }
 
     public Resource getResourceByName(String name) {

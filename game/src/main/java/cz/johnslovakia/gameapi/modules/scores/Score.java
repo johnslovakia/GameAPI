@@ -3,6 +3,7 @@ package cz.johnslovakia.gameapi.modules.scores;
 import cz.johnslovakia.gameapi.Minigame;
 import cz.johnslovakia.gameapi.events.PlayerScoreEvent;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
+import cz.johnslovakia.gameapi.modules.game.session.PlayerGameSession;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
 import cz.johnslovakia.gameapi.modules.stats.Stat;
@@ -146,8 +147,11 @@ public class Score {
                         if (trigger.getResponse() != null) {
                             trigger.getResponse().accept(playerIdentity);
                         } else {
-                            if (playerIdentity instanceof GamePlayer gamePlayer)
-                                ModuleManager.getModule(ScoreModule.class).incrementScore(gamePlayer, getName());
+                            if (playerIdentity instanceof GamePlayer gamePlayer){
+                                PlayerGameSession gameSession = gamePlayer.getGameSession();
+                                if (gameSession != null)
+                                    gameSession.incrementScore(getName());
+                            }
                         }
                     }
                 }

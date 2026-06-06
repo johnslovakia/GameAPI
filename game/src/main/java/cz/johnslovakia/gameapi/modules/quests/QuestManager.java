@@ -109,6 +109,13 @@ public class QuestManager {
     }
 
     public boolean shouldReset(PlayerQuestData data){
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = data.getStartDate();
+        if (startDate == null) return true;
+
+        boolean periodExpired = isPeriodExpired(data, startDate, today);
+        if (!periodExpired) return false;
+
         Optional<QuestUnclaimedReward> unclaimedReward = ModuleManager.getModule(UnclaimedRewardsModule.class)
                 .getPlayerUnclaimedRewardsByType(data.getGamePlayer(), UnclaimedRewardType.QUEST).stream()
                 .filter(r -> r instanceof QuestUnclaimedReward)
@@ -116,25 +123,22 @@ public class QuestManager {
                 .filter(r -> r.getQuestName().equals(data.getQuest().getName())
                         && r.getQuestType().equals(data.getQuest().getType()))
                 .findFirst();
-        if (unclaimedReward.isPresent()) return false;
+        return unclaimedReward.isEmpty();
+    }
 
-
-        LocalDate today = LocalDate.now();
-        LocalDate startDate = data.getStartDate();
-        if (startDate == null) return true;
-
+    private static boolean isPeriodExpired(PlayerQuestData data, LocalDate startDate, LocalDate today) {
+        boolean periodExpired;
         if (data.getQuest().getType().equals(QuestType.WEEKLY)) {
-            WeekFields weekFields = WeekFields.ISO;//WeekFields.of(Locale.getDefault());
+            WeekFields weekFields = WeekFields.ISO;
             int startWeek = startDate.get(weekFields.weekOfWeekBasedYear());
             int currentWeek = today.get(weekFields.weekOfWeekBasedYear());
-
             int startYear = startDate.get(weekFields.weekBasedYear());
             int currentYear = today.get(weekFields.weekBasedYear());
-
-            return startWeek != currentWeek || startYear != currentYear;
+            periodExpired = startWeek != currentWeek || startYear != currentYear;
         } else {
-            return !startDate.isEqual(today);
+            periodExpired = !startDate.isEqual(today);
         }
+        return periodExpired;
     }
 
 

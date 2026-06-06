@@ -39,11 +39,12 @@ public class DailyRewardTrackCategory implements SettingCategory {
                         .addLoreLine("§c► Click to restore default settings")
                         .toItemStack(), p -> {
                     new ConfirmInventory(PlayerIdentityRegistry.get(p), "§cRestore default settings", playerIdentity -> {
-                        DailyRewardTrackModule dailyRewardTrackModule = DailyRewardTrackModule.createDefault();
-
-                        DailyRewardTrackModule.saveDailyRewardTrackModule(dailyRewardTrackModule);
-                        ModuleManager.getInstance().destroyModule(DailyRewardTrackModule.class);
-                        ModuleManager.getInstance().registerModule(dailyRewardTrackModule);
+                        SettingsEditSession.runAction(p, () -> {
+                            DailyRewardTrackModule dailyRewardTrackModule = DailyRewardTrackModule.createDefault();
+                            DailyRewardTrackModule.saveDailyRewardTrackModule(dailyRewardTrackModule);
+                            ModuleManager.getInstance().destroyModule(DailyRewardTrackModule.class);
+                            ModuleManager.getInstance().registerModule(dailyRewardTrackModule);
+                        });
 
                         openMain(p);
                         p.sendMessage("§cDaily Reward Track settings were reset to default. Changes may not apply until the server is restarted.");
@@ -87,13 +88,7 @@ public class DailyRewardTrackCategory implements SettingCategory {
             b.addLoreLine("§7Rewards:");
             if (!tier.reward().getRewardItems().isEmpty()) {
                 for (RewardItem ri : tier.reward().getRewardItems()) {
-                    Resource resource = ri.getResource();
-                    String amount = ri.hasRandomAmount()
-                            ? StringUtils.betterNumberFormat(ri.getRandomMinRange()) + "–" + StringUtils.betterNumberFormat(ri.getRandomMaxRange())
-                            : StringUtils.betterNumberFormat(ri.getAmount());
-                    String chance = ri.getChance() < 100 ? " §7(" + ri.getChance() + "% chance)" : "";
-
-                    b.addLoreLine(" " + resource.getColor() + "+ " + amount + " " + resource.getDisplayName() + chance);
+                    b.addLoreLine(RewardSettingsHelper.rewardItemLine(ri));
                 }
             } else {
                 b.addLoreLine(" §cNone");
@@ -108,9 +103,32 @@ public class DailyRewardTrackCategory implements SettingCategory {
     }
 
     private static void openTierEditor(Player player, int tierIdx) {
+        if (!hasTier(tierIdx)) {
+            openMain(player);
+            return;
+        }
         SettingPageGUI.open(player, "Tier " + (tierIdx + 1),
                 () -> buildTierItems(tierIdx),
-                DailyRewardTrackCategory::openMain);
+                DailyRewardTrackCategory::openMain,
+                List.of(new BottomAction(4, RewardSettingsHelper.addResourceIcon(),
+                        p -> openTierRewardResourcePicker(p, tierIdx))));
+    }
+
+    private static void openTierRewardResourcePicker(Player player, int tierIdx) {
+        if (!hasTier(tierIdx)) {
+            openMain(player);
+            return;
+        }
+        RewardSettingsHelper.openResourcePicker(player,
+                "Add Tier Reward",
+                () -> ModuleManager.getModule(DailyRewardTrackModule.class)
+                        .getTiers().get(tierIdx).reward().getRewardItems(),
+                resource -> {
+                    DailyRewardTrackModule module = ModuleManager.getModule(DailyRewardTrackModule.class);
+                    module.getTiers().get(tierIdx).reward().addRewardItem(new RewardItem(resource, 10));
+                    DailyRewardTrackModule.saveDailyRewardTrackModule(module);
+                },
+                p -> openTierEditor(p, tierIdx));
     }
 
     private static List<SettingItem> buildTierItems(int tierIdx) {
@@ -134,104 +152,61 @@ public class DailyRewardTrackCategory implements SettingCategory {
         }));
 
         List<RewardItem> rewardItems = tier.reward().getRewardItems();
-        for (int i = 0; i < rewardItems.size(); i++) {
-            RewardItem ri = rewardItems.get(i);
-            final int rewardIdx = i;
-
-            Resource resource = ri.getResource();
-            ItemBuilder rb = new ItemBuilder(Material.GOLD_NUGGET);
-            rb.setName("§fReward: " + resource.getColor() + resource.getDisplayName());
-            rb.removeLore();
-            rb.addLoreLine("");
-            rb.addLoreLine("§7Amount: §a" + (ri.hasRandomAmount()
-                    ? StringUtils.betterNumberFormat(ri.getRandomMinRange()) + "–" + StringUtils.betterNumberFormat(ri.getRandomMaxRange())
-                    : StringUtils.betterNumberFormat((ri.getAmount()))));
-            rb.addLoreLine("§7Chance: §a" + ri.getChance() + "%");
-            rb.addLoreLine("");
-            rb.addLoreLine("§a► Click to edit");
-
-            items.add(SettingItem.navigate(rb.toItemStack(),
-                    ctx -> openRewardItemDetail(ctx.player, tierIdx, rewardIdx)));
+        if (rewardItems.isEmpty()) {
+            items.add(SettingItem.display(new ItemBuilder(Material.BARRIER)
+                    .setName("§cNo rewards configured")
+                    .removeLore()
+                    .addLoreLine("§7Use the Add Resource button below.")
+                    .toItemStack()));
+        } else {
+            items.addAll(RewardSettingsHelper.buildRewardNavItems(rewardItems,
+                    (rewardIdx, p) -> openRewardItemDetail(p, tierIdx, rewardIdx),
+                    (rewardIdx, p) -> removeTierRewardItem(tierIdx, rewardIdx),
+                    p -> openTierEditor(p, tierIdx)));
         }
 
         return items;
     }
 
     private static void openRewardItemDetail(Player player, int tierIdx, int rewardIdx) {
+        if (!hasTier(tierIdx) || !hasTierRewardItem(tierIdx, rewardIdx)) {
+            openTierEditor(player, tierIdx);
+            return;
+        }
         SettingPageGUI.open(player, "Reward Item",
-                () -> buildRewardDetailItems(tierIdx, rewardIdx),
+                () -> RewardSettingsHelper.buildRewardItemDetailItems(
+                        () -> ModuleManager.getModule(DailyRewardTrackModule.class)
+                                .getTiers().get(tierIdx).reward().getRewardItems().get(rewardIdx),
+                        ri -> DailyRewardTrackModule.saveDailyRewardTrackModule(
+                                ModuleManager.getModule(DailyRewardTrackModule.class)),
+                        p -> removeTierRewardItem(tierIdx, rewardIdx),
+                        p -> openTierEditor(p, tierIdx)
+                ),
                 p -> openTierEditor(p, tierIdx));
     }
 
-    private static List<SettingItem> buildRewardDetailItems(int tierIdx, int rewardIdx) {
-        DailyRewardTrackModule module = ModuleManager.getModule(DailyRewardTrackModule.class);
-        RewardItem ri = module.getTiers().get(tierIdx).reward().getRewardItems().get(rewardIdx);
-        boolean isRandom = ri.hasRandomAmount();
-        Resource resource = ri.getResource();
-        List<SettingItem> items = new ArrayList<>();
-
-        if (isRandom) {
-            ItemBuilder minItem = new ItemBuilder(Material.GREEN_DYE);
-            minItem.setName("§fMin Amount: " + resource.getColor() + StringUtils.betterNumberFormat(ri.getRandomMinRange()) + " " + resource.getDisplayName());
-            minItem.removeLore();
-            minItem.addLoreLine("");
-            minItem.addLoreLine("§fLeft: §a+1 §8| §fRight: §c-1");
-            minItem.addLoreLine("§fShift+Left: §a+10 §8| §fShift+Right: §c-10");
-            items.add(SettingItem.of(minItem.toItemStack(), ctx -> {
-                int delta = ctx.delta(+1, -1, +10, -10);
-                DailyRewardTrackModule m = ModuleManager.getModule(DailyRewardTrackModule.class);
-                RewardItem r = m.getTiers().get(tierIdx).reward().getRewardItems().get(rewardIdx);
-                r.setRandomMinRange(Math.max(0, r.getRandomMinRange() + delta));
-                if (r.getRandomMaxRange() < r.getRandomMinRange())
-                    r.setRandomMaxRange(r.getRandomMinRange());
-                DailyRewardTrackModule.saveDailyRewardTrackModule(m);
-            }));
-
-            ItemBuilder maxItem = new ItemBuilder(Material.LIME_DYE);
-            maxItem.setName("§fMax Amount: " + resource.getColor() +StringUtils.betterNumberFormat(ri.getRandomMaxRange()) + " " + resource.getDisplayName());
-            maxItem.removeLore();
-            maxItem.addLoreLine("");
-            maxItem.addLoreLine("§fLeft: §a+1 §8| §fRight: §c-1");
-            maxItem.addLoreLine("§fShift+Left: §a+10 §8| §fShift+Right: §c-10");
-            items.add(SettingItem.of(maxItem.toItemStack(), ctx -> {
-                int delta = ctx.delta(+1, -1, +10, -10);
-                DailyRewardTrackModule m = ModuleManager.getModule(DailyRewardTrackModule.class);
-                RewardItem r = m.getTiers().get(tierIdx).reward().getRewardItems().get(rewardIdx);
-                r.setRandomMaxRange(Math.max(r.getRandomMinRange(), r.getRandomMaxRange() + delta));
-                DailyRewardTrackModule.saveDailyRewardTrackModule(m);
-            }));
-        } else {
-            ItemBuilder amountItem = new ItemBuilder(Material.LIME_DYE);
-            amountItem.setName("§fAmount: " + resource.getColor() + StringUtils.betterNumberFormat(ri.getAmount()) + " " + resource.getDisplayName());
-            amountItem.removeLore();
-            amountItem.addLoreLine("");
-            amountItem.addLoreLine("§fLeft: §a+1 §8| §fRight: §c-1");
-            amountItem.addLoreLine("§fShift+Left: §a+10 §8| §fShift+Right: §c-10");
-            items.add(SettingItem.of(amountItem.toItemStack(), ctx -> {
-                int delta = ctx.delta(+1, -1, +10, -10);
-                DailyRewardTrackModule m = ModuleManager.getModule(DailyRewardTrackModule.class);
-                RewardItem r = m.getTiers().get(tierIdx).reward().getRewardItems().get(rewardIdx);
-                r.setAmount(Math.max(1, r.getAmount() + delta));
-                DailyRewardTrackModule.saveDailyRewardTrackModule(m);
-            }));
+    private static void removeTierRewardItem(int tierIdx, int rewardIdx) {
+        if (!hasTier(tierIdx)) {
+            return;
         }
+        DailyRewardTrackModule module = ModuleManager.getModule(DailyRewardTrackModule.class);
+        List<RewardItem> rewardItems = module.getTiers().get(tierIdx).reward().getRewardItems();
+        if (rewardIdx >= 0 && rewardIdx < rewardItems.size()) {
+            rewardItems.remove(rewardIdx);
+            DailyRewardTrackModule.saveDailyRewardTrackModule(module);
+        }
+    }
 
-        ItemBuilder chanceItem = new ItemBuilder(ri.getChance() >= 100 ? Material.EMERALD : Material.GOLD_NUGGET);
-        chanceItem.setName("§fChance: §a" + ri.getChance() + "%");
-        chanceItem.removeLore();
-        chanceItem.addLoreLine("§7Probability that this reward is given.");
-        chanceItem.addLoreLine("§a100% §7= always given.");
-        chanceItem.addLoreLine("");
-        chanceItem.addLoreLine("§fLeft: §a+1% §8| §fRight: §c-1%");
-        chanceItem.addLoreLine("§fShift+Left: §a+5% §8| §fShift+Right: §c-5%");
-        items.add(SettingItem.of(chanceItem.toItemStack(), ctx -> {
-            int delta = ctx.delta(+1, -1, +5, -5);
-            DailyRewardTrackModule m = ModuleManager.getModule(DailyRewardTrackModule.class);
-            RewardItem r = m.getTiers().get(tierIdx).reward().getRewardItems().get(rewardIdx);
-            r.setChance(Math.max(1, Math.min(100, r.getChance() + delta)));
-            DailyRewardTrackModule.saveDailyRewardTrackModule(m);
-        }));
+    private static boolean hasTier(int tierIdx) {
+        return tierIdx >= 0 && tierIdx < ModuleManager.getModule(DailyRewardTrackModule.class).getTiers().size();
+    }
 
-        return items;
+    private static boolean hasTierRewardItem(int tierIdx, int rewardIdx) {
+        if (!hasTier(tierIdx)) {
+            return false;
+        }
+        List<RewardItem> rewardItems = ModuleManager.getModule(DailyRewardTrackModule.class)
+                .getTiers().get(tierIdx).reward().getRewardItems();
+        return rewardIdx >= 0 && rewardIdx < rewardItems.size();
     }
 }

@@ -12,27 +12,46 @@ import java.sql.SQLException;
 
 public class JSConfigs {
 
+    private static final String TABLE_NAME = "jsConfigs";
+    private static volatile boolean tableReady = false;
+
     public static void createTable() {
-        if (Core.getInstance().getDatabase() == null) return;
+        ensureTable();
+    }
 
-        try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getPool().getResource()) {
+    private static boolean ensureTable() {
+        if (tableReady) return true;
 
-            QueryResult result = connection.exec(() ->
-                    "CREATE TABLE IF NOT EXISTS jsConfigs (" +
-                            "id INT AUTO_INCREMENT PRIMARY KEY," +
-                            "`key` VARCHAR(100) NOT NULL UNIQUE," +
-                            "value LONGTEXT NOT NULL," +
-                            "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
-                            ");"
-            );
+        Core core = Core.getInstance();
+        if (core == null || core.getDatabase() == null) return false;
 
-            if (!result.isSuccessful()) {
-                Logger.log("Failed to create game_configs table!", Logger.LogType.ERROR);
-                Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+        synchronized (JSConfigs.class) {
+            if (tableReady) return true;
+
+            try (SQLDatabaseConnection connection = core.getDatabase().getPool().getResource()) {
+
+                QueryResult result = connection.exec(() ->
+                        "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (" +
+                                "id INT AUTO_INCREMENT PRIMARY KEY," +
+                                "`key` VARCHAR(100) NOT NULL UNIQUE," +
+                                "value LONGTEXT NOT NULL," +
+                                "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
+                                ");"
+                );
+
+                if (!result.isSuccessful()) {
+                    Logger.log("Failed to create " + TABLE_NAME + " table!", Logger.LogType.ERROR);
+                    Logger.log(result.getRejectMessage(), Logger.LogType.ERROR);
+                    return false;
+                }
+
+                tableReady = true;
+                return true;
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return false;
             }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
@@ -41,11 +60,13 @@ public class JSConfigs {
     }
 
     public void saveConfig(String key, String json) {
+        if (!ensureTable()) return;
+
         try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getPool().getResource()) {
             Connection conn = dbConn.getConnection();
 
             try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO jsConfigs (`key`, value) VALUES (?, ?) " +
+                    "INSERT INTO " + TABLE_NAME + " (`key`, value) VALUES (?, ?) " +
                             "ON DUPLICATE KEY UPDATE value = VALUES(value), last_updated = CURRENT_TIMESTAMP"
             )) {
                 ps.setString(1, key);
@@ -54,16 +75,18 @@ public class JSConfigs {
             }
 
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
     }
 
     public String loadConfig(String key) {
+        if (!ensureTable()) return null;
+
         try (SQLDatabaseConnection dbConn = Core.getInstance().getDatabase().getPool().getResource()) {
             Connection conn = dbConn.getConnection();
 
             try (PreparedStatement ps = conn.prepareStatement(
-                    "SELECT value FROM jsConfigs WHERE `key` = ?"
+                    "SELECT value FROM " + TABLE_NAME + " WHERE `key` = ?"
             )) {
                 ps.setString(1, key);
 
@@ -75,7 +98,7 @@ public class JSConfigs {
             }
 
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
 
         return null;

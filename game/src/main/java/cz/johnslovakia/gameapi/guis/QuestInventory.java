@@ -18,6 +18,7 @@ import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.StringUtils;
 import cz.johnslovakia.gameapi.utils.Utils;
+import cz.johnslovakia.gameapi.utils.VipBonusUtils;
 
 import me.zort.containr.Component;
 import me.zort.containr.Element;
@@ -37,11 +38,10 @@ import java.util.*;
 
 public class QuestInventory {
 
-    private static ItemStack getEditedItem(GamePlayer gamePlayer, Quest quest){
+    private static ItemStack getEditedItem(GamePlayer gamePlayer, Quest quest, int bonus){
         PlayerData data = gamePlayer.getPlayerData();
         boolean in_progress = data.getQuestData(quest).getStatus().equals(PlayerQuestData.Status.IN_PROGRESS);
         boolean completed = data.getQuestData(quest).isCompleted();
-        int bonus = getBonus(gamePlayer);
 
         LocalDate today = LocalDate.now();
         WeekFields weekFields = WeekFields.ISO;//WeekFields.of(Locale.getDefault());
@@ -118,30 +118,12 @@ public class QuestInventory {
         return item.toItemStack();
     }
 
-    private static int getBonus(GamePlayer gamePlayer){
-        int bonus;
-        if (gamePlayer.getMetadata().get("quest_reward_bonus") == null) {
-            List<Integer> percentages = Arrays.asList(5, 7, 10, 12, 15, 17, 20, 25, 30, 35, 40, 45, 50, 75, 100);
-            for (Integer percent : percentages) {
-                if (gamePlayer.getOnlinePlayer().hasPermission("vip.bonus" + percent)) {
-                    gamePlayer.getMetadata().put("quest_reward_bonus", percent);
-                    return percent;
-                }
-            }
-        } else {
-            return (int) gamePlayer.getMetadata().get("quest_reward_bonus");
-        }
-        return 0;
-    }
-
     public static void openGUI(GamePlayer gamePlayer){
         Minigame.getInstance().getQuestManager().check(gamePlayer);
 
         PlayerData data = gamePlayer.getPlayerData();
 
-        int bonus = getBonus(gamePlayer);
-
-
+        int bonus = VipBonusUtils.getRewardBonus(gamePlayer);
 
         GUI inventory = Component.gui()
                 .title(net.kyori.adventure.text.Component.text("§f七七七七七七七七ㆼ").font(Key.key("jsplugins", "guis")))
@@ -166,19 +148,30 @@ public class QuestInventory {
                     }).build());
                     gui.appendElement(8, Component.element(info.toItemStack()).build());
 
-                    List<Quest> sorted = data.getQuests().stream()
-                            .sorted(Comparator.comparing(q -> q.getType() == QuestType.WEEKLY))
-                            .toList();
+                    List<Quest> activeQuests = new ArrayList<>(data.getQuests());
 
-                    List<QuestUnclaimedReward> orphanedRewards = ModuleManager.getModule(UnclaimedRewardsModule.class)
+                    ModuleManager.getModule(UnclaimedRewardsModule.class)
                             .getPlayerUnclaimedRewardsByType(gamePlayer, UnclaimedRewardType.QUEST).stream()
                             .filter(QuestUnclaimedReward.class::isInstance)
                             .map(QuestUnclaimedReward.class::cast)
-                            .filter(r -> sorted.stream().noneMatch(q ->
-                                    q.getType().equals(r.getQuestType()) &&
-                                            q.getName().equalsIgnoreCase(r.getQuestName())))
+                            .forEach(r -> {
+                                boolean alreadyPresent = activeQuests.stream().anyMatch(q ->
+                                        q.getType().equals(r.getQuestType()) &&
+                                        q.getName().equalsIgnoreCase(r.getQuestName()));
+                                if (!alreadyPresent) {
+                                    Quest q = Minigame.getInstance().getQuestManager()
+                                            .getQuest(r.getQuestType(), r.getQuestName());
+                                    if (q != null) {
+                                        activeQuests.add(q);
+                                    } else {
+                                        r.claim();
+                                    }
+                                }
+                            });
+
+                    List<Quest> sorted = activeQuests.stream()
+                            .sorted(Comparator.comparing(q -> q.getType() == QuestType.WEEKLY))
                             .toList();
-                    orphanedRewards.forEach(UnclaimedReward::claim);
 
                     int slot = 11;
                     for (Quest quest : sorted) {
@@ -190,7 +183,7 @@ public class QuestInventory {
                                         && r.getQuestName().equalsIgnoreCase(quest.getName()))
                                 .findFirst();
 
-                        Element element = Component.element(getEditedItem(gamePlayer, quest)).addClick(i -> {
+                        Element element = Component.element(getEditedItem(gamePlayer, quest, bonus)).addClick(i -> {
                             if (unclaimedReward.isPresent()){
                                 ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.unclaimed_reward.quest.claimed").send();
                                 if (bonus != 0) {

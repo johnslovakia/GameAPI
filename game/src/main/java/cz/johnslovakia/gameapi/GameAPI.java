@@ -15,6 +15,7 @@ import cz.johnslovakia.gameapi.listeners.cosmetics.KillSoundsCategoryListener;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticsModule;
 import cz.johnslovakia.gameapi.modules.dailyRewardTrack.DailyRewardTrackModule;
+import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.game.GameService;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.modules.game.runtime.RestartScheduler;
@@ -30,6 +31,7 @@ import cz.johnslovakia.gameapi.modules.levels.PlayerLevelData;
 import cz.johnslovakia.gameapi.modules.messages.FileGroup;
 import cz.johnslovakia.gameapi.modules.messages.Language;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
+import cz.johnslovakia.gameapi.modules.scoreboard.ScoreboardModule;
 import cz.johnslovakia.gameapi.utils.InputStreamWithName;
 import cz.johnslovakia.gameapi.modules.perks.Perk;
 import cz.johnslovakia.gameapi.modules.perks.PerkManager;
@@ -429,9 +431,10 @@ public class GameAPI{
         this.minigame = minigame;
 
         JavaPlugin plugin = minigame.getPlugin();
-        
-        onEnable(minigame);
+
         //new Core(Core.PluginContext.MINIGAME, plugin, minigame.getDatabase());
+
+        onEnable(minigame);
 
         boolean somethingwrong = false;
         //TODO: something went wrong messages
@@ -489,6 +492,16 @@ public class GameAPI{
         }
 
         moduleManager.registerModule(new MessageModule(plugin, fileGroups));
+        if (minigame.getScoreboardSettings() != null) {
+            moduleManager.registerModule(new ScoreboardModule(plugin, minigame.getScoreboardSettings()));
+        }
+
+        if (minigame.getDatabase() == null){
+            Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
+            return;
+        }
+
+        JSConfigs.createTable();
 
 
 
@@ -513,11 +526,6 @@ public class GameAPI{
         }
 
 
-        if (Minigame.getInstance().getDatabase() == null){
-            Logger.log("You don't have the database set up in the config.yml!", Logger.LogType.ERROR);
-            return;
-        }
-
         Resource experiencePoints = null;
         if (minigame.getSettings().isUseLevelSystem()) {
             experiencePoints = Resource.builder("ExperiencePoints")
@@ -532,7 +540,8 @@ public class GameAPI{
                 .displayName("Cosmetic Tokens")
                 .color(ChatColor.DARK_GREEN)
                 .rank(4)
-                .batched("gameapi_playertable")
+                .global()
+                .migrateFromBatched("gameapi_playertable")
                 .build();
 
         FileConfiguration config = minigame.getPlugin().getConfig();
@@ -545,7 +554,8 @@ public class GameAPI{
         if (config.getBoolean("useVault", false)) {
             coins.deferredVault("gameapi_playertable", plugin);
         } else {
-            coins.batched("gameapi_playertable");
+            coins.global()
+                    .migrateFromBatched("gameapi_playertable");
         }
 
         resourcesModule.registerResource(coins.build(), cosmeticTokens);
@@ -557,7 +567,6 @@ public class GameAPI{
         MinigameTable minigameTable = minigame.getMinigameTable();
         PlayerTable playerTable = new PlayerTable();
 
-        JSConfigs.createTable();
         LevelModule levelModule;
         if (minigame.getSettings().isUseLevelSystem()) {
             levelModule = LevelModule.loadOrCreateLevelModule();
@@ -627,16 +636,20 @@ public class GameAPI{
 
                         if (offlinePlayer.isOnline() && levelProgress != null) {
                             Player player = offlinePlayer.getPlayer();
-                            levelProgress.calculate().thenRun(() -> {
-                                float xpProgress = levelProgress.getXpToNextLevel() > 0 ? (float) levelProgress.getXpOnCurrentLevel() / levelProgress.getXpToNextLevel() : 1.0f;
+                            GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+                            GameInstance game = gamePlayer.getGame().getGame();
+                            if (game != null) {
+                                levelProgress.calculate().thenRun(() -> {
+                                    float xpProgress = levelProgress.getXpToNextLevel() > 0 ? (float) levelProgress.getXpOnCurrentLevel() / levelProgress.getXpToNextLevel() : 1.0f;
 
-                                if (!((GamePlayer) PlayerIdentityRegistry.get(offlinePlayer)).getGame().getState().equals(GameState.INGAME)) {
-                                    Bukkit.getScheduler().runTask(minigame.getPlugin(), task -> {
-                                        player.setExp(Math.min(xpProgress, 1.0f));
-                                        player.setLevel(levelProgress.getLevel());
-                                    });
-                                }
-                            });
+                                    if (!game.getState().equals(GameState.INGAME)) {
+                                        Bukkit.getScheduler().runTask(minigame.getPlugin(), task -> {
+                                            player.setExp(Math.min(xpProgress, 1.0f));
+                                            player.setLevel(levelProgress.getLevel());
+                                        });
+                                    }
+                                });
+                            }
                         }
                     }
 

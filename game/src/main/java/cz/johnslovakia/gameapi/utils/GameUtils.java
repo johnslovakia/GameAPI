@@ -194,7 +194,7 @@ public class GameUtils {
 
             if (rank > maxRank) break;
 
-            result.put((GamePlayer) session.getPlayerIdentity(), rank);
+            result.put((GamePlayer) session.getGamePlayer(), rank);
 
             if (result.size() >= hardCap) break;
         }

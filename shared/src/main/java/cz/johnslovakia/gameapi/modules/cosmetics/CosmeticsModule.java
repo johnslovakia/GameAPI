@@ -12,6 +12,7 @@ import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics.*;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
+import cz.johnslovakia.gameapi.modules.settings.SettingsEditSession;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.utils.eTrigger.Condition;
@@ -34,6 +35,8 @@ import java.util.*;
 @Getter
 public class CosmeticsModule implements Listener, Module {
 
+    private static final String PRICE_SETTINGS_SOURCE_ID = "module-settings:CosmeticPrices";
+
     private List<CosmeticsCategory> categories = new ArrayList<>();
     private Map<PlayerIdentity, Map<CosmeticsCategory, Cosmetic>> selectedCosmetics = new HashMap<>();
     private Map<PlayerIdentity, List<Cosmetic>> purchasedCosmetics = new HashMap<>();
@@ -49,6 +52,7 @@ public class CosmeticsModule implements Listener, Module {
         new PlayerTable().createNewColumn(Type.JSON, "Cosmetics");
 
         prices = loadPrices();
+        registerPriceSettingsSource();
 
         addCategory(new KillMessagesCategory(this));
         addCategory(new KillSoundsCategory(this));
@@ -90,9 +94,39 @@ public class CosmeticsModule implements Listener, Module {
     }
 
     public void savePrices(CosmeticPrices p) {
+        prices = p;
+        registerPriceSettingsSource();
+        if (SettingsEditSession.deferSave(PRICE_SETTINGS_SOURCE_ID)) {
+            return;
+        }
+        savePricesNow(p);
+    }
+
+    private void savePricesNow(CosmeticPrices p) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         new JSConfigs().saveConfig("CosmeticPrices", gson.toJson(p));
         prices = p;
+    }
+
+    private void registerPriceSettingsSource() {
+        SettingsEditSession.registerSource(
+                PRICE_SETTINGS_SOURCE_ID,
+                "Cosmetics Prices",
+                this::snapshotPrices,
+                this::restorePrices,
+                () -> savePricesNow(prices)
+        );
+    }
+
+    private String snapshotPrices() {
+        return new GsonBuilder().setPrettyPrinting().create().toJson(prices);
+    }
+
+    private void restorePrices(String json) {
+        CosmeticPrices restored = new GsonBuilder().setPrettyPrinting().create().fromJson(json, CosmeticPrices.class);
+        if (restored != null) {
+            prices = restored;
+        }
     }
 
 

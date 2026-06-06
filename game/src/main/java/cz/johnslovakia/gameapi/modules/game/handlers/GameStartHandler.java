@@ -21,7 +21,7 @@ import cz.johnslovakia.gameapi.modules.game.task.tasks.GameCountdown;
 import cz.johnslovakia.gameapi.modules.game.task.tasks.PreparationCountdown;
 import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.GamePlayerState;
-import cz.johnslovakia.gameapi.utils.CollisionManager;bug
+import cz.johnslovakia.gameapi.utils.CollisionManager;
 import cz.johnslovakia.gameapi.utils.Logger;
 import cz.johnslovakia.gameapi.worldManagement.WorldManager;
 import org.bukkit.Bukkit;
@@ -58,10 +58,11 @@ public class GameStartHandler {
 
     private void prepareGame(){
         if (!gameInstance.getSettings().isChooseRandomMap()) {
-            if (gameInstance.nextArena() == null) {
+            GameMap nextMap = gameInstance.nextArena();
+            if (nextMap == null) {
                 return;
             }
-            gameInstance.nextArena().setWinned(true);
+            nextMap.setWinned(true);
         }
 
         GameMap playingMap = gameInstance.getCurrentMap();
@@ -80,9 +81,12 @@ public class GameStartHandler {
         gameInstance.getCurrentMap().getWorld().setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
         gameInstance.getCurrentMap().getWorld().setGameRule(GameRule.LOCATOR_BAR, false);
 
+        StatsModule statsModule = ModuleManager.getModule(StatsModule.class);
         for (GamePlayer gamePlayer : gameInstance.getPlayers()) {
             preparePlayer(gamePlayer);
-            ModuleManager.getModule(StatsModule.class).removeHolograms(gamePlayer);
+            if (statsModule != null) {
+                statsModule.removeHolograms(gamePlayer);
+            }
         }
         gameInstance.getCurrentMap().teleport();
 
@@ -143,8 +147,8 @@ public class GameStartHandler {
         } else {
             ItemStack[] savedContents = (ItemStack[]) gamePlayer.getMetadata().remove("rejoin_inventory");
             ItemStack[] savedArmor = (ItemStack[]) gamePlayer.getMetadata().remove("rejoin_armor");
-            ItemStack savedOffhand = gamePlayer.getMetadata().remove("rejoin_offhand") != null
-                    ? (ItemStack) gamePlayer.getMetadata().remove("rejoin_offhand") : null;
+            Object savedOffhandValue = gamePlayer.getMetadata().remove("rejoin_offhand");
+            ItemStack savedOffhand = savedOffhandValue instanceof ItemStack item ? item : null;
 
             if (savedContents != null) player.getInventory().setContents(savedContents);
             if (savedArmor != null) player.getInventory().setArmorContents(savedArmor);

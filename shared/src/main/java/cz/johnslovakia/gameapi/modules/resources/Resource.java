@@ -2,6 +2,7 @@ package cz.johnslovakia.gameapi.modules.resources;
 
 import cz.johnslovakia.gameapi.modules.resources.storage.BatchedStorage;
 import cz.johnslovakia.gameapi.modules.resources.storage.DeferredVaultStorage;
+import cz.johnslovakia.gameapi.modules.resources.storage.JsonResourceStorage;
 import cz.johnslovakia.gameapi.modules.resources.storage.ResourceStorage;
 import cz.johnslovakia.gameapi.modules.resources.storage.VaultStorage;
 
@@ -24,6 +25,7 @@ public class Resource {
 
     private ResourceStorage resourceInterface;
     private boolean applicableBonus;
+    private final ResourceDefinition definition;
 
     private Resource(Builder builder) {
         this.name = builder.name;
@@ -34,6 +36,7 @@ public class Resource {
         this.applicableBonus = builder.applicableBonus;
         this.imgChar = builder.imgChar;
         this.resourceInterface = builder.resourceStorage;
+        this.definition = builder.createDefinition();
     }
 
     public String getDisplayName(){
@@ -77,6 +80,10 @@ public class Resource {
         private boolean applicableBonus = false;
         private String imgChar;
         private ResourceStorage resourceStorage;
+        private boolean publishedDefinition = false;
+        private String definitionStorage;
+        private String definitionTableName;
+        private final java.util.List<String> migrateFromBatchedTables = new java.util.ArrayList<>();
 
         private Builder(String name) {
             this.name = name;
@@ -114,21 +121,56 @@ public class Resource {
 
         public Builder customInterface(ResourceStorage resourceStorage) {
             this.resourceStorage = resourceStorage;
+            this.publishedDefinition = false;
+            this.definitionStorage = null;
+            this.definitionTableName = null;
             return this;
         }
 
         public Builder batched(String tableName) {
             this.resourceStorage = new BatchedStorage(getName(), tableName);
+            this.publishedDefinition = false;
+            this.definitionStorage = null;
+            this.definitionTableName = null;
+            return this;
+        }
+
+        public Builder global() {
+            this.resourceStorage = new JsonResourceStorage(getName(), migrateFromBatchedTables);
+            this.publishedDefinition = true;
+            this.definitionStorage = ResourceDefinition.STORAGE_PLAYER_TABLE_JSON;
+            this.definitionTableName = null;
+            return this;
+        }
+
+        public Builder migrateFromBatched(String... tableNames) {
+            if (tableNames == null) return this;
+
+            for (String tableName : tableNames) {
+                if (tableName != null && !tableName.isBlank() && !migrateFromBatchedTables.contains(tableName)) {
+                    migrateFromBatchedTables.add(tableName);
+                }
+            }
+
+            if (resourceStorage instanceof JsonResourceStorage jsonResourceStorage) {
+                jsonResourceStorage.addLegacyBatchedTables(migrateFromBatchedTables);
+            }
             return this;
         }
 
         public Builder vault(Economy vaultEconomy) {
             this.resourceStorage = new VaultStorage(vaultEconomy);
+            this.publishedDefinition = false;
+            this.definitionStorage = null;
+            this.definitionTableName = null;
             return this;
         }
 
         public Builder deferredVault(String tableName, JavaPlugin plugin) {
             this.resourceStorage = new DeferredVaultStorage(getName(), tableName, plugin);
+            this.publishedDefinition = true;
+            this.definitionStorage = ResourceDefinition.STORAGE_DEFERRED_VAULT;
+            this.definitionTableName = tableName;
             return this;
         }
 
@@ -139,6 +181,23 @@ public class Resource {
                 );
             }
             return new Resource(this);
+        }
+
+        private ResourceDefinition createDefinition() {
+            if (!publishedDefinition) return null;
+
+            return new ResourceDefinition(
+                    name,
+                    displayName,
+                    color,
+                    rank,
+                    firstDailyWinReward,
+                    applicableBonus,
+                    imgChar,
+                    definitionStorage,
+                    definitionTableName,
+                    migrateFromBatchedTables
+            );
         }
     }
 }

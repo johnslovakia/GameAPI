@@ -35,6 +35,10 @@ public class RewardItem {
         return ModuleManager.getModule(ResourcesModule.class).getResourceByName(resource);
     }
 
+    public String getResourceName() {
+        return resource;
+    }
+
     public RewardItem(Resource resource, int amount) {
         this.resource = resource.getName();
         this.amount = amount;

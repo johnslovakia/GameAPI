@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.modules.game.session;
 
+import cz.johnslovakia.gameapi.events.PlayerScoreEvent;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.kits.Kit;
@@ -8,19 +9,25 @@ import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.resources.ResourceComparator;
 import cz.johnslovakia.gameapi.modules.scores.ScoreGroup;
 import cz.johnslovakia.gameapi.modules.scores.ScoreModule;
+import cz.johnslovakia.gameapi.modules.stats.Stat;
+import cz.johnslovakia.gameapi.modules.stats.StatsModule;
 import cz.johnslovakia.gameapi.rewards.PlayerRewardRecord;
+import cz.johnslovakia.gameapi.rewards.Reward;
+import cz.johnslovakia.gameapi.users.GamePlayer;
 import cz.johnslovakia.gameapi.users.GamePlayerState;
 import cz.johnslovakia.gameapi.users.PlayerIdentity;
 import cz.johnslovakia.gameapi.modules.scores.Score;
+import cz.johnslovakia.gameapi.users.ScoreAction;
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.Bukkit;
 
 import java.util.*;
 
 @Getter @Setter
 public class PlayerGameSession {
 
-    private final PlayerIdentity playerIdentity;
+    private final GamePlayer gamePlayer;
     private final GameInstance gameInstance;
 
     private final Map<Score, Integer> scores = new HashMap<>();
@@ -36,8 +43,8 @@ public class PlayerGameSession {
     private boolean limited = false;
     private boolean participatedAsPlayer = false;
 
-    public PlayerGameSession(PlayerIdentity playerIdentity, GameInstance gameInstance) {
-        this.playerIdentity = playerIdentity;
+    public PlayerGameSession(GamePlayer gamePlayer, GameInstance gameInstance) {
+        this.gamePlayer = gamePlayer;
         this.gameInstance = gameInstance;
     }
 
@@ -54,6 +61,69 @@ public class PlayerGameSession {
                 .getScore(scoreName)
                 .map(score -> scores.getOrDefault(score, 0))
                 .orElse(0);
+    }
+
+    public void incrementScore(String scoreName){
+        incrementScore(scoreName, 1);
+    }
+
+    public void incrementScore(String scoreName, int amount){
+        if (amount <= 0) return;
+        ScoreAction action = amount == 1 ? ScoreAction.INCREASE : ScoreAction.ADD;
+        setScore(scoreName, getScore(scoreName) + amount, action);
+    }
+
+    public void decrementScore(String scoreName){
+        decrementScore(scoreName, 1);
+    }
+
+    public void decrementScore(String scoreName, int amount){
+        if (amount <= 0) return;
+        setScore(scoreName, getScore(scoreName) - amount, ScoreAction.DECREASE);
+    }
+
+    public void setScore(String scoreName, int value){
+        setScore(scoreName, value, null);
+    }
+
+    private void setScore(String scoreName, int value, ScoreAction action){
+        ScoreModule scoreModule = ModuleManager.getModule(ScoreModule.class);
+        scoreModule.getScore(scoreName).ifPresent(score -> {
+            if (gameInstance == null) return;
+            int previousScore = getScore(scoreName);
+            int currentScore = Math.max(0, value);
+            int difference = currentScore - previousScore;
+            if (difference == 0) return;
+            ScoreAction eventAction = action != null ? action : getScoreAction(currentScore, difference);
+
+            if (currentScore == 0) {
+                scores.remove(score);
+            } else {
+                scores.put(score, currentScore);
+            }
+
+            Stat linkedStat = score.getLinkedStat();
+            if (linkedStat != null) {
+                ModuleManager.getModule(StatsModule.class).increasePlayerStat(gamePlayer, linkedStat, difference);
+            }
+
+            Reward reward = score.getReward();
+            if (difference > 0 && reward != null &&
+                    (score.getRewardLimit() == 0 || currentScore < score.getRewardLimit())
+                    && currentScore % score.getRewardFrequency() == 0) {
+
+                PlayerRewardRecord record = reward.applyReward(gamePlayer, score.isAllowedMessage());
+                earnedScoreRewards.computeIfAbsent(score, s -> new ArrayList<>()).add(record);
+            }
+
+            PlayerScoreEvent event = new PlayerScoreEvent(gamePlayer, score, eventAction);
+            Bukkit.getPluginManager().callEvent(event);
+        });
+    }
+
+    private ScoreAction getScoreAction(int currentScore, int difference) {
+        if (currentScore == 0) return ScoreAction.RESET;
+        return difference > 0 ? ScoreAction.ADD : ScoreAction.DECREASE;
     }
 
     public Map<Resource, Integer> getEarnedRewards() {

@@ -164,6 +164,7 @@ public class GamePlayer extends Winner implements PlayerIdentity {
             inventory.setChestplate(new ItemStack(Material.AIR));
             inventory.setLeggings(new ItemStack(Material.AIR));
             inventory.setBoots(new ItemStack(Material.AIR));
+            inventory.setItemInOffHand(new ItemStack(Material.AIR));
 
             if (game.getState().equals(GameState.INGAME)) {
                 if (teamSelector) {

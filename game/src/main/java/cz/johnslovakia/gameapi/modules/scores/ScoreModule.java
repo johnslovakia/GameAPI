@@ -37,34 +37,6 @@ public class ScoreModule implements Module {
         scoreGroups = null;
     }
 
-    public void incrementScore(GamePlayer gamePlayer, String scoreName){
-        getScore(scoreName).ifPresent(score -> {
-            if (gamePlayer.getGame() == null) return;
-            PlayerGameSession session = gamePlayer.getGame().getModule(GameSessionModule.class).getPlayerSession(gamePlayer);
-            if (session == null) return;
-
-            session.getScores().merge(score, 1, Integer::sum);
-            int currentScore = session.getScore(scoreName);
-
-            Stat linkedStat = score.getLinkedStat();
-            if (linkedStat != null) {
-                ModuleManager.getModule(StatsModule.class).increasePlayerStat(gamePlayer, linkedStat, 1);
-            }
-
-            Reward reward = score.getReward();
-            if (reward != null &&
-                    (score.getRewardLimit() == 0 || currentScore < score.getRewardLimit())
-                    && currentScore % score.getRewardFrequency() == 0) {
-
-                PlayerRewardRecord record = reward.applyReward(gamePlayer, score.isAllowedMessage());
-                session.getEarnedScoreRewards().computeIfAbsent(score, s -> new ArrayList<>()).add(record);
-            }
-
-            PlayerScoreEvent event = new PlayerScoreEvent(gamePlayer, score, ScoreAction.INCREASE);
-            Bukkit.getPluginManager().callEvent(event);
-        });
-    }
-
     public void registerScoreGroup(ScoreGroup group) {
         scoreGroups.put(group.getKey(), group);
     }

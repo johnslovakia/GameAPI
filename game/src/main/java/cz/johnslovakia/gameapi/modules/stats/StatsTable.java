@@ -117,19 +117,11 @@ public class StatsTable {
             if (dbConn == null) return;
             Connection conn = dbConn.getConnection();
 
-            try (PreparedStatement check = conn.prepareStatement(
-                    "SELECT 1 FROM " + quotedLifetimeTable() + " WHERE `Nickname` = ? LIMIT 1"
-            )) {
-                check.setString(1, playerIdentity.getOnlinePlayer().getName());
-                try (ResultSet rs = check.executeQuery()) {
-                    if (rs.next()) return;
-                }
-            }
-
             try (PreparedStatement insert = conn.prepareStatement(
-                    "INSERT INTO " + quotedLifetimeTable() + " (`Nickname`) VALUES (?)"
+                    "INSERT INTO " + quotedLifetimeTable() + " (`Nickname`) VALUES (?) " +
+                            "ON DUPLICATE KEY UPDATE `Nickname` = `Nickname`"
             )) {
-                insert.setString(1, playerIdentity.getOnlinePlayer().getName());
+                insert.setString(1, playerIdentity.getName());
                 insert.executeUpdate();
             }
         } catch (SQLException e) {

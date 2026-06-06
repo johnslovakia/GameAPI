@@ -314,9 +314,23 @@ public class CachedBatchStorage<K, V> {
     }
 
     public void shutdown() {
+        shutdown(false);
+    }
+
+    public void shutdownSilently() {
+        shutdown(true);
+    }
+
+    private void shutdown(boolean silent) {
+        if (isShutdown) {
+            return;
+        }
+
         isShutdown = true;
 
-        LOGGER.info(String.format("[%s] Shutting down... Flushing %d changes", name, pendingChanges.size()));
+        if (!silent) {
+            LOGGER.info(String.format("[%s] Shutting down... Flushing %d changes", name, pendingChanges.size()));
+        }
 
         flush();
 
@@ -330,7 +344,9 @@ public class CachedBatchStorage<K, V> {
             Thread.currentThread().interrupt();
         }
 
-        LOGGER.info(String.format("[%s] Shutdown complete", name));
+        if (!silent) {
+            LOGGER.info(String.format("[%s] Shutdown complete", name));
+        }
     }
 
     @Getter

@@ -4,6 +4,7 @@ import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.modules.game.team.GameTeam;
 import cz.johnslovakia.gameapi.modules.game.team.TeamModule;
+import cz.johnslovakia.gameapi.modules.messages.Message;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.resources.Resource;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
@@ -85,10 +86,12 @@ public class GameMap {
 
     public void voteForMap(Player player) {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
+        MessageModule messageModule = ModuleManager.getModule(MessageModule.class);
+        MapModule mapModule = game.getModule(MapModule.class);
 
-        if (!game.getModule(MapModule.class).isEnabledVoting() ||
+        if (!mapModule.isEnabledVoting() ||
                 !(game.getState().equals(GameState.WAITING) || game.getState().equals(GameState.STARTING))) {
-            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.map.vote_ended").send();
+            messageModule.getMessage(player, "chat.map.vote_ended").send();
             player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_BREAK, 20.0F, 20.0F);
             return;
         }
@@ -100,39 +103,60 @@ public class GameMap {
             freeVotes = 2;
         }
 
-        int allowedVotes = 3;
-        int currentVotes = game.getModule(MapModule.class).getTotalPlayerVotes(gamePlayer);
+        int maxVotes = 3;
+        int currentVotes = mapModule.getTotalPlayerVotes(gamePlayer);
 
-        if (currentVotes >= allowedVotes) {
-            ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.map.no_more_votes")
-                    .send();
+        if (currentVotes >= maxVotes) {
+            messageModule.getMessage(player, "chat.map.no_more_votes").send();
             return;
         }
 
-        if (currentVotes >= freeVotes) {
-            int[] votePrices = {150, 200};
-            int cost = votePrices[currentVotes - freeVotes];
-            ResourcesModule resourcesModule = ModuleManager.getModule(ResourcesModule.class);
-            Resource resource = resourcesModule.getResourceByName("Coins");
+        ResourcesModule resourcesModule = ModuleManager.getModule(ResourcesModule.class);
+        Resource resource = resourcesModule.getResourceByName("Coins");
 
+        int voteCost = getVoteCost(currentVotes, freeVotes);
+        boolean paidForVote = voteCost > 0;
+
+        if (paidForVote) {
             int balance = resourcesModule.getPlayerBalanceCached(player, resource);
-            if (balance < cost) {
-                ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.dont_have_enough")
-                        .replace("%need_more%", StringUtils.betterNumberFormat((long) (cost - balance)))
+
+            if (balance < voteCost) {
+                messageModule.getMessage(player, "chat.dont_have_enough")
+                        .replace("%need_more%", StringUtils.betterNumberFormat((long) (voteCost - balance)))
                         .replace("%economy_name%", resource.getDisplayName())
                         .send();
                 return;
             }
 
-            resourcesModule.withdraw(player, resource, cost);
+            resourcesModule.withdraw(player, resource, voteCost);
         }
 
-        game.getModule(MapModule.class).addPlayerVote(gamePlayer, this);
+        mapModule.addPlayerVote(gamePlayer, this);
+
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 20.0F, 20.0F);
-        ModuleManager.getModule(MessageModule.class).getMessage(player, "chat.map.vote")
+
+        messageModule.getMessage(player, "chat.map.vote")
                 .replace("%map%", getName())
-                .replace("%votes%", "" + getVotes())
+                .replace("%votes%", String.valueOf(getVotes()))
+                .add(StringUtils.colorizer("§c(- #df1c1c" + StringUtils.betterNumberFormat(voteCost) + " §c" + resource.getDisplayName() + ")"), identity -> paidForVote)
                 .send();
+
+        if (paidForVote) {
+            messageModule.getMessage(player, "chat.current_balance")
+                    .replace("%balance%", StringUtils.betterNumberFormat(resourcesModule.getPlayerBalanceCached(player, resource)))
+                    .replace("%economy_name%", resource.getDisplayName())
+                    .send();
+        }
+    }
+
+    private int getVoteCost(int currentVotes, int freeVotes) {
+        if (currentVotes < freeVotes) return 0;
+
+        int[] votePrices = {150, 200};
+        int priceIndex = currentVotes - freeVotes;
+        if (priceIndex >= votePrices.length) return 0;
+
+        return votePrices[priceIndex];
     }
 
     public int getVotes(){
@@ -217,12 +241,13 @@ public class GameMap {
     }
 
     public void setWinned(boolean winned){
+        boolean changed = this.winned != winned;
         this.winned = winned;
         GameDataManager<GameInstance> gameDataManager = game.getServerDataManager();
-        if (gameDataManager != null) {
+        if (changed && gameDataManager != null) {
             gameDataManager.updateGame();
         }
-        if (winned){
+        if (winned && changed){
             setGame(game);
 
             if (settings.isLoadWorldWithGameAPI()) {

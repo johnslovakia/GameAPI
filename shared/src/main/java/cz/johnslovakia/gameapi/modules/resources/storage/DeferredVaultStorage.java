@@ -18,12 +18,14 @@ public class DeferredVaultStorage implements ResourceStorage, Listener {
 
     private final AtomicReference<ResourceStorage> delegate;
     private final JavaPlugin plugin;
+    private volatile boolean shutdown = false;
 
     public DeferredVaultStorage(String resourceName, String tableName, JavaPlugin plugin) {
         this.plugin = plugin;
         this.delegate = new AtomicReference<>(new BatchedStorage(resourceName, tableName));
 
         Bukkit.getScheduler().runTask(plugin, () -> {
+            if (shutdown) return;
             if (isVaultHooked()) return;
 
             RegisteredServiceProvider<Economy> rsp =
@@ -42,6 +44,7 @@ public class DeferredVaultStorage implements ResourceStorage, Listener {
         if (!event.getProvider().getService().equals(Economy.class)) return;
 
         Bukkit.getScheduler().runTask(plugin, () -> {
+            if (shutdown) return;
             RegisteredServiceProvider<Economy> rsp =
                     Bukkit.getServicesManager().getRegistration(Economy.class);
             if (rsp != null) {
@@ -52,6 +55,7 @@ public class DeferredVaultStorage implements ResourceStorage, Listener {
     }
 
     private void hookVault(Economy economy) {
+        if (shutdown) return;
         if (isVaultHooked()) return;
 
         ResourceStorage old = delegate.getAndSet(new VaultStorage(economy));
@@ -69,37 +73,68 @@ public class DeferredVaultStorage implements ResourceStorage, Listener {
 
     @Override
     public void deposit(OfflinePlayer player, int amount) {
-        delegate.get().deposit(player, amount);
+        ResourceStorage current = delegate.get();
+        if (current != null) {
+            current.deposit(player, amount);
+        }
     }
 
     @Override
     public void withdraw(OfflinePlayer player, int amount) {
-        delegate.get().withdraw(player, amount);
+        ResourceStorage current = delegate.get();
+        if (current != null) {
+            current.withdraw(player, amount);
+        }
     }
 
     @Override
     public CompletableFuture<Integer> getBalance(OfflinePlayer player) {
-        return delegate.get().getBalance(player);
+        ResourceStorage current = delegate.get();
+        return current != null ? current.getBalance(player) : CompletableFuture.completedFuture(0);
     }
 
     @Override
     public int getBalanceCached(OfflinePlayer player) {
-        return delegate.get().getBalanceCached(player);
+        ResourceStorage current = delegate.get();
+        return current != null ? current.getBalanceCached(player) : 0;
     }
 
     @Override
     public void onEnable() {
-        delegate.get().onEnable();
+        ResourceStorage current = delegate.get();
+        if (current != null) {
+            current.onEnable();
+        }
     }
 
     @Override
     public CompletableFuture<Void> preload(Iterable<? extends OfflinePlayer> players) {
-        return delegate.get().preload(players);
+        ResourceStorage current = delegate.get();
+        return current != null ? current.preload(players) : CompletableFuture.completedFuture(null);
     }
 
     @Override
     public void shutdown() {
+        shutdown(false);
+    }
+
+    @Override
+    public void shutdownSilently() {
+        shutdown(true);
+    }
+
+    private void shutdown(boolean silent) {
+        if (shutdown) return;
+        shutdown = true;
+
         HandlerList.unregisterAll(this);
-        delegate.get().shutdown();
+        ResourceStorage current = delegate.getAndSet(null);
+        if (current != null) {
+            if (silent) {
+                current.shutdownSilently();
+            } else {
+                current.shutdown();
+            }
+        }
     }
 }

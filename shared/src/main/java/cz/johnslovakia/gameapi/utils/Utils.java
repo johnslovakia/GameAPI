@@ -25,6 +25,7 @@ import org.bukkit.profile.PlayerTextures;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Utils {
@@ -202,7 +203,7 @@ public class Utils {
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
 
-        PlayerProfile pp = Bukkit.createProfile(UUID.fromString("4fbecd49-c7d4-4c18-8410-adf7a7348728"));
+        PlayerProfile pp = Bukkit.createProfile(UUID.nameUUIDFromBytes(("gameapi-head:" + url).getBytes(StandardCharsets.UTF_8)));
         PlayerTextures pt = pp.getTextures();
 
         try {
@@ -255,11 +256,7 @@ public class Utils {
             if (skinUrl != null) {
                 item = getCustomHead(skinUrl.toString());
             } else {
-                item = new ItemStack(Material.PLAYER_HEAD);
-                SkullMeta meta = (SkullMeta) item.getItemMeta();
-                PlayerProfile staticProfile = Bukkit.createProfile(uuid, player.getName());
-                meta.setPlayerProfile(staticProfile);
-                item.setItemMeta(meta);
+                return new ItemStack(Material.PLAYER_HEAD);
             }
 
             headCache.put(uuid, item.clone());

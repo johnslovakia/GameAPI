@@ -15,10 +15,14 @@ import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.StringUtils;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -42,10 +46,12 @@ public class LevelModuleCategory implements SettingCategory {
                         .addLoreLine("§c► Click to restore default settings")
                         .toItemStack(), p -> {
                     new ConfirmInventory(PlayerIdentityRegistry.get(p), "§cRestore default settings", playerIdentity -> {
-                        LevelModule levelModule = LevelModule.createDefault();
-                        LevelModule.saveLevelModule(levelModule);
-                        ModuleManager.getInstance().destroyModule(LevelModule.class);
-                        ModuleManager.getInstance().registerModule(levelModule);
+                        SettingsEditSession.runAction(p, () -> {
+                            LevelModule levelModule = LevelModule.createDefault();
+                            LevelModule.saveLevelModule(levelModule);
+                            ModuleManager.getInstance().destroyModule(LevelModule.class);
+                            ModuleManager.getInstance().registerModule(levelModule);
+                        });
 
                         p.sendMessage("§cLevel system settings were reset to default. Changes may not apply until the server is restarted.");
                         openSubMenu(p);
@@ -101,7 +107,8 @@ public class LevelModuleCategory implements SettingCategory {
             b.addLoreLine("");
             b.addLoreLine("§7Base XP: §a" + StringUtils.betterNumberFormat(range.baseXP()));
             b.addLoreLine("§7Scaling: §a" + scalingLabel(range.scaling()));
-            b.addLoreLine("§7Range reward: " + rewardSummary(range.reward()));
+            b.addLoreLine("");
+            addRewardLore(b, range.reward());
             b.addLoreLine("");
             b.addLoreLine("§a► Click to edit");
 
@@ -112,6 +119,10 @@ public class LevelModuleCategory implements SettingCategory {
     }
 
     private static void openRangeDetail(Player player, int rangeIdx) {
+        if (!hasRange(rangeIdx)) {
+            openRangeList(player);
+            return;
+        }
         SettingPageGUI.open(player, "Range " + (rangeIdx + 1),
                 () -> buildRangeDetailItems(rangeIdx),
                 LevelModuleCategory::openRangeList);
@@ -181,7 +192,7 @@ public class LevelModuleCategory implements SettingCategory {
         rewardNav.removeLore();
         rewardNav.addLoreLine("§7Reward on every level-up in this range.");
         rewardNav.addLoreLine("");
-        rewardNav.addLoreLine("§7Current: " + rewardSummary(range.reward()));
+        addRewardLore(rewardNav, range.reward());
         rewardNav.addLoreLine("");
         rewardNav.addLoreLine("§a► Click to edit rewards");
         items.add(SettingItem.navigate(rewardNav.toItemStack(),
@@ -196,35 +207,89 @@ public class LevelModuleCategory implements SettingCategory {
     }
 
     private static void openRangeRewardList(Player player, int rangeIdx) {
+        if (!hasRange(rangeIdx)) {
+            openRangeList(player);
+            return;
+        }
         SettingPageGUI.open(player, "Range " + (rangeIdx + 1) + " Rewards",
-                () -> buildRewardNavItems(
+                () -> RewardSettingsHelper.buildRewardNavItems(
                         ModuleManager.getModule(LevelModule.class)
                                 .getLevelRanges().get(rangeIdx).reward().getRewardItems(),
-                        (rewardIdx, p) -> openRangeRewardItemDetail(p, rangeIdx, rewardIdx)
+                        (rewardIdx, p) -> openRangeRewardItemDetail(p, rangeIdx, rewardIdx),
+                        (rewardIdx, p) -> removeRangeRewardItem(rangeIdx, rewardIdx),
+                        p -> openRangeRewardList(p, rangeIdx)
                 ),
-                p -> openRangeDetail(p, rangeIdx));
+                p -> openRangeDetail(p, rangeIdx),
+                List.of(new BottomAction(4, RewardSettingsHelper.addResourceIcon(),
+                        p -> openRangeRewardResourcePicker(p, rangeIdx))));
+    }
+
+    private static void openRangeRewardResourcePicker(Player player, int rangeIdx) {
+        if (!hasRange(rangeIdx)) {
+            openRangeList(player);
+            return;
+        }
+        RewardSettingsHelper.openResourcePicker(player,
+                "Add Range Reward",
+                () -> ModuleManager.getModule(LevelModule.class)
+                        .getLevelRanges().get(rangeIdx).reward().getRewardItems(),
+                resource -> {
+                    LevelModule module = ModuleManager.getModule(LevelModule.class);
+                    LevelRange range = module.getLevelRanges().get(rangeIdx);
+                    range.reward().addRewardItem(new RewardItem(resource, 10));
+                    LevelModule.saveLevelModule(module);
+                },
+                p -> openRangeRewardList(p, rangeIdx));
     }
 
     private static void openRangeRewardItemDetail(Player player, int rangeIdx, int rewardIdx) {
+        if (!hasRange(rangeIdx) || !hasRangeRewardItem(rangeIdx, rewardIdx)) {
+            openRangeRewardList(player, rangeIdx);
+            return;
+        }
         SettingPageGUI.open(player, "Reward Item",
-                () -> buildRewardItemDetailItems(
+                () -> RewardSettingsHelper.buildRewardItemDetailItems(
                         () -> ModuleManager.getModule(LevelModule.class)
                                 .getLevelRanges().get(rangeIdx).reward().getRewardItems().get(rewardIdx),
-                        ri -> LevelModule.saveLevelModule(ModuleManager.getModule(LevelModule.class))
+                        ri -> LevelModule.saveLevelModule(ModuleManager.getModule(LevelModule.class)),
+                        p -> removeRangeRewardItem(rangeIdx, rewardIdx),
+                        p -> openRangeRewardList(p, rangeIdx)
                 ),
                 p -> openRangeRewardList(p, rangeIdx));
+    }
+
+    private static void removeRangeRewardItem(int rangeIdx, int rewardIdx) {
+        if (!hasRange(rangeIdx)) {
+            return;
+        }
+        LevelModule module = ModuleManager.getModule(LevelModule.class);
+        List<RewardItem> rewardItems = module.getLevelRanges().get(rangeIdx).reward().getRewardItems();
+        if (rewardIdx >= 0 && rewardIdx < rewardItems.size()) {
+            rewardItems.remove(rewardIdx);
+            LevelModule.saveLevelModule(module);
+        }
     }
 
     private static void openRewardEditor(Player player) {
         SettingPageGUI.open(player, "Level Rewards",
                 LevelModuleCategory::buildRewardItems,
-                LevelModuleCategory::openSubMenu);
+                LevelModuleCategory::openSubMenu,
+                List.of(new BottomAction(4, addLevelRewardIcon(), LevelModuleCategory::addLevelReward)));
     }
 
     private static List<SettingItem> buildRewardItems() {
         LevelModule module = ModuleManager.getModule(LevelModule.class);
         List<SettingItem> items = new ArrayList<>();
         List<LevelReward> rewards = module.getLevelRewards();
+
+        if (rewards.isEmpty()) {
+            items.add(SettingItem.display(new ItemBuilder(Material.BARRIER)
+                    .setName("§cNo level rewards configured")
+                    .removeLore()
+                    .addLoreLine("§7Use the Add Level Reward button below.")
+                    .toItemStack()));
+            return items;
+        }
 
         for (int i = 0; i < rewards.size(); i++) {
             LevelReward levelReward = rewards.get(i);
@@ -248,40 +313,393 @@ public class LevelModuleCategory implements SettingCategory {
             }
             b.addLoreLine("");
             b.addLoreLine("§a► Click to edit rewards");
+            b.addLoreLine("§c► Shift-click to remove reward group");
 
             items.add(SettingItem.navigate(b.toItemStack(),
-                    ctx -> openLevelRewardGroupEditor(ctx.player, index)));
+                    ctx -> {
+                        if (ctx.clickInfo.getClickType().isShiftClick()) {
+                            removeLevelRewardGroup(ctx.player, index);
+                            SettingsEditSession.afterCurrentAction(() -> openRewardEditor(ctx.player));
+                            return;
+                        }
+                        openLevelRewardGroupEditor(ctx.player, index);
+                    }));
         }
 
         return items;
     }
 
     private static void openLevelRewardGroupEditor(Player player, int groupIdx) {
+        if (!hasLevelRewardGroup(groupIdx)) {
+            openRewardEditor(player);
+            return;
+        }
         SettingPageGUI.open(player, "Reward Group " + (groupIdx + 1),
-                () -> buildRewardNavItems(
-                        ModuleManager.getModule(LevelModule.class)
-                                .getLevelRewards().get(groupIdx).reward().getRewardItems(),
-                        (rewardIdx, p) -> openLevelRewardItemDetail(p, groupIdx, rewardIdx)
-                ),
-                LevelModuleCategory::openRewardEditor);
+                () -> buildLevelRewardGroupItems(groupIdx),
+                LevelModuleCategory::openRewardEditor,
+                List.of(new BottomAction(4, RewardSettingsHelper.addResourceIcon(),
+                        p -> openLevelRewardResourcePicker(p, groupIdx))));
+    }
+
+    private static List<SettingItem> buildLevelRewardGroupItems(int groupIdx) {
+        LevelModule module = ModuleManager.getModule(LevelModule.class);
+        LevelReward levelReward = module.getLevelRewards().get(groupIdx);
+        List<SettingItem> items = new ArrayList<>();
+
+        ItemBuilder levelsItem = new ItemBuilder(Material.EXPERIENCE_BOTTLE);
+        levelsItem.setName("§fReward Levels");
+        levelsItem.removeLore();
+        levelsItem.addLoreLine(levelsDescription(levelReward.level()));
+        levelsItem.addLoreLine("");
+        levelsItem.addLoreLine("§a► Click to edit target levels");
+        items.add(SettingItem.navigate(levelsItem.toItemStack(),
+                ctx -> openLevelRewardLevelsEditor(ctx.player, groupIdx)));
+
+        List<RewardItem> rewardItems = levelReward.reward().getRewardItems();
+        if (rewardItems.isEmpty()) {
+            items.add(SettingItem.display(new ItemBuilder(Material.BARRIER)
+                    .setName("§cNo rewards configured")
+                    .removeLore()
+                    .addLoreLine("§7Use the Add Resource button below.")
+                    .toItemStack()));
+        } else {
+            items.addAll(RewardSettingsHelper.buildRewardNavItems(rewardItems,
+                    (rewardIdx, p) -> openLevelRewardItemDetail(p, groupIdx, rewardIdx),
+                    (rewardIdx, p) -> removeLevelRewardItem(groupIdx, rewardIdx),
+                    p -> openLevelRewardGroupEditor(p, groupIdx)));
+        }
+
+        return items;
+    }
+
+    private static void openLevelRewardResourcePicker(Player player, int groupIdx) {
+        if (!hasLevelRewardGroup(groupIdx)) {
+            openRewardEditor(player);
+            return;
+        }
+        RewardSettingsHelper.openResourcePicker(player,
+                "Add Level Reward",
+                () -> ModuleManager.getModule(LevelModule.class)
+                        .getLevelRewards().get(groupIdx).reward().getRewardItems(),
+                resource -> {
+                    LevelModule module = ModuleManager.getModule(LevelModule.class);
+                    module.getLevelRewards().get(groupIdx).reward().addRewardItem(new RewardItem(resource, 10));
+                    LevelModule.saveLevelModule(module);
+                },
+                p -> openLevelRewardGroupEditor(p, groupIdx));
+    }
+
+    private static void openLevelRewardLevelsEditor(Player player, int groupIdx) {
+        if (!hasLevelRewardGroup(groupIdx)) {
+            openRewardEditor(player);
+            return;
+        }
+        SettingPageGUI.open(player, "Reward Group Levels",
+                () -> buildLevelRewardLevelItems(groupIdx),
+                p -> openLevelRewardGroupEditor(p, groupIdx),
+                List.of(new BottomAction(4, addLevelTargetIcon(),
+                        p -> addLevelTargetToRewardGroup(p, groupIdx))));
+    }
+
+    private static List<SettingItem> buildLevelRewardLevelItems(int groupIdx) {
+        LevelModule module = ModuleManager.getModule(LevelModule.class);
+        LevelReward levelReward = module.getLevelRewards().get(groupIdx);
+        List<SettingItem> items = new ArrayList<>();
+
+        if (levelReward.level().length == 0) {
+            items.add(SettingItem.display(new ItemBuilder(Material.BARRIER)
+                    .setName("§cNo target levels")
+                    .removeLore()
+                    .addLoreLine("§7Use the Add Level button below.")
+                    .toItemStack()));
+            return items;
+        }
+
+        for (int i = 0; i < levelReward.level().length; i++) {
+            int level = levelReward.level()[i];
+            final int levelIdx = i;
+
+            ItemBuilder b = new ItemBuilder(Material.EXPERIENCE_BOTTLE);
+            b.setName("§fLevel: §a" + level);
+            b.removeLore();
+            b.addLoreLine("§7This reward group is granted on this level.");
+            b.addLoreLine("");
+            b.addLoreLine("§fLeft: §a+1 §8| §fRight: §c-1");
+            b.addLoreLine("§fShift+Left: §a+5 §8| §fShift+Right: §c-5");
+            items.add(SettingItem.of(b.toItemStack(), ctx -> {
+                int delta = ctx.delta(+1, -1, +5, -5);
+                adjustLevelRewardLevel(ctx.player, groupIdx, levelIdx, delta);
+            }));
+        }
+
+        return items;
+    }
+
+    private static void addLevelReward(Player player) {
+        LevelModule module = ModuleManager.getModule(LevelModule.class);
+        int level = findFirstUnusedRewardLevel(module);
+        if (level < 0) {
+            player.sendMessage("§cAll configured levels already have a level reward group.");
+            player.playSound(player, Sound.BLOCK_ANVIL_LAND, 0.6F, 0.8F);
+            openRewardEditor(player);
+            return;
+        }
+
+        module.getLevelRewards().add(new LevelReward(new Reward(), level));
+        LevelModule.saveLevelModule(module);
+
+        int groupIdx = module.getLevelRewards().size() - 1;
+        player.sendMessage("§aCreated level reward group for level §f" + level + "§a.");
+        player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 0.6F, 1.2F);
+        SettingsEditSession.afterCurrentAction(() -> openLevelRewardGroupEditor(player, groupIdx));
+    }
+
+    private static void addLevelTargetToRewardGroup(Player player, int groupIdx) {
+        if (!hasLevelRewardGroup(groupIdx)) {
+            openRewardEditor(player);
+            return;
+        }
+        LevelModule module = ModuleManager.getModule(LevelModule.class);
+        int level = findFirstUnusedRewardLevel(module);
+        if (level < 0) {
+            player.sendMessage("§cNo free level target is available.");
+            player.playSound(player, Sound.BLOCK_ANVIL_LAND, 0.6F, 0.8F);
+            openLevelRewardLevelsEditor(player, groupIdx);
+            return;
+        }
+
+        LevelReward levelReward = module.getLevelRewards().get(groupIdx);
+        int[] levels = Arrays.copyOf(levelReward.level(), levelReward.level().length + 1);
+        levels[levels.length - 1] = level;
+        setLevelRewardLevels(module, groupIdx, levels);
+
+        player.sendMessage("§aAdded level §f" + level + "§a to this reward group.");
+        player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 0.6F, 1.2F);
+        SettingsEditSession.afterCurrentAction(() -> openLevelRewardLevelsEditor(player, groupIdx));
+    }
+
+    private static void adjustLevelRewardLevel(Player player, int groupIdx, int levelIdx, int delta) {
+        if (!hasLevelRewardGroup(groupIdx)) {
+            return;
+        }
+        LevelModule module = ModuleManager.getModule(LevelModule.class);
+        LevelReward levelReward = module.getLevelRewards().get(groupIdx);
+        if (levelIdx < 0 || levelIdx >= levelReward.level().length) {
+            return;
+        }
+        int[] levels = levelReward.level().clone();
+        int current = levels[levelIdx];
+        int requested = clamp(current + delta, minRewardLevel(module), maxRewardLevel(module));
+        if (requested == current) {
+            return;
+        }
+        if (isRewardLevelUsed(module, groupIdx, levelIdx, requested)) {
+            player.sendMessage("§cThat level already has a reward target.");
+            player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BASS, 0.7F, 0.8F);
+            return;
+        }
+        levels[levelIdx] = requested;
+        setLevelRewardLevels(module, groupIdx, levels);
+    }
+
+    private static void setLevelRewardLevels(LevelModule module, int groupIdx, int[] levels) {
+        if (groupIdx < 0 || groupIdx >= module.getLevelRewards().size()) {
+            return;
+        }
+        LevelReward current = module.getLevelRewards().get(groupIdx);
+        int[] normalized = normalizeRewardLevels(module, levels);
+        if (normalized.length == 0) {
+            int fallbackLevel = findAvailableRewardLevel(module, groupIdx, minRewardLevel(module), +1);
+            normalized = new int[]{fallbackLevel};
+        }
+        module.getLevelRewards().set(groupIdx, new LevelReward(current.reward(), normalized));
+        LevelModule.saveLevelModule(module);
+    }
+
+    private static int[] normalizeRewardLevels(LevelModule module, int[] levels) {
+        Set<Integer> normalized = new LinkedHashSet<>();
+        Arrays.stream(levels)
+                .map(level -> clamp(level, minRewardLevel(module), maxRewardLevel(module)))
+                .forEach(normalized::add);
+        return normalized.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    private static int findFirstUnusedRewardLevel(LevelModule module) {
+        Set<Integer> used = usedRewardLevels(module, -1);
+        for (int level = minRewardLevel(module); level <= maxRewardLevel(module); level++) {
+            if (!used.contains(level)) {
+                return level;
+            }
+        }
+        return -1;
+    }
+
+    private static int findAvailableRewardLevel(LevelModule module, int groupIdx, int requested, int direction) {
+        int min = minRewardLevel(module);
+        int max = maxRewardLevel(module);
+        int clamped = clamp(requested, min, max);
+        Set<Integer> used = usedRewardLevels(module, groupIdx);
+        if (!used.contains(clamped)) {
+            return clamped;
+        }
+
+        int step = direction >= 0 ? 1 : -1;
+        for (int level = clamped; level >= min && level <= max; level += step) {
+            if (!used.contains(level)) {
+                return level;
+            }
+        }
+
+        for (int level = min; level <= max; level++) {
+            if (!used.contains(level)) {
+                return level;
+            }
+        }
+        return clamped;
+    }
+
+    private static Set<Integer> usedRewardLevels(LevelModule module, int ignoredGroupIdx) {
+        Set<Integer> used = new LinkedHashSet<>();
+        List<LevelReward> levelRewards = module.getLevelRewards();
+        for (int i = 0; i < levelRewards.size(); i++) {
+            if (i == ignoredGroupIdx) {
+                continue;
+            }
+            for (int level : levelRewards.get(i).level()) {
+                used.add(level);
+            }
+        }
+        return used;
+    }
+
+    private static boolean isRewardLevelUsed(LevelModule module, int editedGroupIdx, int editedLevelIdx, int level) {
+        List<LevelReward> levelRewards = module.getLevelRewards();
+        for (int groupIdx = 0; groupIdx < levelRewards.size(); groupIdx++) {
+            int[] levels = levelRewards.get(groupIdx).level();
+            for (int levelIdx = 0; levelIdx < levels.length; levelIdx++) {
+                if (groupIdx == editedGroupIdx && levelIdx == editedLevelIdx) {
+                    continue;
+                }
+                if (levels[levelIdx] == level) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static int minRewardLevel(LevelModule module) {
+        if (module.getLevelRanges().isEmpty()) {
+            return 1;
+        }
+        return Math.max(1, module.getLevelRanges().getFirst().startLevel());
+    }
+
+    private static int maxRewardLevel(LevelModule module) {
+        if (module.getLevelRanges().isEmpty()) {
+            return 100;
+        }
+        return Math.max(minRewardLevel(module), module.getLevelRanges().getLast().endLevel());
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private static String levelsDescription(int[] levels) {
+        if (levels.length == 0) {
+            return "§8Levels: none";
+        }
+        StringBuilder levelsDesc = new StringBuilder("§8Levels: ");
+        for (int lvl : levels) levelsDesc.append(lvl).append(" ");
+        return levelsDesc.toString();
+    }
+
+    private static org.bukkit.inventory.ItemStack addLevelRewardIcon() {
+        return new ItemBuilder(Material.EMERALD)
+                .setName("§aAdd Level Reward")
+                .removeLore()
+                .addLoreLine("§7Creates a new configurable level reward group.")
+                .toItemStack();
+    }
+
+    private static org.bukkit.inventory.ItemStack addLevelTargetIcon() {
+        return new ItemBuilder(Material.EMERALD)
+                .setName("§aAdd Level")
+                .removeLore()
+                .addLoreLine("§7Adds another level target to this reward group.")
+                .toItemStack();
+    }
+
+    private static void removeLevelRewardGroup(Player player, int groupIdx) {
+        LevelModule module = ModuleManager.getModule(LevelModule.class);
+        if (groupIdx >= 0 && groupIdx < module.getLevelRewards().size()) {
+            module.getLevelRewards().remove(groupIdx);
+            LevelModule.saveLevelModule(module);
+            player.sendMessage("§cLevel reward group removed.");
+            player.playSound(player, Sound.BLOCK_ANVIL_BREAK, 0.8F, 1F);
+        }
     }
 
     private static void openLevelRewardItemDetail(Player player, int groupIdx, int rewardIdx) {
+        if (!hasLevelRewardGroup(groupIdx) || !hasLevelRewardItem(groupIdx, rewardIdx)) {
+            openLevelRewardGroupEditor(player, groupIdx);
+            return;
+        }
         SettingPageGUI.open(player, "Reward Item",
-                () -> buildRewardItemDetailItems(
+                () -> RewardSettingsHelper.buildRewardItemDetailItems(
                         () -> ModuleManager.getModule(LevelModule.class)
                                 .getLevelRewards().get(groupIdx).reward().getRewardItems().get(rewardIdx),
-                        ri -> LevelModule.saveLevelModule(ModuleManager.getModule(LevelModule.class))
+                        ri -> LevelModule.saveLevelModule(ModuleManager.getModule(LevelModule.class)),
+                        p -> removeLevelRewardItem(groupIdx, rewardIdx),
+                        p -> openLevelRewardGroupEditor(p, groupIdx)
                 ),
                 p -> openLevelRewardGroupEditor(p, groupIdx));
+    }
+
+    private static void removeLevelRewardItem(int groupIdx, int rewardIdx) {
+        if (!hasLevelRewardGroup(groupIdx)) {
+            return;
+        }
+        LevelModule module = ModuleManager.getModule(LevelModule.class);
+        List<RewardItem> rewardItems = module.getLevelRewards().get(groupIdx).reward().getRewardItems();
+        if (rewardIdx >= 0 && rewardIdx < rewardItems.size()) {
+            rewardItems.remove(rewardIdx);
+            LevelModule.saveLevelModule(module);
+        }
+    }
+
+    private static boolean hasRange(int rangeIdx) {
+        return rangeIdx >= 0 && rangeIdx < ModuleManager.getModule(LevelModule.class).getLevelRanges().size();
+    }
+
+    private static boolean hasRangeRewardItem(int rangeIdx, int rewardIdx) {
+        if (!hasRange(rangeIdx)) {
+            return false;
+        }
+        List<RewardItem> rewardItems = ModuleManager.getModule(LevelModule.class)
+                .getLevelRanges().get(rangeIdx).reward().getRewardItems();
+        return rewardIdx >= 0 && rewardIdx < rewardItems.size();
+    }
+
+    private static boolean hasLevelRewardGroup(int groupIdx) {
+        return groupIdx >= 0 && groupIdx < ModuleManager.getModule(LevelModule.class).getLevelRewards().size();
+    }
+
+    private static boolean hasLevelRewardItem(int groupIdx, int rewardIdx) {
+        if (!hasLevelRewardGroup(groupIdx)) {
+            return false;
+        }
+        List<RewardItem> rewardItems = ModuleManager.getModule(LevelModule.class)
+                .getLevelRewards().get(groupIdx).reward().getRewardItems();
+        return rewardIdx >= 0 && rewardIdx < rewardItems.size();
     }
 
 
     @FunctionalInterface
     interface RewardOpenDetail { void open(int rewardIdx, Player player); }
 
-    private static List<SettingItem> buildRewardNavItems(List<RewardItem> rewardItems,
-                                                          RewardOpenDetail openDetail) {
+    private static List<SettingItem> buildRewardNavItems(List<RewardItem> rewardItems, RewardOpenDetail openDetail) {
         List<SettingItem> items = new ArrayList<>();
         for (int i = 0; i < rewardItems.size(); i++) {
             RewardItem ri = rewardItems.get(i);
@@ -304,89 +722,19 @@ public class LevelModuleCategory implements SettingCategory {
         return items;
     }
 
-    private static List<SettingItem> buildRewardItemDetailItems(Supplier<RewardItem> riGetter,
-                                                                  Consumer<RewardItem> saver) {
-        RewardItem ri = riGetter.get();
-        boolean isRandom = ri.hasRandomAmount();
-        Resource resource = ri.getResource();
-        List<SettingItem> items = new ArrayList<>();
-
-        if (isRandom) {
-            ItemBuilder minItem = new ItemBuilder(Material.GREEN_DYE);
-            minItem.setName("§fMin Amount: " + resource.getColor() + StringUtils.betterNumberFormat(ri.getRandomMinRange()) + " " + resource.getDisplayName());
-            minItem.removeLore();
-            minItem.addLoreLine("");
-            minItem.addLoreLine("§fLeft: §a+1 §8| §fRight: §c-1");
-            minItem.addLoreLine("§fShift+Left: §a+10 §8| §fShift+Right: §c-10");
-            items.add(SettingItem.of(minItem.toItemStack(), ctx -> {
-                int delta = ctx.delta(+1, -1, +10, -10);
-                RewardItem r = riGetter.get();
-                r.setRandomMinRange(Math.max(0, r.getRandomMinRange() + delta));
-                if (r.getRandomMaxRange() < r.getRandomMinRange())
-                    r.setRandomMaxRange(r.getRandomMinRange());
-                saver.accept(r);
-            }));
-
-            ItemBuilder maxItem = new ItemBuilder(Material.LIME_DYE);
-            maxItem.setName("§fMax Amount: " + resource.getColor() + StringUtils.betterNumberFormat(ri.getRandomMaxRange()) + " " + resource.getDisplayName());
-            maxItem.removeLore();
-            maxItem.addLoreLine("");
-            maxItem.addLoreLine("§fLeft: §a+1 §8| §fRight: §c-1");
-            maxItem.addLoreLine("§fShift+Left: §a+10 §8| §fShift+Right: §c-10");
-            items.add(SettingItem.of(maxItem.toItemStack(), ctx -> {
-                int delta = ctx.delta(+1, -1, +10, -10);
-                RewardItem r = riGetter.get();
-                r.setRandomMaxRange(Math.max(r.getRandomMinRange(), r.getRandomMaxRange() + delta));
-                saver.accept(r);
-            }));
+    private static void addRewardLore(ItemBuilder builder, Reward reward) {
+        builder.addLoreLine("§7Rewards:");
+        if (reward != null && !reward.getRewardItems().isEmpty()) {
+            for (RewardItem ri : reward.getRewardItems()) {
+                builder.addLoreLine(rewardItemLine(ri));
+            }
         } else {
-            ItemBuilder amountItem = new ItemBuilder(Material.LIME_DYE);
-            amountItem.setName("§fAmount: " + resource.getColor() + StringUtils.betterNumberFormat(ri.getAmount()) + " " + resource.getDisplayName());
-            amountItem.removeLore();
-            amountItem.addLoreLine("");
-            amountItem.addLoreLine("§fLeft: §a+1 §8| §fRight: §c-1");
-            amountItem.addLoreLine("§fShift+Left: §a+10 §8| §fShift+Right: §c-10");
-            items.add(SettingItem.of(amountItem.toItemStack(), ctx -> {
-                int delta = ctx.delta(+1, -1, +10, -10);
-                RewardItem r = riGetter.get();
-                r.setAmount(Math.max(1, r.getAmount() + delta));
-                saver.accept(r);
-            }));
+            builder.addLoreLine(" §cNone");
         }
-
-        ItemBuilder chanceItem = new ItemBuilder(ri.getChance() >= 100 ? Material.EMERALD : Material.GOLD_NUGGET);
-        chanceItem.setName("§fChance: §a" + ri.getChance() + "%");
-        chanceItem.removeLore();
-        chanceItem.addLoreLine("§7Probability that this reward is given.");
-        chanceItem.addLoreLine("§a100% §7= always given.");
-        chanceItem.addLoreLine("");
-        chanceItem.addLoreLine("§fLeft: §a+1% §8| §fRight: §c-1%");
-        chanceItem.addLoreLine("§fShift+Left: §a+5% §8| §fShift+Right: §c-5%");
-        items.add(SettingItem.of(chanceItem.toItemStack(), ctx -> {
-            int delta = ctx.delta(+1, -1, +5, -5);
-            RewardItem r = riGetter.get();
-            r.setChance(Math.max(1, Math.min(100, r.getChance() + delta)));
-            saver.accept(r);
-        }));
-
-        return items;
-    }
-
-    private static String rewardSummary(Reward reward) {
-        if (reward == null || reward.getRewardItems().isEmpty()) return "§8none";
-        return reward.getRewardItems().stream()
-                .map(LevelModuleCategory::rewardItemLine)
-                .reduce((a, b) -> a + "§8, " + b)
-                .orElse("§8none");
     }
 
     private static String rewardItemLine(RewardItem ri) {
-        Resource resource = ri.getResource();
-        String amount = ri.hasRandomAmount()
-                ? StringUtils.betterNumberFormat(ri.getRandomMinRange()) + "–" + StringUtils.betterNumberFormat(ri.getRandomMaxRange())
-                : StringUtils.betterNumberFormat(ri.getAmount());
-        String chance = ri.getChance() < 100 ? " §7(" + ri.getChance() + "% chance)" : "";
-        return " " + resource.getColor() + "+ " + amount + " " + resource.getDisplayName() + chance;
+        return RewardSettingsHelper.rewardItemLine(ri);
     }
 
     private static String scalingLabel(LevelRange.XPScaling scaling) {

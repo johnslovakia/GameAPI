@@ -12,6 +12,7 @@ import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.Module;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
+import cz.johnslovakia.gameapi.modules.settings.SettingsEditSession;
 import cz.johnslovakia.gameapi.rewards.Reward;
 import cz.johnslovakia.gameapi.rewards.RewardItem;
 import cz.johnslovakia.gameapi.rewards.unclaimed.UnclaimedRewardType;
@@ -40,6 +41,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @NoArgsConstructor
 public class LevelModule implements Module, Listener {
+
+    private static final String SETTINGS_SOURCE_ID = "module-settings:LevelModule";
 
     @Getter
     private List<LevelRange> levelRanges = new ArrayList<>();
@@ -259,7 +262,7 @@ public class LevelModule implements Module, Listener {
                             .replace("%level%", String.valueOf(newLevel))
                             .send();
                     levelUpBanner(player, newLevel);
-                    player.setLevel(newLevel);
+                    //player.setLevel(newLevel); //already handled by the XP resource observer
                 }
 
                 for (int lvl = currentLevel + 1; lvl <= newLevel; lvl++) {
@@ -428,25 +431,37 @@ public class LevelModule implements Module, Listener {
                     Logger.log("Old LevelModule range format detected. Migrating to new format...", Logger.LogType.WARNING);
                     LevelModule newModule = LevelModule.createDefault();
                     saveLevelModule(newModule);
+                    registerSettingsSource();
                     return newModule;
                 }
+                registerSettingsSource();
                 return loaded;
             } else {
                 Logger.log("Old or missing LevelModule format detected - creating new default config", Logger.LogType.WARNING);
                 LevelModule defaultManager = LevelModule.createDefault();
                 saveLevelModule(defaultManager);
+                registerSettingsSource();
                 return defaultManager;
             }
         } catch (Exception ex) {
             Logger.log("Failed to load LevelModule, creating default: " + ex.getMessage(), Logger.LogType.ERROR);
             LevelModule defaultManager = LevelModule.createDefault();
             saveLevelModule(defaultManager);
+            registerSettingsSource();
             ex.printStackTrace();
             return defaultManager;
         }
     }
 
     public static void saveLevelModule(LevelModule levelManager) {
+        registerSettingsSource();
+        if (SettingsEditSession.deferSave(SETTINGS_SOURCE_ID)) {
+            return;
+        }
+        saveLevelModuleNow(levelManager);
+    }
+
+    private static void saveLevelModuleNow(LevelModule levelManager) {
         Gson gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .registerTypeAdapter(TextColor.class, new TextColorAdapter())
@@ -454,6 +469,65 @@ public class LevelModule implements Module, Listener {
 
         String json = gson.toJson(levelManager);
         new JSConfigs().saveConfig("LevelModule", json);
+    }
+
+    private static void registerSettingsSource() {
+        SettingsEditSession.registerSource(
+                SETTINGS_SOURCE_ID,
+                "Level System",
+                LevelModule::snapshotCurrentSettings,
+                LevelModule::restoreCurrentSettings,
+                LevelModule::saveCurrentSettingsNow
+        );
+    }
+
+    private static String snapshotCurrentSettings() {
+        LevelModule current = currentSettingsModule();
+        if (current == null) {
+            return null;
+        }
+        return settingsGson().toJson(current);
+    }
+
+    private static void restoreCurrentSettings(String json) {
+        LevelModule restored = settingsGson().fromJson(json, LevelModule.class);
+        LevelModule target = currentSettingsModule();
+        if (restored == null || target == null) {
+            return;
+        }
+
+        target.getLevelRanges().clear();
+        target.getLevelRanges().addAll(restored.getLevelRanges());
+        target.getLevelRewards().clear();
+        target.getLevelRewards().addAll(restored.getLevelRewards());
+        target.getLevelEvolutions().clear();
+        target.getLevelEvolutions().addAll(restored.getLevelEvolutions());
+    }
+
+    private static void saveCurrentSettingsNow() {
+        LevelModule current = currentSettingsModule();
+        if (current != null) {
+            saveLevelModuleNow(current);
+        }
+    }
+
+    private static LevelModule currentSettingsModule() {
+        try {
+            ModuleManager manager = ModuleManager.getInstance();
+            if (manager == null || !manager.hasModule(LevelModule.class)) {
+                return null;
+            }
+            return ModuleManager.getModule(LevelModule.class);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static Gson settingsGson() {
+        return new GsonBuilder()
+                .setPrettyPrinting()
+                .registerTypeAdapter(TextColor.class, new TextColorAdapter())
+                .create();
     }
 
     public static class Builder {

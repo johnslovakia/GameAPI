@@ -33,6 +33,7 @@ import cz.johnslovakia.gameapi.users.PlayerManager;
 import cz.johnslovakia.gameapi.users.friends.FriendsInterface;
 import cz.johnslovakia.gameapi.users.parties.PartyInterface;
 import cz.johnslovakia.gameapi.utils.*;
+import cz.johnslovakia.gameapi.utils.VipBonusUtils;
 import cz.johnslovakia.gameapi.utils.chatHead.ChatHeadAPI;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
@@ -45,10 +46,14 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class GameEndHandler {
+
+    private static final long TOP_PLAYER_HEAD_TIMEOUT_MILLIS = 2000L;
 
     private final GameInstance gameInstance;
 
@@ -80,6 +85,7 @@ public class GameEndHandler {
             }
         }
         Map<GamePlayer, Integer> ranking =  GameUtils.getTopPlayers(gameInstance, rankingScore, 3, 5);
+        preloadTopPlayerHeads(ranking.keySet());
 
         GameEndEvent ev = new GameEndEvent(gameInstance, winner, ranking);
         Bukkit.getPluginManager().callEvent(ev);
@@ -347,6 +353,37 @@ public class GameEndHandler {
         if (fullRanking.isEmpty()) return;
 
         Score score = ModuleManager.getModule(ScoreModule.class).getScore(rankingScore).get();
+        ChatHeadAPI chatHeadAPI = ChatHeadAPI.getInstance();
+        String fallbackHead = chatHeadAPI.getFallbackHeadAsString();
+        Map<GamePlayer, CompletableFuture<String>> headFutures = new LinkedHashMap<>();
+
+        for (GamePlayer pos : fullRanking.keySet()) {
+            headFutures.put(pos, chatHeadAPI.getHeadAsStringAsync(pos.getOfflinePlayer())
+                    .completeOnTimeout(fallbackHead, TOP_PLAYER_HEAD_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+                    .exceptionally(ex -> fallbackHead));
+        }
+
+        CompletableFuture.allOf(headFutures.values().toArray(new CompletableFuture[0]))
+                .thenRun(() -> {
+                    Map<GamePlayer, String> playerHeads = new HashMap<>();
+                    headFutures.forEach((pos, future) -> playerHeads.put(pos, future.getNow(fallbackHead)));
+
+                    Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), () -> {
+                        if (gameInstance.getState() != GameState.ENDING) return;
+                        sendTopPlayers(rankingScore, fullRanking, score, playerHeads);
+                    });
+                });
+    }
+
+    private void preloadTopPlayerHeads(Collection<GamePlayer> rankedPlayers) {
+        ChatHeadAPI chatHeadAPI = ChatHeadAPI.getInstance();
+        for (GamePlayer rankedPlayer : rankedPlayers) {
+            chatHeadAPI.getHeadAsStringAsync(rankedPlayer.getOfflinePlayer());
+        }
+    }
+
+    private void sendTopPlayers(String rankingScore, Map<GamePlayer, Integer> fullRanking, Score score, Map<GamePlayer, String> playerHeads){
+        String fallbackHead = ChatHeadAPI.getInstance().getFallbackHeadAsString();
 
         for (GamePlayer gamePlayer : gameInstance.getParticipants()) {
             Player player = gamePlayer.getOnlinePlayer();
@@ -363,7 +400,7 @@ public class GameEndHandler {
                 int pScore = posSession.getScore(rankingScore);
                 ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.top3players.position")
                         .replace("%position%", "" + position)
-                        .replace("%player_head%", ChatHeadAPI.getInstance().getHeadAsString(pos.getOfflinePlayer()))
+                        .replace("%player_head%", playerHeads.getOrDefault(pos, fallbackHead))
                         .replace("%player%", (pos.equals(gamePlayer) ? "§a" : "") + pos.getOnlinePlayer().getName() + "§r")
                         .replace("%score%", "" + pScore)
                         .replace("%ranking_score_name%", score.getDisplayName(pScore))
@@ -397,7 +434,7 @@ public class GameEndHandler {
 
                     hoverText = hoverText.append(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.top3players.position")
                                     .replace("%position%", "" + fullRanking.get(partyMember))
-                                    .replace("%player_head%", ChatHeadAPI.getInstance().getHeadAsString(partyMember.getOfflinePlayer()))
+                                    .replace("%player_head%", playerHeads.getOrDefault(partyMember, fallbackHead))
                                     .replace("%player%", partyMember.getOnlinePlayer().getName())
                                     .replace("%score%", "" + partyMemberSession.getScore(rankingScore))
                                     .replace("%ranking_score_name%", score.getDisplayName(partyMemberSession.getScore(rankingScore)))
@@ -421,7 +458,7 @@ public class GameEndHandler {
 
                         hoverText = hoverText.append(ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.top3players.position")
                                         .replace("%position%", "" + fullRanking.get(friend))
-                                        .replace("%player_head%", ChatHeadAPI.getInstance().getHeadAsString(friend.getOfflinePlayer()))
+                                        .replace("%player_head%", playerHeads.getOrDefault(friend, fallbackHead))
                                         .replace("%player%", friend.getOnlinePlayer().getName())
                                         .replace("%score%", "" + friendSession.getScore(rankingScore))
                                         .replace("%ranking_score_name%", score.getDisplayName(friendSession.getScore(rankingScore)))
@@ -536,22 +573,16 @@ public class GameEndHandler {
 
 
                     if (resource.isApplicableBonus()) {
-                        List<Integer> percentages = Arrays.asList(100, 75, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5);
-
-                        for (Integer percent : percentages) {
-                            if (gamePlayer.getOnlinePlayer().hasPermission("vip.bonus" + percent)){
-                                int coins = (int) (((double) totalEarnedEntry.getValue() * (double) percent) / (double) 100);
-                                if (coins != 0) {
-                                    resource.getResourceInterface().deposit(gamePlayer.getOfflinePlayer(), coins);
-                                    ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.rewardsummary.bonus")
-                                            .replace("%economy_color%", "" + resource.getColor())
-                                            .replace("%reward%", "" + coins)
-                                            .replace("%economy_name%", resource.getColor() + resource.getDisplayName())
-                                            .replace("%bonus%", "" + percent)
-                                            .send();
-                                    break;
-                                }
-                            }
+                        int percent = VipBonusUtils.getRewardBonus(gamePlayer);
+                        int coins = (int) (((double) totalEarnedEntry.getValue() * (double) percent) / (double) 100);
+                        if (coins != 0) {
+                            resource.getResourceInterface().deposit(gamePlayer.getOfflinePlayer(), coins);
+                            ModuleManager.getModule(MessageModule.class).getMessage(gamePlayer, "chat.rewardsummary.bonus")
+                                    .replace("%economy_color%", "" + resource.getColor())
+                                    .replace("%reward%", "" + coins)
+                                    .replace("%economy_name%", resource.getColor() + resource.getDisplayName())
+                                    .replace("%bonus%", "" + percent)
+                                    .send();
                         }
                     }
                 }

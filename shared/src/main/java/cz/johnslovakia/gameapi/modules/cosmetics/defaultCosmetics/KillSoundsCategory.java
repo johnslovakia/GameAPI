@@ -1,6 +1,5 @@
 package cz.johnslovakia.gameapi.modules.cosmetics.defaultCosmetics;
 
-import com.cryptomorin.xseries.XMaterial;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.*;
 import cz.johnslovakia.gameapi.modules.resources.ResourcesModule;
@@ -47,7 +46,7 @@ public class KillSoundsCategory extends CosmeticsCategory implements Listener {
                 .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), COMMON_TOKEN_PRICE)
                 .setAsPurchasable()
                 .setPreviewConsumer(gamePlayer -> gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), Sound.BLOCK_SNIFFER_EGG_PLOP, 1F, 1F));
-        Cosmetic woofSoundCosmetic = new Cosmetic("Wolf Howl Sound", new ItemStack(XMaterial.WOLF_SPAWN_EGG.parseMaterial()), CosmeticRarity.EPIC)
+        Cosmetic woofSoundCosmetic = new Cosmetic("Wolf Howl Sound", new ItemStack(Material.WOLF_SPAWN_EGG), CosmeticRarity.EPIC)
                 .addCost(manager.getMainResource(), EPIC_COINS_PRICE)
                 .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), EPIC_TOKEN_PRICE)
                 .setPreviewConsumer(gamePlayer -> gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), Sound.ENTITY_WOLF_AMBIENT, 1F, 1F));
@@ -59,7 +58,7 @@ public class KillSoundsCategory extends CosmeticsCategory implements Listener {
                 .addCost(manager.getMainResource(), UNCOMMON_COINS_PRICE)
                 .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), UNCOMMON_TOKEN_PRICE)
                 .setPreviewConsumer(gamePlayer -> gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), Sound.ENTITY_PLAYER_BURP, 1F, 1F));
-        Cosmetic levelUpSoundCosmetic = new Cosmetic("Level Up Sound", new ItemStack(XMaterial.EXPERIENCE_BOTTLE.parseMaterial()), CosmeticRarity.COMMON)
+        Cosmetic levelUpSoundCosmetic = new Cosmetic("Level Up Sound", new ItemStack(Material.EXPERIENCE_BOTTLE), CosmeticRarity.COMMON)
                 .addCost(manager.getMainResource(), COMMON_COINS_PRICE)
                 .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), COMMON_TOKEN_PRICE)
                 .setAsPurchasable()
@@ -68,11 +67,11 @@ public class KillSoundsCategory extends CosmeticsCategory implements Listener {
                 .addCost(manager.getMainResource(), RARE_COINS_PRICE)
                 .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), RARE_TOKEN_PRICE)
                 .setPreviewConsumer(gamePlayer -> gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), Sound.ENTITY_ENDER_DRAGON_HURT, 1F, 1F));
-        Cosmetic blazeDeathSoundCosmetic = new Cosmetic("Blaze Death Sound", new ItemStack(XMaterial.GOLDEN_SWORD.parseMaterial()), CosmeticRarity.UNCOMMON)
+        Cosmetic blazeDeathSoundCosmetic = new Cosmetic("Blaze Death Sound", new ItemStack(Material.GOLDEN_SWORD), CosmeticRarity.UNCOMMON)
                 .addCost(manager.getMainResource(), UNCOMMON_COINS_PRICE)
                 .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), UNCOMMON_TOKEN_PRICE)
                 .setPreviewConsumer(gamePlayer -> gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), Sound.ENTITY_BLAZE_DEATH, 1F, 1F));
-        Cosmetic villagerSoundCosmetic = new Cosmetic("Villager Sound", new ItemStack(XMaterial.VILLAGER_SPAWN_EGG.parseMaterial()), CosmeticRarity.COMMON)
+        Cosmetic villagerSoundCosmetic = new Cosmetic("Villager Sound", new ItemStack(Material.VILLAGER_SPAWN_EGG), CosmeticRarity.COMMON)
                 .addCost(manager.getMainResource(), COMMON_COINS_PRICE)
                 .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), COMMON_TOKEN_PRICE)
                 .setPreviewConsumer(gamePlayer -> gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), Sound.ENTITY_VILLAGER_AMBIENT, 1F, 1F));
@@ -81,11 +80,11 @@ public class KillSoundsCategory extends CosmeticsCategory implements Listener {
                 .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), COMMON_TOKEN_PRICE)
                 .setAsPurchasable()
                 .setPreviewConsumer(gamePlayer -> gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), Sound.ENTITY_CAT_AMBIENT, 1F, 1F));
-        Cosmetic ghastMoanSoundCosmetic = new Cosmetic("Ghast Moan Sound", new ItemStack(XMaterial.GHAST_SPAWN_EGG.parseMaterial()), CosmeticRarity.COMMON)
+        Cosmetic ghastMoanSoundCosmetic = new Cosmetic("Ghast Moan Sound", new ItemStack(Material.GHAST_SPAWN_EGG), CosmeticRarity.COMMON)
                 .addCost(manager.getMainResource(), COMMON_COINS_PRICE)
                 .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), COMMON_TOKEN_PRICE)
                 .setPreviewConsumer(gamePlayer -> gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), Sound.ENTITY_GHAST_SCREAM, 1F, 1F));
-        Cosmetic witherSoundCosmetic = new Cosmetic("Wither Sound", new ItemStack(XMaterial.WITHER_SKELETON_SKULL.parseMaterial()), CosmeticRarity.EPIC)
+        Cosmetic witherSoundCosmetic = new Cosmetic("Wither Sound", new ItemStack(Material.WITHER_SKELETON_SKULL), CosmeticRarity.EPIC)
                 .addCost(manager.getMainResource(), EPIC_COINS_PRICE)
                 .addCost(ModuleManager.getModule(ResourcesModule.class).getResourceByName("CosmeticTokens"), EPIC_TOKEN_PRICE)
                 .setPreviewConsumer(gamePlayer -> gamePlayer.getOnlinePlayer().playSound(gamePlayer.getOnlinePlayer(), Sound.ENTITY_WITHER_DEATH, 1F, 1F));

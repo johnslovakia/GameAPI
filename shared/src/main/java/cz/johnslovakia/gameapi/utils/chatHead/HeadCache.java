@@ -7,8 +7,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -39,7 +41,7 @@ public class HeadCache {
     /**
      * A map used to track pending asynchronous head requests to avoid duplicate fetches.
      */
-    private final Map<String, Boolean> pendingRequests = new ConcurrentHashMap<>();
+    private final Map<String, CompletableFuture<BaseComponent[]>> pendingRequests = new ConcurrentHashMap<>();
 
     /**
      * The scheduled task responsible for cleaning up expired cache entries.
@@ -81,7 +83,7 @@ public class HeadCache {
      * <p>
      * If a valid (i.e., not expired) cached head is available, it is returned immediately.
      * Otherwise, an asynchronous task is scheduled to fetch a new head representation, and the
-     * last cached version (if any) is returned. If no cached version exists, an empty array is returned.
+     * last cached version (if any) is returned. If no cached version exists, a fallback head is returned.
      * </p>
      *
      * @param player     the {@link OfflinePlayer} whose head is to be retrieved.
@@ -98,20 +100,48 @@ public class HeadCache {
         }
 
         // Use the last cached version (even if expired) if available.
-        BaseComponent[] lastHead = cachedHead != null ? cachedHead.getHead() : new BaseComponent[]{};
+        BaseComponent[] lastHead = cachedHead != null ? cachedHead.getHead() : getFallbackHead(skinSource);
 
-        // Only schedule a new asynchronous fetch if one isn't already pending.
-        if (pendingRequests.putIfAbsent(cacheKey, true) == null) {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                BaseComponent[] head = skinSource.getHead(player, overlay);
-                if (head != null && head.length > 0 && plugin.isEnabled()) {
-                    cache.put(cacheKey, new CachedHead(uuid, head, overlay, System.currentTimeMillis()));
-                }
-                pendingRequests.remove(cacheKey);
-            });
-        }
+        getCachedHeadAsync(player, overlay, skinSource);
 
         return lastHead;
+    }
+
+    public CompletableFuture<BaseComponent[]> getCachedHeadAsync(OfflinePlayer player, boolean overlay, SkinSource skinSource) {
+        UUID uuid = player.getUniqueId();
+        String cacheKey = getCacheKey(uuid, overlay);
+        CachedHead cachedHead = cache.get(cacheKey);
+        if (cachedHead != null && !isExpired(cachedHead)) {
+            return CompletableFuture.completedFuture(cachedHead.getHead());
+        }
+
+        BaseComponent[] lastHead = cachedHead != null ? cachedHead.getHead() : getFallbackHead(skinSource);
+
+        return pendingRequests.computeIfAbsent(cacheKey, ignored -> {
+            CompletableFuture<BaseComponent[]> future = new CompletableFuture<>();
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                try {
+                    BaseComponent[] head = skinSource.getHead(player, overlay);
+                    if (head != null && head.length > 0 && plugin.isEnabled()) {
+                        cache.put(cacheKey, new CachedHead(uuid, head, overlay, System.currentTimeMillis()));
+                        future.complete(head);
+                    } else {
+                        future.complete(lastHead);
+                    }
+                } catch (Exception ex) {
+                    future.complete(lastHead);
+                } finally {
+                    pendingRequests.remove(cacheKey, future);
+                }
+            });
+            return future;
+        });
+    }
+
+    public BaseComponent[] getFallbackHead(SkinSource skinSource) {
+        String[] colors = new String[64];
+        Arrays.fill(colors, "#7F7F7F");
+        return skinSource.toBaseComponent(colors);
     }
 
     /**

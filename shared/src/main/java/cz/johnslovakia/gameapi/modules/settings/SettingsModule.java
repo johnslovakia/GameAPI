@@ -9,6 +9,7 @@ import me.zort.containr.GUI;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,16 +31,18 @@ public class SettingsModule implements Module {
 
     @Override
     public void terminate() {
+        SettingsEditSession.flushAll();
         categories = null;
     }
-    
-    
+
+
     public void register(SettingCategory category) {
         categories.add(category);
     }
 
     public void open(Player player) {
-        int rows = Math.min(6, Math.max(1, (int) Math.ceil(categories.size() / 9.0)) + 1);
+        int visibleItems = categories.size() + 1;
+        int rows = Math.min(6, Math.max(1, (int) Math.ceil(visibleItems / 9.0)) + 1);
 
         GUI gui = Component.gui()
                 .title(net.kyori.adventure.text.Component.text("§8Settings"))
@@ -62,12 +65,37 @@ public class SettingsModule implements Module {
 
                     int bottomStart = (rows - 1) * 9;
 
+                    g.appendElement(bottomStart + 8, Component.element(saveInfoItem()).build());
+
                     ItemBuilder close = new ItemBuilder(Material.BARRIER).setName("§cClose");
                     g.appendElement(bottomStart + 4, Component.element(close.toItemStack()).addClick(e ->
                             e.getPlayer().closeInventory()).build());
+
+                    SettingsEditSession session = SettingsEditSession.get(p);
+                    if (session.hasUndo()) {
+                        g.appendElement(bottomStart + 7, Component.element(session.undoItem()).addClick(e -> {
+                            if (SettingsEditSession.get(e.getPlayer()).undoLast(e.getPlayer())) {
+                                open(e.getPlayer());
+                            }
+                        }).build());
+                    }
                 })
                 .build();
 
+        gui.onClose(GUI.CloseReason.BY_PLAYER, SettingsEditSession::finish);
         gui.open(player);
+    }
+
+    private ItemStack saveInfoItem() {
+        return new ItemBuilder(Material.PAPER)
+                .setName("§aSaving Info")
+                .removeLore()
+                .addLoreLine("§7Changes are saved while moving back")
+                .addLoreLine("§7through settings pages and when")
+                .addLoreLine("§7you close this GUI .")
+                .addLoreLine("")
+                .addLoreLine("§7Undo stays available while this")
+                .addLoreLine("§7settings session is open.")
+                .toItemStack();
     }
 }

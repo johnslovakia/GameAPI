@@ -10,6 +10,7 @@ import cz.johnslovakia.gameapi.modules.game.GameState;
 import cz.johnslovakia.gameapi.events.GameQuitEvent;
 import cz.johnslovakia.gameapi.modules.game.session.PlayerGameSession;
 import cz.johnslovakia.gameapi.modules.levels.LevelModule;
+import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.serverManagement.PendingActionType;
 import cz.johnslovakia.gameapi.modules.serverManagement.PendingServerAction;
 import cz.johnslovakia.gameapi.modules.serverManagement.ServerRegistry;
@@ -39,6 +40,7 @@ public class JoinQuitListener implements Listener {
         GamePlayer gamePlayer = PlayerManager.getGamePlayer(player);
         gamePlayer.setOfflinePlayer(e.getPlayer());
 
+        ModuleManager.getModule(MessageModule.class).preloadPlayerLanguage(gamePlayer);
         Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> ModuleManager.getModule(CosmeticsModule.class).loadPlayerCosmetics(gamePlayer));
 
         Minigame minigame = Minigame.getInstance();
@@ -52,56 +54,75 @@ public class JoinQuitListener implements Listener {
             return;
         }
 
-        if (gameService.getGames().size() > 1 && ModuleManager.getModule(ServerRegistry.class) != null) {
+        ServerRegistry serverRegistry = ModuleManager.getModule(ServerRegistry.class);
+        if (gameService.getGames().size() > 1 && serverRegistry != null) {
             String currentServer = minigame.getSettings().getServerName();
-            Optional<PendingServerAction> pending = ModuleManager.getModule(ServerRegistry.class)
-                    .consumePendingAction(player.getName(), currentServer);
+            String playerName = player.getName();
 
-            if (pending.isPresent()) {
-                PendingServerAction action = pending.get();
-                if (action.getType() == PendingActionType.JOIN_ARENA) {
-                    String arenaId = action.getData();
-                    Optional<GameInstance> optionalGameInstance = gameService.getGames().values().stream()
-                            .filter(g -> g.getName().endsWith(arenaId))
-                            .toList()
-                            .stream().findFirst();
-                    if (optionalGameInstance.isPresent()) {
-                        GameInstance game = optionalGameInstance.get();
-                        if (gameService.isAvailableFor(player, game)) {
-                            game.joinPlayer(player);
-                        }else if (Minigame.getInstance().hasSpectatePermission(player)){
-                            game.spectate(player);
-                        }
+            Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> {
+                Optional<PendingServerAction> pending = serverRegistry.consumePendingAction(playerName, currentServer);
+
+                Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), task2 -> {
+                    if (!player.isOnline()) return;
+                    if (pending.isPresent() && handlePendingAction(player, gameService, pending.get())) {
                         return;
                     }
-                } else if (action.getType() == PendingActionType.SPECTATE) {
-                    String data = action.getData();
-                    String[] parts = data.split(":");
-                    if (parts.length == 2) {
-                        if (parts[0].equalsIgnoreCase("player")) {
-                            String targetName = parts[1];
-                            Player targetPlayer = Bukkit.getPlayer(targetName);
-                            if (targetPlayer != null) {
-                                GamePlayer targetGamePlayer = PlayerManager.getGamePlayer(targetPlayer);
-                                if (targetGamePlayer != null && targetGamePlayer.isOnline() && targetGamePlayer.isInGame()) {
-                                    targetGamePlayer.getGame().spectate(player);
-                                    Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> player.teleport(targetPlayer.getLocation()), 5L);
-                                    return;
-                                }
-                            }
-                        }else if (parts[0].equalsIgnoreCase("game")) {
-                            String gameName = parts[1];
-                            if (gameService.getGameByName(gameName).isPresent()){
-                                gameService.getGameByName(gameName).get().spectate(player);
-                                return;
-                            }
+                    handleAutoBestGameJoin(player, gamePlayer, gameService);
+                });
+            });
+            return;
+        }
+
+        handleAutoBestGameJoin(player, gamePlayer, gameService);
+    }
+
+    private boolean handlePendingAction(Player player, GameService gameService, PendingServerAction action) {
+        if (action.getType() == PendingActionType.JOIN_ARENA) {
+            String arenaId = action.getData();
+            if (arenaId == null) return false;
+            Optional<GameInstance> optionalGameInstance = gameService.getGames().values().stream()
+                    .filter(g -> g.getName().endsWith(arenaId))
+                    .toList()
+                    .stream().findFirst();
+            if (optionalGameInstance.isPresent()) {
+                GameInstance game = optionalGameInstance.get();
+                if (gameService.isAvailableFor(player, game)) {
+                    game.joinPlayer(player);
+                }else if (Minigame.getInstance().hasSpectatePermission(player)){
+                    game.spectate(player);
+                }
+                return true;
+            }
+        } else if (action.getType() == PendingActionType.SPECTATE) {
+            String data = action.getData();
+            if (data == null) return false;
+            String[] parts = data.split(":");
+            if (parts.length == 2) {
+                if (parts[0].equalsIgnoreCase("player")) {
+                    String targetName = parts[1];
+                    Player targetPlayer = Bukkit.getPlayer(targetName);
+                    if (targetPlayer != null) {
+                        GamePlayer targetGamePlayer = PlayerManager.getGamePlayer(targetPlayer);
+                        if (targetGamePlayer != null && targetGamePlayer.isOnline() && targetGamePlayer.isInGame()) {
+                            targetGamePlayer.getGame().spectate(player);
+                            Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> player.teleport(targetPlayer.getLocation()), 5L);
+                            return true;
                         }
+                    }
+                }else if (parts[0].equalsIgnoreCase("game")) {
+                    String gameName = parts[1];
+                    if (gameService.getGameByName(gameName).isPresent()){
+                        gameService.getGameByName(gameName).get().spectate(player);
+                        return true;
                     }
                 }
             }
         }
 
+        return false;
+    }
 
+    private void handleAutoBestGameJoin(Player player, GamePlayer gamePlayer, GameService gameService) {
         if (Minigame.getInstance().getSettings().isAutoBestGameJoin()) {
             Optional<GameInstance> game = Optional.ofNullable(
                     gamePlayer.getGame()
@@ -190,8 +211,10 @@ public class JoinQuitListener implements Listener {
             }, 20L);*/
             Bukkit.getScheduler().runTaskLater(Minigame.getInstance().getPlugin(), task -> {
                 if (Bukkit.getPlayer(player.getUniqueId()) == null) {
-                    gamePlayer.getPlayerData().saveAll();
-                    gamePlayer.cleanUpHeavyData();
+                    Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task2 -> {
+                        gamePlayer.getPlayerData().saveAll();
+                        Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), gamePlayer::cleanUpHeavyData);
+                    });
                 }
             }, 3 * 20L);
         }

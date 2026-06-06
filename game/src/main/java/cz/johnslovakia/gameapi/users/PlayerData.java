@@ -25,6 +25,7 @@ import me.zort.sqllib.SQLDatabaseConnection;
 import me.zort.sqllib.api.data.QueryResult;
 import me.zort.sqllib.api.data.Row;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -35,6 +36,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @Getter @Setter
 public class PlayerData {
@@ -47,6 +49,7 @@ public class PlayerData {
     private List<PlayerQuestData> questData = new ArrayList<>();
 
     private Map<Perk, Integer> perksLevel = new HashMap<>();
+    private volatile CompletableFuture<Void> initializationFuture = CompletableFuture.completedFuture(null);
 
 
     public PlayerData(GamePlayer gamePlayer) {
@@ -56,22 +59,65 @@ public class PlayerData {
             return;
         }
 
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        initializationFuture = future;
+
         new BukkitRunnable(){
             @Override
             public void run() {
-                PlayerTable playerTable = new PlayerTable();
+                try {
+                    PlayerTable playerTable = new PlayerTable();
 
-                playerTable.newUser(gamePlayer);
-                Minigame.getInstance().getMinigameTable().newUser(gamePlayer);
-                ModuleManager.getModule(StatsModule.class).getStatsTable().newUser(gamePlayer);
+                    playerTable.newUser(gamePlayer);
+                    Minigame.getInstance().getMinigameTable().newUser(gamePlayer);
+                    StatsModule statsModule = ModuleManager.getModule(StatsModule.class);
+                    if (statsModule != null && statsModule.getStatsTable() != null) {
+                        statsModule.getStatsTable().newUser(gamePlayer);
+                    }
 
-                loadData();
+                    loadData();
+                    future.complete(null);
+                } catch (Exception e) {
+                    future.completeExceptionally(e);
+                    throw new RuntimeException(e);
+                }
             }
         }.runTaskAsynchronously(Minigame.getInstance().getPlugin());
     }
     public void loadData(){
-        loadPerks();
-        loadQuests();
+        if (Minigame.getInstance().getPerkManager() == null
+                && Minigame.getInstance().getQuestManager() == null) {
+            return;
+        }
+
+        Optional<Row> row = loadMinigameRow("loading player data");
+        row.ifPresent(result -> {
+            loadPerks(result);
+            loadQuests(result);
+        });
+    }
+
+    private Optional<Row> loadMinigameRow(String context) {
+        Minigame minigame = Minigame.getInstance();
+        if (minigame.getDatabase() == null) {
+            return Optional.empty();
+        }
+
+        try (SQLDatabaseConnection connection = minigame.getDatabase().getConnection()) {
+            if (connection == null) {
+                Logger.log("Database connection is null when " + context + " for " + getPlayerName(), Logger.LogType.ERROR);
+                return Optional.empty();
+            }
+
+            return connection.select()
+                    .from(minigame.getMinigameTable().getTableName())
+                    .where().isEqual("Nickname", getPlayerName())
+                    .obtainOne();
+        } catch (Exception e) {
+            Logger.log("Failed when " + context + " for " + getPlayerName() + ": " + e.getMessage(), Logger.LogType.ERROR);
+            e.printStackTrace();
+            return Optional.empty();
+        }
     }
 
     public Inventory getKitInventory(Kit kit){
@@ -124,7 +170,7 @@ public class PlayerData {
                     connection.update()
                             .table(Minigame.getInstance().getMinigameTable().getTableName())
                             .set("DefaultKit", kitName)
-                            .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
+                            .where().isEqual("Nickname", getPlayerName())
                             .execute();
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -170,81 +216,58 @@ public class PlayerData {
         return getQuestData().stream().filter(data -> data.getStatus().equals(status)).toList();
     }
 
-    private void loadQuests() {
+    private void loadQuests(Row row) {
         if (Minigame.getInstance().getQuestManager() == null) {
             return;
         }
 
-        Minigame minigame = Minigame.getInstance();
+        try {
+            String jsonString = row.getString("Quests");
+            if (jsonString != null) {
+                JSONObject jsonObject = new JSONObject(jsonString);
+                JSONArray questsArray = jsonObject.getJSONArray("quests");
 
-        try (SQLDatabaseConnection connection = minigame.getDatabase().getConnection()) {
-            if (connection == null) {
-                Logger.log("Database connection is null when loading quests for " + gamePlayer.getOnlinePlayer().getName(), Logger.LogType.ERROR);
-                return;
-            }
+                questData.clear();
+                for (int i = 0; i < questsArray.length(); i++) {
+                    JSONObject questObject = questsArray.getJSONObject(i);
+                    String name = questObject.getString("name");
+                    QuestType type = QuestType.valueOf(questObject.getString("type").toUpperCase());
+                    PlayerQuestData.Status status = (!questObject.getString("status").equalsIgnoreCase("NOT_STARTED")
+                            ? PlayerQuestData.Status.valueOf(questObject.getString("status").toUpperCase())
+                            : PlayerQuestData.Status.IN_PROGRESS);
+                    int progress = questObject.getInt("progress");
 
-            Optional<Row> result = connection.select()
-                    .from(minigame.getMinigameTable().getTableName())
-                    .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
-                    .obtainOne();
-
-            if (result.isEmpty()) {
-                //Logger.log("I can't get quests data for player " + gamePlayer.getOnlinePlayer().getName() + ". (1)", Logger.LogType.ERROR);
-                //gamePlayer.getOnlinePlayer().sendMessage("Can't get your quests data. Sorry for the inconvenience. (1)");
-                return;
-            }
-
-            try {
-                String jsonString = result.get().getString("Quests");
-                if (jsonString != null) {
-                    JSONObject jsonObject = new JSONObject(jsonString);
-                    JSONArray questsArray = jsonObject.getJSONArray("quests");
-
-                    for (int i = 0; i < questsArray.length(); i++) {
-                        JSONObject questObject = questsArray.getJSONObject(i);
-                        String name = questObject.getString("name");
-                        QuestType type = QuestType.valueOf(questObject.getString("type").toUpperCase());
-                        PlayerQuestData.Status status = (!questObject.getString("status").equalsIgnoreCase("NOT_STARTED")
-                                ? PlayerQuestData.Status.valueOf(questObject.getString("status").toUpperCase())
-                                : PlayerQuestData.Status.IN_PROGRESS);
-                        int progress = questObject.getInt("progress");
-
-                        LocalDate startDate = null;
-                        if (questObject.has("start_date") && questObject.get("start_date") != null) {
-                            startDate = LocalDate.parse(questObject.getString("start_date"));
-                        }
-
-                        Quest quest = Minigame.getInstance().getQuestManager().getQuest(type, name);
-                        if (quest == null) continue;
-
-                        PlayerQuestData questData = status.equals(PlayerQuestData.Status.COMPLETED)
-                                ? new PlayerQuestData(gamePlayer, quest, startDate, PlayerQuestData.Status.COMPLETED)
-                                : new PlayerQuestData(gamePlayer, quest, startDate, progress);
-
-                        if (progress >= quest.getCompletionGoal() && status != PlayerQuestData.Status.COMPLETED) {
-                            Logger.log("Quest data is incorrectly stored in the database. Status: " + status.name()
-                                    + " Progress: " + progress + " Completion goal: " + quest.getCompletionGoal()
-                                    + " Quest Name: " + quest.getDisplayName(), Logger.LogType.WARNING);
-                            questData.setStatus(PlayerQuestData.Status.COMPLETED);
-                        }
-
-                        getQuestData().add(questData);
+                    LocalDate startDate = null;
+                    if (questObject.has("start_date") && questObject.get("start_date") != null) {
+                        startDate = LocalDate.parse(questObject.getString("start_date"));
                     }
-                }
-            } catch (Exception exception) {
-                Logger.log("I can't get quests data for player " + gamePlayer.getOnlinePlayer().getName()
-                        + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
-                gamePlayer.getOnlinePlayer().sendMessage("Can't get your quests data. Sorry for the inconvenience. (2)");
-                exception.printStackTrace();
-            }
 
-        } catch (Exception e) {
-            Logger.log("Failed to load quests for player " + gamePlayer.getOnlinePlayer().getName()
-                    + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
-            e.printStackTrace();
+                    Quest quest = Minigame.getInstance().getQuestManager().getQuest(type, name);
+                    if (quest == null) continue;
+
+                    PlayerQuestData questData = status.equals(PlayerQuestData.Status.COMPLETED)
+                            ? new PlayerQuestData(gamePlayer, quest, startDate, PlayerQuestData.Status.COMPLETED)
+                            : new PlayerQuestData(gamePlayer, quest, startDate, progress);
+
+                    if (progress >= quest.getCompletionGoal() && status != PlayerQuestData.Status.COMPLETED) {
+                        Logger.log("Quest data is incorrectly stored in the database. Status: " + status.name()
+                                + " Progress: " + progress + " Completion goal: " + quest.getCompletionGoal()
+                                + " Quest Name: " + quest.getDisplayName(), Logger.LogType.WARNING);
+                        questData.setStatus(PlayerQuestData.Status.COMPLETED);
+                    }
+
+                    getQuestData().add(questData);
+                }
+            }
+        } catch (Exception exception) {
+            Logger.log("I can't get quests data for player " + getPlayerName()
+                    + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
+            sendSync("Can't get your quests data. Sorry for the inconvenience. (2)");
+            exception.printStackTrace();
         }
 
-        Minigame.getInstance().getQuestManager().check(gamePlayer);
+        Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), () ->
+                Minigame.getInstance().getQuestManager().check(gamePlayer));
     }
 
     public void setPerkLevel(Perk perk, int level){
@@ -267,54 +290,36 @@ public class PlayerData {
         return getPerkLevel(perk) != null;
     }
 
-    private void loadPerks() {
+    private void loadPerks(Row row) {
         if (Minigame.getInstance().getPerkManager() == null) {
             return;
         }
 
         Minigame minigame = Minigame.getInstance();
 
-        try (SQLDatabaseConnection connection = minigame.getDatabase().getConnection()) {
-            if (connection == null) {
-                Logger.log("Database connection is null when loading perks for " + gamePlayer.getOnlinePlayer().getName(), Logger.LogType.ERROR);
-                return;
-            }
+        try {
+            String jsonString = row.getString("Perks");
+            if (jsonString != null) {
+                JSONObject jsonObject = new JSONObject(jsonString);
+                JSONArray perksArray = jsonObject.getJSONArray("levels");
 
-            Optional<Row> result = connection.select()
-                    .from(minigame.getMinigameTable().getTableName())
-                    .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
-                    .obtainOne();
+                perksLevel.clear();
+                for (int i = 0; i < perksArray.length(); i++) {
+                    JSONObject perkObject = perksArray.getJSONObject(i);
+                    String name = perkObject.getString("name");
+                    int level = perkObject.getInt("level");
+                    Perk perk = minigame.getPerkManager().getPerk(name);
 
-            if (!result.isPresent()) return;
-
-            try {
-                String jsonString = result.get().getString("Perks");
-                if (jsonString != null) {
-                    JSONObject jsonObject = new JSONObject(jsonString);
-                    JSONArray perksArray = jsonObject.getJSONArray("levels");
-
-                    for (int i = 0; i < perksArray.length(); i++) {
-                        JSONObject perkObject = perksArray.getJSONObject(i);
-                        String name = perkObject.getString("name");
-                        int level = perkObject.getInt("level");
-                        Perk perk = minigame.getPerkManager().getPerk(name);
-
-                        if (perk != null) {
-                            setPerkLevel(perk, level);
-                        }
+                    if (perk != null) {
+                        setPerkLevel(perk, level);
                     }
                 }
-            } catch (Exception exception) {
-                Logger.log("I can't get perks data for player " + gamePlayer.getOnlinePlayer().getName()
-                        + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
-                gamePlayer.getOnlinePlayer().sendMessage("Can't get your perks data. Sorry for the inconvenience. (2)");
-                exception.printStackTrace();
             }
-
-        } catch (Exception e) {
-            Logger.log("Failed to load perks for player " + gamePlayer.getOnlinePlayer().getName()
-                    + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
-            e.printStackTrace();
+        } catch (Exception exception) {
+            Logger.log("I can't get perks data for player " + getPlayerName()
+                    + ". (2) The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
+            sendSync("Can't get your perks data. Sorry for the inconvenience. (2)");
+            exception.printStackTrace();
         }
     }
 
@@ -326,6 +331,18 @@ public class PlayerData {
         if (!getGamePlayer().isInGame()) {
             return;
         }
+        if (!initializationFuture.isDone()) {
+            if (Bukkit.isPrimaryThread()) {
+                Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> loadKits());
+                return;
+            }
+            try {
+                initializationFuture.join();
+            } catch (Exception e) {
+                Logger.log("Cannot load kits for " + getPlayerName() + " because player data initialization failed: " + e.getMessage(), Logger.LogType.ERROR);
+                return;
+            }
+        }
 
         KitManager kitManager = KitManager.getKitManager(getGamePlayer().getGame());
         if (kitManager == null) return;
@@ -336,16 +353,19 @@ public class PlayerData {
         }
 
         Minigame minigame = Minigame.getInstance();
+        if (minigame.getDatabase() == null) {
+            return;
+        }
 
         try (SQLDatabaseConnection connection = minigame.getDatabase().getConnection()) {
             if (connection == null) {
-                Logger.log("Database connection is null when loading kits for " + gamePlayer.getOnlinePlayer().getName(), Logger.LogType.ERROR);
+                Logger.log("Database connection is null when loading kits for " + getPlayerName(), Logger.LogType.ERROR);
                 return;
             }
 
             Optional<Row> result = connection.select()
                     .from(minigame.getMinigameTable().getTableName())
-                    .where().isEqual("Nickname", getGamePlayer().getOnlinePlayer().getName())
+                    .where().isEqual("Nickname", getPlayerName())
                     .obtainOne();
 
             if (!result.isPresent()) return;
@@ -414,20 +434,33 @@ public class PlayerData {
                 }
 
             } catch (Exception exception) {
-                Logger.log("I can't get kits data for player " + gamePlayer.getOnlinePlayer().getName()
+                Logger.log("I can't get kits data for player " + getPlayerName()
                         + ". The following message is for Developers: " + exception.getMessage(), Logger.LogType.ERROR);
-                gamePlayer.getOnlinePlayer().sendMessage("Can't get your kits data. Sorry for the inconvenience.");
+                sendSync("Can't get your kits data. Sorry for the inconvenience.");
                 exception.printStackTrace();
             }
 
         } catch (Exception e) {
-            Logger.log("Failed to load kits for player " + gamePlayer.getOnlinePlayer().getName()
+            Logger.log("Failed to load kits for player " + getPlayerName()
                     + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
             e.printStackTrace();
         }
     }
 
     public void saveAll(){
+        if (Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTaskAsynchronously(Minigame.getInstance().getPlugin(), task -> saveAll());
+            return;
+        }
+        if (!initializationFuture.isDone()) {
+            try {
+                initializationFuture.join();
+            } catch (Exception e) {
+                Logger.log("Cannot save player data for " + getPlayerName() + " because initialization failed: " + e.getMessage(), Logger.LogType.ERROR);
+                return;
+            }
+        }
+
         saveQuests();
         savePerks();
         saveKitInventories();
@@ -435,35 +468,37 @@ public class PlayerData {
 
     public void saveKitInventories() {
         Minigame minigame = Minigame.getInstance();
+        if (minigame.getDatabase() == null) return;
 
         try (SQLDatabaseConnection connection = minigame.getDatabase().getConnection()) {
             if (connection == null) {
-                Logger.log("Database connection is null when saving kits for " + gamePlayer.getOnlinePlayer().getName(), Logger.LogType.ERROR);
+                Logger.log("Database connection is null when saving kits for " + getPlayerName(), Logger.LogType.ERROR);
                 return;
             }
 
             QueryResult kitInventoriesResult = connection.update()
                     .table(minigame.getMinigameTable().getTableName())
                     .set("KitInventories", KitsStorage.inventoriesToJSON(getGamePlayer()).toString())
-                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .where().isEqual("Nickname", getPlayerName())
                     .execute();
 
             if (!kitInventoriesResult.isSuccessful()) {
                 Logger.log("Something went wrong when saving kits data! The following message is for Developers: ", Logger.LogType.ERROR);
                 Logger.log(kitInventoriesResult.getRejectMessage(), Logger.LogType.ERROR);
-                gamePlayer.getOnlinePlayer().sendMessage("§cAn error occurred while saving kits data. Sorry for the inconvenience.");
+                sendSync("§cAn error occurred while saving kits data. Sorry for the inconvenience.");
             }
 
         } catch (Exception e) {
-            Logger.log("Failed to save kits data for player " + gamePlayer.getOnlinePlayer().getName()
+            Logger.log("Failed to save kits data for player " + getPlayerName()
                     + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
             e.printStackTrace();
-            gamePlayer.getOnlinePlayer().sendMessage("§cAn error occurred while saving kits data. Sorry for the inconvenience.");
+            sendSync("§cAn error occurred while saving kits data. Sorry for the inconvenience.");
         }
     }
 
     public void savePerks() {
         Minigame minigame = Minigame.getInstance();
+        if (minigame.getDatabase() == null) return;
 
         if (Minigame.getInstance().getPerkManager() == null) {
             return;
@@ -471,32 +506,33 @@ public class PlayerData {
 
         try (SQLDatabaseConnection connection = minigame.getDatabase().getConnection()) {
             if (connection == null) {
-                Logger.log("Database connection is null when saving perks for " + gamePlayer.getOnlinePlayer().getName(), Logger.LogType.ERROR);
+                Logger.log("Database connection is null when saving perks for " + getPlayerName(), Logger.LogType.ERROR);
                 return;
             }
 
             QueryResult perksResult = connection.update()
                     .table(minigame.getMinigameTable().getTableName())
                     .set("Perks", PerksStorage.perksToJSON(getGamePlayer()).toString())
-                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .where().isEqual("Nickname", getPlayerName())
                     .execute();
 
             if (!perksResult.isSuccessful()) {
                 Logger.log("Something went wrong when saving perks data! The following message is for Developers: ", Logger.LogType.ERROR);
                 Logger.log(perksResult.getRejectMessage(), Logger.LogType.ERROR);
-                gamePlayer.getOnlinePlayer().sendMessage("§cAn error occurred while saving perks data. Sorry for the inconvenience.");
+                sendSync("§cAn error occurred while saving perks data. Sorry for the inconvenience.");
             }
 
         } catch (Exception e) {
-            Logger.log("Failed to save perks data for player " + gamePlayer.getOnlinePlayer().getName()
+            Logger.log("Failed to save perks data for player " + getPlayerName()
                     + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
             e.printStackTrace();
-            gamePlayer.getOnlinePlayer().sendMessage("§cAn error occurred while saving perks data. Sorry for the inconvenience.");
+            sendSync("§cAn error occurred while saving perks data. Sorry for the inconvenience.");
         }
     }
 
     public void saveQuests() {
         Minigame minigame = Minigame.getInstance();
+        if (minigame.getDatabase() == null) return;
 
         if (Minigame.getInstance().getQuestManager() == null) {
             return;
@@ -504,27 +540,40 @@ public class PlayerData {
 
         try (SQLDatabaseConnection connection = minigame.getDatabase().getConnection()) {
             if (connection == null) {
-                Logger.log("Database connection is null when saving quests for " + gamePlayer.getOnlinePlayer().getName(), Logger.LogType.ERROR);
+                Logger.log("Database connection is null when saving quests for " + getPlayerName(), Logger.LogType.ERROR);
                 return;
             }
 
             QueryResult questsResult = connection.update()
                     .table(minigame.getMinigameTable().getTableName())
                     .set("Quests", QuestsStorage.toJSON(getGamePlayer()).toString())
-                    .where().isEqual("Nickname", gamePlayer.getOnlinePlayer().getName())
+                    .where().isEqual("Nickname", getPlayerName())
                     .execute();
 
             if (!questsResult.isSuccessful()) {
                 Logger.log("Something went wrong when saving quests data! The following message is for Developers: ", Logger.LogType.ERROR);
                 Logger.log(questsResult.getRejectMessage(), Logger.LogType.ERROR);
-                gamePlayer.getOnlinePlayer().sendMessage("§cAn error occurred while saving quests data. Sorry for the inconvenience.");
+                sendSync("§cAn error occurred while saving quests data. Sorry for the inconvenience.");
             }
 
         } catch (Exception e) {
-            Logger.log("Failed to save quests data for player " + gamePlayer.getOnlinePlayer().getName()
+            Logger.log("Failed to save quests data for player " + getPlayerName()
                     + " due to SQL error: " + e.getMessage(), Logger.LogType.ERROR);
             e.printStackTrace();
-            gamePlayer.getOnlinePlayer().sendMessage("§cAn error occurred while saving quests data. Sorry for the inconvenience.");
+            sendSync("§cAn error occurred while saving quests data. Sorry for the inconvenience.");
         }
+    }
+
+    private String getPlayerName() {
+        return gamePlayer.getName();
+    }
+
+    private void sendSync(String message) {
+        Bukkit.getScheduler().runTask(Minigame.getInstance().getPlugin(), () -> {
+            Player player = gamePlayer.getOnlinePlayer();
+            if (player != null && player.isOnline()) {
+                player.sendMessage(message);
+            }
+        });
     }
 }

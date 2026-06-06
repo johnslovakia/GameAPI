@@ -1,6 +1,7 @@
 package cz.johnslovakia.gameapi.modules.game.task.tasks;
 
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
+import cz.johnslovakia.gameapi.modules.game.map.GameMap;
 import cz.johnslovakia.gameapi.modules.game.map.MapModule;
 import cz.johnslovakia.gameapi.modules.game.task.Task;
 import cz.johnslovakia.gameapi.modules.game.task.TaskInterface;
@@ -28,6 +29,11 @@ public class StartCountdown implements TaskInterface {
             if (!game.getSettings().isChooseRandomMap()) {
                 if (game.getModule(MapModule.class).isEnabledVoting()) {
                     game.winMap();
+                } else if (game.getCurrentMap() == null) {
+                    GameMap nextMap = game.nextArena();
+                    if (nextMap != null) {
+                        nextMap.setWinned(true);
+                    }
                 }
 
                 for (GamePlayer gamePlayer : game.getParticipants()) {

@@ -1,5 +1,6 @@
 package cz.johnslovakia.gameapi.modules.settings;
 
+import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import me.zort.containr.Component;
 import me.zort.containr.GUI;
@@ -36,9 +37,12 @@ public class SettingPageGUI {
                         PagedContainer container = Component.pagedContainer()
                                 .size(9, rows - 2)
                                 .init(c -> {
-                                    for (SettingItem si : current) {
+                                    for (int i = 0; i < current.size(); i++) {
+                                        SettingItem si = current.get(i);
+                                        String undoGroup = si.navigate ? null : undoGroup(title, itemsSupplier, i);
                                         c.appendElement(Component.element(si.item).addClick(clickInfo -> {
-                                            si.onClick.accept(new ClickContext(clickInfo.getPlayer(), clickInfo));
+                                            SettingsEditSession.runAction(clickInfo.getPlayer(), undoGroup,
+                                                    () -> si.onClick.accept(new ClickContext(clickInfo.getPlayer(), clickInfo)));
                                             clickInfo.getPlayer().playSound(clickInfo.getPlayer(), Sound.UI_BUTTON_CLICK, 0.6F, 1.2F);
                                             if (!si.navigate) {
                                                 open(clickInfo.getPlayer(), title, itemsSupplier, back, bottomActions);
@@ -63,23 +67,27 @@ public class SettingPageGUI {
 
                         ItemBuilder backBtn = new ItemBuilder(Material.ARROW).setName("§cGo Back");
                         g.appendElement(bottomStart, Component.element(backBtn.toItemStack()).addClick(e -> {
-                            back.accept(e.getPlayer());
+                            goBackSafely(e.getPlayer(), back);
                             e.getPlayer().playSound(e.getPlayer(), Sound.UI_BUTTON_CLICK, 1F, 1F);
                         }).build());
 
                         if (bottomActions != null) {
                             for (BottomAction action : bottomActions) {
                                 g.appendElement(bottomStart + action.slotOffset, Component.element(action.icon).addClick(clickInfo -> {
-                                    action.onClick.accept(clickInfo.getPlayer());
+                                    SettingsEditSession.runAction(clickInfo.getPlayer(), () -> action.onClick.accept(clickInfo.getPlayer()));
                                     clickInfo.getPlayer().playSound(clickInfo.getPlayer(), Sound.UI_BUTTON_CLICK, 1F, 1F);
                                 }).build());
                             }
                         }
+
+                        appendUndoButton(g, bottomStart + 7, p, title, itemsSupplier, back, bottomActions);
                     } else {
                         for (int i = 0; i < current.size(); i++) {
                             SettingItem si = current.get(i);
+                            String undoGroup = si.navigate ? null : undoGroup(title, itemsSupplier, i);
                             g.appendElement(i, Component.element(si.item).addClick(clickInfo -> {
-                                si.onClick.accept(new ClickContext(clickInfo.getPlayer(), clickInfo));
+                                SettingsEditSession.runAction(clickInfo.getPlayer(), undoGroup,
+                                        () -> si.onClick.accept(new ClickContext(clickInfo.getPlayer(), clickInfo)));
                                 clickInfo.getPlayer().playSound(clickInfo.getPlayer(), Sound.UI_BUTTON_CLICK, 0.6F, 1.2F);
                                 if (!si.navigate) {
                                     open(clickInfo.getPlayer(), title, itemsSupplier, back, bottomActions);
@@ -91,22 +99,90 @@ public class SettingPageGUI {
 
                         ItemBuilder backBtn = new ItemBuilder(Material.ARROW).setName("§cGo Back");
                         g.appendElement(bottomStart, Component.element(backBtn.toItemStack()).addClick(e -> {
-                            back.accept(e.getPlayer());
+                            goBackSafely(e.getPlayer(), back);
                             e.getPlayer().playSound(e.getPlayer(), Sound.UI_BUTTON_CLICK, 1F, 1F);
                         }).build());
 
                         if (bottomActions != null) {
                             for (BottomAction action : bottomActions) {
                                 g.appendElement(bottomStart + action.slotOffset, Component.element(action.icon).addClick(clickInfo -> {
-                                    action.onClick.accept(clickInfo.getPlayer());
+                                    SettingsEditSession.runAction(clickInfo.getPlayer(), () -> action.onClick.accept(clickInfo.getPlayer()));
                                     clickInfo.getPlayer().playSound(clickInfo.getPlayer(), Sound.UI_BUTTON_CLICK, 1F, 1F);
                                 }).build());
                             }
                         }
+
+                        appendUndoButton(g, bottomStart + 7, p, title, itemsSupplier, back, bottomActions);
                     }
                 })
                 .build();
 
+        gui.onClose(GUI.CloseReason.BY_PLAYER, SettingsEditSession::finish);
         gui.open(player);
+    }
+
+    private static void appendUndoButton(GUI gui,
+                                         int slot,
+                                         Player viewer,
+                                         String title,
+                                         Supplier<List<SettingItem>> itemsSupplier,
+                                         Consumer<Player> back,
+                                         List<BottomAction> bottomActions) {
+        SettingsEditSession session = SettingsEditSession.get(viewer);
+        if (!session.hasUndo() || usesBottomSlot(bottomActions, 7)) {
+            return;
+        }
+
+        gui.appendElement(slot, Component.element(session.undoItem()).addClick(e -> {
+            if (SettingsEditSession.get(e.getPlayer()).undoLast(e.getPlayer())) {
+                reopenSafely(e.getPlayer(), title, itemsSupplier, back, bottomActions);
+            }
+        }).build());
+    }
+
+    private static void reopenSafely(Player player,
+                                     String title,
+                                     Supplier<List<SettingItem>> itemsSupplier,
+                                     Consumer<Player> back,
+                                     List<BottomAction> bottomActions) {
+        try {
+            open(player, title, itemsSupplier, back, bottomActions);
+        } catch (RuntimeException exception) {
+            player.sendMessage("§eThat settings page changed, returning to the previous menu.");
+            goBackSafely(player, back);
+        }
+    }
+
+    private static void goBackSafely(Player player, Consumer<Player> back) {
+        SettingsEditSession.saveCheckpoint(player);
+        try {
+            back.accept(player);
+        } catch (RuntimeException exception) {
+            openRootSafely(player);
+        }
+    }
+
+    private static void openRootSafely(Player player) {
+        try {
+            ModuleManager.getModule(SettingsModule.class).open(player);
+        } catch (RuntimeException exception) {
+            player.closeInventory();
+        }
+    }
+
+    private static boolean usesBottomSlot(List<BottomAction> bottomActions, int slotOffset) {
+        if (bottomActions == null) {
+            return false;
+        }
+        for (BottomAction action : bottomActions) {
+            if (action.slotOffset == slotOffset) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String undoGroup(String title, Supplier<List<SettingItem>> itemsSupplier, int itemIndex) {
+        return title + ":" + System.identityHashCode(itemsSupplier) + ":item:" + itemIndex;
     }
 }

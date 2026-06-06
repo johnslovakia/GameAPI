@@ -272,7 +272,7 @@ chat.kit.activated_vip: "Ẁ #00e1ffKit #00b5d9%kit% #00e1ffaktivován! §a(Uše
 chat.economy.reward.limit: "Ẁ #00e1ffDosáhl jsi limitu odměn pro #00b5d9%score%."
 chat.team_chat: "Ẁ #00b5d9Týmový chat #00e1ffje ve výchozím nastavení zapnut v této hře. Pro poslání zprávy všem začni zprávu znakem #00b5d9 '!'"
 chat.kit.balance_deducted: "Ẁ #00b5d9%economy_name% #00e1ffbudou odečteny po začátku hry."
-chat.current_balance: "Ẁ #00e1ffAktuální zůstatek: §a%balance% %economy_name%"
+chat.current_balance: "Ẁ #00e1ffAktuální zůstatek: #00b5d9%balance% %economy_name%"
 chat.time_reduced: "Ẁ #00e1ffČas do začátku hry byl snížen na #00b5d9 %reduced% #00e1ffvteřin."
 chat.map_won: "Ẁ #00e1ffV hlasování byla zvolena mapa: #00b5d9%map%!"
 chat.party.team_join: "Ẁ #00e1ffByl jsi přiřazen do týmu, ke kterému se připojil člen tvé party."

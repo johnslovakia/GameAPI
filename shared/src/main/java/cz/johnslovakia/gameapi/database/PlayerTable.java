@@ -83,19 +83,12 @@ public class PlayerTable {
         try (SQLDatabaseConnection connection = Core.getInstance().getDatabase().getConnection()) {
             if (connection == null) return;
 
-            Optional<Row> result = connection.select()
-                    .from(TABLE_NAME)
-                    .where().isEqual("Nickname", playerIdentity.getOnlinePlayer().getName())
-                    .obtainOne();
-
-            if (result.isEmpty()) {
-                connection.insert()
-                        .into(TABLE_NAME, "Nickname", "Language")
-                        .values(
-                                playerIdentity.getOnlinePlayer().getName(),
-                                Language.getDefaultLanguage().getName()
-                        )
-                        .execute();
+            String sql = "INSERT INTO `" + TABLE_NAME + "` (`Nickname`, `Language`) VALUES (?, ?) " +
+                    "ON DUPLICATE KEY UPDATE `Nickname` = `Nickname`";
+            try (PreparedStatement stmt = connection.getConnection().prepareStatement(sql)) {
+                stmt.setString(1, playerIdentity.getName());
+                stmt.setString(2, Language.getDefaultLanguage().getName());
+                stmt.executeUpdate();
             }
         }catch (Exception exception){
             exception.printStackTrace();

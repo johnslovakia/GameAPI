@@ -185,7 +185,8 @@ public class Message {
         
         for (Map.Entry<PlayerIdentity, String> entry : rawMessages.entrySet()) {
             Component component = Component.empty();
-            String[] lines = entry.getValue().split("(/newline/|\\n)");
+            String value = StringUtils.colorizer(entry.getValue());
+            String[] lines = value.split("(/newline/|\\n)");
             
             for (int i = 0; i < lines.length; i++) {
                 if (i != 0) {

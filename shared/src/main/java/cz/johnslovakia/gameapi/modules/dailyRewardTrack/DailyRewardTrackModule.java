@@ -12,6 +12,7 @@ import cz.johnslovakia.gameapi.modules.Module;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.levels.LevelModule;
 import cz.johnslovakia.gameapi.modules.levels.PlayerLevelData;
+import cz.johnslovakia.gameapi.modules.settings.SettingsEditSession;
 import cz.johnslovakia.gameapi.rewards.Reward;
 import cz.johnslovakia.gameapi.rewards.RewardItem;
 import cz.johnslovakia.gameapi.rewards.unclaimed.DailyMeterUnclaimedReward;
@@ -42,6 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
 public class DailyRewardTrackModule implements Module, Listener {
+
+    private static final String SETTINGS_SOURCE_ID = "module-settings:DailyRewardTrackModule";
 
     private List<DailyRewardTier> tiers = new ArrayList<>();
     @Getter(AccessLevel.PACKAGE)
@@ -357,21 +360,87 @@ public class DailyRewardTrackModule implements Module, Listener {
         String json = new JSConfigs().loadConfig("DailyRewardTrackModule");
 
         if (json != null) {
+            registerSettingsSource();
             return gson.fromJson(json, DailyRewardTrackModule.class);
         } else {
             DailyRewardTrackModule defaultManager = DailyRewardTrackModule.createDefault();
             saveDailyRewardTrackModule(defaultManager);
+            registerSettingsSource();
             return defaultManager;
         }
     }
 
     public static void saveDailyRewardTrackModule(DailyRewardTrackModule dailyRewardTrackModule) {
+        registerSettingsSource();
+        if (SettingsEditSession.deferSave(SETTINGS_SOURCE_ID)) {
+            return;
+        }
+        saveDailyRewardTrackModuleNow(dailyRewardTrackModule);
+    }
+
+    private static void saveDailyRewardTrackModuleNow(DailyRewardTrackModule dailyRewardTrackModule) {
         Gson gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .create();
 
         String json = gson.toJson(dailyRewardTrackModule);
         new JSConfigs().saveConfig("DailyRewardTrackModule", json);
+    }
+
+    private static void registerSettingsSource() {
+        SettingsEditSession.registerSource(
+                SETTINGS_SOURCE_ID,
+                "Daily Reward Track",
+                DailyRewardTrackModule::snapshotCurrentSettings,
+                DailyRewardTrackModule::restoreCurrentSettings,
+                DailyRewardTrackModule::saveCurrentSettingsNow
+        );
+    }
+
+    private static String snapshotCurrentSettings() {
+        DailyRewardTrackModule current = currentSettingsModule();
+        if (current == null) {
+            return null;
+        }
+        return settingsGson().toJson(current);
+    }
+
+    private static void restoreCurrentSettings(String json) {
+        DailyRewardTrackModule restored = settingsGson().fromJson(json, DailyRewardTrackModule.class);
+        DailyRewardTrackModule target = currentSettingsModule();
+        if (restored == null || target == null) {
+            return;
+        }
+
+        target.getTiers().clear();
+        target.getTiers().addAll(restored.getTiers());
+        target.setAfterMaxTierReward(restored.getAfterMaxTierReward());
+        target.setMaxTier(restored.getMaxTier());
+    }
+
+    private static void saveCurrentSettingsNow() {
+        DailyRewardTrackModule current = currentSettingsModule();
+        if (current != null) {
+            saveDailyRewardTrackModuleNow(current);
+        }
+    }
+
+    private static DailyRewardTrackModule currentSettingsModule() {
+        try {
+            ModuleManager manager = ModuleManager.getInstance();
+            if (manager == null || !manager.hasModule(DailyRewardTrackModule.class)) {
+                return null;
+            }
+            return ModuleManager.getModule(DailyRewardTrackModule.class);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static Gson settingsGson() {
+        return new GsonBuilder()
+                .setPrettyPrinting()
+                .create();
     }
 
     public static class Builder {

@@ -9,6 +9,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * The {@code ChatHeadAPI} class provides methods to retrieve a Minecraft player's head representation
@@ -174,17 +175,15 @@ public class ChatHeadAPI {
      * <p>
      * This method converts the 8x8 grid of {@link BaseComponent} objects into a legacy text format
      * using {@link TextComponent#toLegacyText(BaseComponent[])}.
-     * <strong>Note:</strong> Although this method accepts parameters for overlay and skin source,
-     * it always applies the skin overlay and uses the default skin source.
      * </p>
      *
      * @param uuid       the UUID of the player whose head is to be retrieved.
-     * @param overlay    an unused parameter; the head is always generated with the overlay applied.
-     * @param skinSource an unused parameter; the default skin source is always used.
+     * @param overlay    {@code true} to apply the skin overlay; {@code false} otherwise.
+     * @param skinSource the {@link SkinSource} to use for retrieving the player's skin.
      * @return a legacy-formatted string representing the player's head.
      */
     public String getHeadAsString(UUID uuid, boolean overlay, SkinSource skinSource) {
-        return getHeadAsString(Bukkit.getOfflinePlayer(uuid), true, defaultSource);
+        return getHeadAsString(Bukkit.getOfflinePlayer(uuid), overlay, skinSource);
     }
 
     /**
@@ -205,6 +204,11 @@ public class ChatHeadAPI {
         );
     }
 
+    public CompletableFuture<String> getHeadAsStringAsync(OfflinePlayer player, boolean overlay, SkinSource skinSource) {
+        return headCache.getCachedHeadAsync(player, overlay, skinSource)
+                .thenApply(TextComponent::toLegacyText);
+    }
+
     /**
      * Retrieves the player's head as a legacy-formatted string using the specified {@link OfflinePlayer}.
      * <p>
@@ -218,6 +222,14 @@ public class ChatHeadAPI {
      */
     public String getHeadAsString(OfflinePlayer player) {
         return getHeadAsString(player, true, defaultSource);
+    }
+
+    public CompletableFuture<String> getHeadAsStringAsync(OfflinePlayer player) {
+        return getHeadAsStringAsync(player, true, defaultSource);
+    }
+
+    public String getFallbackHeadAsString() {
+        return TextComponent.toLegacyText(headCache.getFallbackHead(defaultSource));
     }
 
 

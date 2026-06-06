@@ -6,6 +6,7 @@ import cz.johnslovakia.gameapi.database.RedisManager;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.game.GameInstance;
 import cz.johnslovakia.gameapi.listeners.TestServerListener;
+import cz.johnslovakia.gameapi.modules.scoreboard.ScoreboardSettings;
 import cz.johnslovakia.gameapi.modules.messages.MessageModule;
 import cz.johnslovakia.gameapi.modules.updateTasks.UpdateTask;
 import cz.johnslovakia.gameapi.modules.updateTasks.UpdateTaskModule;
@@ -51,6 +52,7 @@ public abstract class Minigame {
 
     private UpdateChecker updateChecker;
     private MinigameSettings settings;
+    private ScoreboardSettings scoreboardSettings;
     private Database database;
     private WinCondition winCondition;
     private MinigameTable minigameTable;

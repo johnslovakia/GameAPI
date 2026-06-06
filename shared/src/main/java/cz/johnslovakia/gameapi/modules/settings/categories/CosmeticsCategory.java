@@ -1,6 +1,5 @@
 package cz.johnslovakia.gameapi.modules.settings.categories;
 
-import cz.johnslovakia.gameapi.Core;
 import cz.johnslovakia.gameapi.guis.ConfirmInventory;
 import cz.johnslovakia.gameapi.modules.ModuleManager;
 import cz.johnslovakia.gameapi.modules.cosmetics.CosmeticPrices;
@@ -10,11 +9,8 @@ import cz.johnslovakia.gameapi.modules.settings.*;
 import cz.johnslovakia.gameapi.users.PlayerIdentityRegistry;
 import cz.johnslovakia.gameapi.utils.ItemBuilder;
 import cz.johnslovakia.gameapi.utils.StringUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,8 +51,10 @@ public class CosmeticsCategory implements SettingCategory {
                         .addLoreLine("§c► Click to restore default settings")
                         .toItemStack(), p -> {
                     new ConfirmInventory(PlayerIdentityRegistry.get(p), "§cRestore default settings", playerIdentity -> {
-                        CosmeticPrices defaultPrices = new CosmeticPrices();
-                        ModuleManager.getModule(CosmeticsModule.class).savePrices(defaultPrices);
+                        SettingsEditSession.runAction(p, () -> {
+                            CosmeticPrices defaultPrices = new CosmeticPrices();
+                            ModuleManager.getModule(CosmeticsModule.class).savePrices(defaultPrices);
+                        });
 
                         p.sendMessage("§cCosmetic prices were reset to default. Changes may not apply until the server is restarted.");
                         openTypeList(p);
@@ -122,9 +120,7 @@ public class CosmeticsCategory implements SettingCategory {
                 CosmeticPrices.PriceSet current = ModuleManager.getModule(CosmeticsModule.class).getPrices().getByKey(type.key());
                 if (current == null) return;
                 current.setByRarity(rarity, Math.max(0, current.getByRarity(rarity) + ctx.delta(+50, -50, +500, -500)));
-                Bukkit.getScheduler().runTaskAsynchronously(Core.getInstance().getPlugin(),
-                        () -> ModuleManager.getModule(CosmeticsModule.class).savePrices());
-                openRarityEditor(ctx.player, type);
+                ModuleManager.getModule(CosmeticsModule.class).savePrices();
             }));
         }
 

@@ -16,5 +16,8 @@ public interface ResourceStorage {
         return CompletableFuture.completedFuture(null);
     }
     void shutdown();
+    default void shutdownSilently() {
+        shutdown();
+    }
 
 }

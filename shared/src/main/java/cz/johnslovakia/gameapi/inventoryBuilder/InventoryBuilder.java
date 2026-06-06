@@ -159,7 +159,10 @@ public class InventoryBuilder implements Listener, Initialize, Terminate {
         if (e.getPlayer() instanceof Player player) {
             if (!players.contains(player)) return;
 
-            give(PlayerIdentityRegistry.get(player));
+            PlayerIdentity playerIdentity = PlayerIdentityRegistry.get(player);
+            if (shouldRefreshBlinkingItems(playerIdentity)) {
+                give(playerIdentity);
+            }
         }
     }
 
@@ -208,6 +211,33 @@ public class InventoryBuilder implements Listener, Initialize, Terminate {
         }
         //inventory.setHeldItemSlot(holdItemSlot);
         playerInventories.put(playerIdentity, this);
+    }
+
+    private boolean shouldRefreshBlinkingItems(PlayerIdentity playerIdentity) {
+        PlayerInventory inventory = playerIdentity.getOnlinePlayer().getInventory();
+
+        for (Item item : items) {
+            if (item.getBlinking() == null) continue;
+
+            ItemStack currentItem = inventory.getItem(item.getSlot());
+            Integer currentCustomModelData = getCustomModelData(currentItem);
+            Integer expectedCustomModelData = item.getBlinking().test(playerIdentity)
+                    ? Integer.valueOf(item.getBlinkingItemCustomModelData())
+                    : getCustomModelData(item.getItem());
+
+            if (!Objects.equals(currentCustomModelData, expectedCustomModelData)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private Integer getCustomModelData(ItemStack itemStack) {
+        if (itemStack == null || !itemStack.hasItemMeta()) return null;
+
+        ItemMeta meta = itemStack.getItemMeta();
+        return meta.hasCustomModelData() ? meta.getCustomModelData() : null;
     }
 
     public void unloadInventory(PlayerIdentity playerIdentity) {
