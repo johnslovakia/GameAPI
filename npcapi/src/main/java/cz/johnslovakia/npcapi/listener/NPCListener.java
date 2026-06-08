@@ -38,6 +38,7 @@ public class NPCListener implements Listener {
     private final NPCManagerImpl manager;
     private final Plugin plugin;
     private final Set<UUID> injected = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Long> lastRefreshRequest = new ConcurrentHashMap<>();
 
     public NPCListener(@NotNull NPCManagerImpl manager, @NotNull Plugin plugin) {
         this.manager = manager;
@@ -47,12 +48,45 @@ public class NPCListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onJoin(PlayerJoinEvent event) {
         inject(event.getPlayer());
+        scheduleRefresh(event.getPlayer(), 20L, false);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(PlayerQuitEvent event) {
+        lastRefreshRequest.remove(event.getPlayer().getUniqueId());
         uninject(event.getPlayer());
         manager.handlePlayerQuit(event.getPlayer());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent event) {
+        scheduleRefresh(event.getPlayer(), 5L, false);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onChangedWorld(PlayerChangedWorldEvent event) {
+        scheduleRefresh(event.getPlayer(), 5L, false);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onRespawn(PlayerRespawnEvent event) {
+        scheduleRefresh(event.getPlayer(), 5L, false);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onMove(PlayerMoveEvent event) {
+        if (event.getTo() == null) return;
+
+        int fromChunkX = event.getFrom().getBlockX() >> 4;
+        int fromChunkZ = event.getFrom().getBlockZ() >> 4;
+        int toChunkX = event.getTo().getBlockX() >> 4;
+        int toChunkZ = event.getTo().getBlockZ() >> 4;
+
+        if (!event.getFrom().getWorld().equals(event.getTo().getWorld())
+                || fromChunkX != toChunkX
+                || fromChunkZ != toChunkZ) {
+            scheduleRefresh(event.getPlayer(), 2L, true);
+        }
     }
 
     public void injectAll() {
@@ -67,28 +101,61 @@ public class NPCListener implements Listener {
         if (!injected.add(player.getUniqueId())) return;
 
         Channel channel = ((CraftPlayer) player).getHandle().connection.connection.channel;
-        channel.pipeline().addBefore("packet_handler", HANDLER_NAME,
-                new ChannelInboundHandlerAdapter() {
-                    @Override
-                    public void channelRead(@NotNull ChannelHandlerContext ctx,
-                                            @NotNull Object msg) throws Exception {
-                        if (msg instanceof ServerboundInteractPacket packet
-                                && handleInteract(player, packet)) {
-                            return;
+        Runnable addHandler = () -> {
+            if (channel.pipeline().get(HANDLER_NAME) != null) {
+                channel.pipeline().remove(HANDLER_NAME);
+            }
+            channel.pipeline().addBefore("packet_handler", HANDLER_NAME,
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelRead(@NotNull ChannelHandlerContext ctx,
+                                                @NotNull Object msg) throws Exception {
+                            if (msg instanceof ServerboundInteractPacket packet
+                                    && handleInteract(player, packet)) {
+                                return;
+                            }
+                            super.channelRead(ctx, msg);
                         }
-                        super.channelRead(ctx, msg);
-                    }
-                });
+                    });
+        };
+        if (channel.eventLoop().inEventLoop()) {
+            addHandler.run();
+        } else {
+            channel.eventLoop().execute(addHandler);
+        }
     }
 
     private void uninject(@NotNull Player player) {
         if (!injected.remove(player.getUniqueId())) return;
         try {
             Channel ch = ((CraftPlayer) player).getHandle().connection.connection.channel;
-            if (ch.pipeline().get(HANDLER_NAME) != null) {
-                ch.pipeline().remove(HANDLER_NAME);
+            Runnable removeHandler = () -> {
+                if (ch.pipeline().get(HANDLER_NAME) != null) {
+                    ch.pipeline().remove(HANDLER_NAME);
+                }
+            };
+            if (ch.eventLoop().inEventLoop()) {
+                removeHandler.run();
+            } else {
+                ch.eventLoop().execute(removeHandler);
             }
         } catch (Exception ignored) {}
+    }
+
+    private void scheduleRefresh(@NotNull Player player, long delay, boolean throttled) {
+        if (throttled) {
+            long now = System.currentTimeMillis();
+            Long previous = lastRefreshRequest.put(player.getUniqueId(), now);
+            if (previous != null && now - previous < 1000L) {
+                return;
+            }
+        }
+
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline()) {
+                manager.refreshNPCs(player);
+            }
+        }, delay);
     }
 
     /**

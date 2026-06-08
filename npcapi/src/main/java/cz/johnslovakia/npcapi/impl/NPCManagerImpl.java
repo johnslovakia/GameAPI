@@ -5,6 +5,7 @@ import cz.johnslovakia.npcapi.api.NPCBuilder;
 import cz.johnslovakia.npcapi.api.NPCManager;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -16,9 +17,12 @@ public class NPCManagerImpl implements NPCManager {
     private final Plugin plugin;
     private final Map<String, NPCImpl> npcById = new ConcurrentHashMap<>();
     private final Map<Integer, NPCImpl> npcByEntityId = new ConcurrentHashMap<>();
+    private final BukkitTask refreshTask;
 
     public NPCManagerImpl(@NotNull Plugin plugin) {
         this.plugin = plugin;
+        this.refreshTask = plugin.getServer().getScheduler()
+                .runTaskTimer(plugin, this::refreshOnlineViewers, 100L, 400L);
     }
 
     @Override
@@ -68,6 +72,11 @@ public class NPCManagerImpl implements NPCManager {
         npcByEntityId.put(npc.getEntityId(), npc);
     }
 
+    public void updateEntityId(@NotNull NPCImpl npc, int oldEntityId) {
+        npcByEntityId.remove(oldEntityId);
+        npcByEntityId.put(npc.getEntityId(), npc);
+    }
+
     public void unregister(@NotNull String id) {
         NPCImpl removed = npcById.remove(id);
         if (removed != null) {
@@ -79,6 +88,25 @@ public class NPCManagerImpl implements NPCManager {
     public void handlePlayerQuit(@NotNull Player player) {
         for (NPCImpl npc : npcById.values()) {
             npc.onViewerQuit(player);
+        }
+    }
+
+    public void refreshNPCs(@NotNull Player player) {
+        for (NPCImpl npc : npcById.values()) {
+            npc.refresh(player);
+        }
+    }
+
+    public void shutdown() {
+        refreshTask.cancel();
+        removeAll();
+    }
+
+    private void refreshOnlineViewers() {
+        for (NPCImpl npc : npcById.values()) {
+            for (Player viewer : npc.getViewers()) {
+                npc.refresh(viewer);
+            }
         }
     }
 

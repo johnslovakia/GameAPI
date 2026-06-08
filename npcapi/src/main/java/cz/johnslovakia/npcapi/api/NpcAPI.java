@@ -62,7 +62,7 @@ public final class NpcAPI {
     public static synchronized void shutdown() {
         if (manager == null) return;
 
-        manager.removeAll();
+        manager.shutdown();
         manager = null;
 
         if (listener != null) {

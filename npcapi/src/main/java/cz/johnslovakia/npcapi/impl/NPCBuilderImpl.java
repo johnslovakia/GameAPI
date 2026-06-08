@@ -3,8 +3,6 @@ package cz.johnslovakia.npcapi.impl;
 import cz.johnslovakia.npcapi.api.NPC;
 import cz.johnslovakia.npcapi.api.NPCBuilder;
 import cz.johnslovakia.npcapi.api.SkinData;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -21,7 +19,6 @@ public class NPCBuilderImpl implements NPCBuilder {
     private Location location;
     private String displayName;
     private SkinData skin = SkinData.STEVE;
-    private boolean nameVisible = true;
     private boolean listedInTab = false;
     private BiConsumer<Player, NPC.ClickType> clickHandler;
 

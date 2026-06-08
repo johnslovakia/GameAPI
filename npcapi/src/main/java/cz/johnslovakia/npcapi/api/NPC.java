@@ -79,6 +79,11 @@ public interface NPC {
     void show(@NotNull Player player);
 
     /**
+     * Re-sends this NPC to a player that should already see it.
+     */
+    void refresh(@NotNull Player player);
+
+    /**
      * Despawns the NPC for a specific player.
      */
     void hide(@NotNull Player player);

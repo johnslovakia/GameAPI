@@ -62,6 +62,13 @@ public class NPCHologram {
         player.showEntity(plugin, entity);
     }
 
+    /** Re-applies visibility for players whose client may have dropped the entity. */
+    public void refreshTo(@NotNull org.bukkit.entity.Player player) {
+        viewers.add(player.getUniqueId());
+        player.hideEntity(plugin, entity);
+        player.showEntity(plugin, entity);
+    }
+
     /** Hides the hologram from {@code player}. No-op if not visible. */
     public void hideFrom(@NotNull org.bukkit.entity.Player player) {
         if (!viewers.remove(player.getUniqueId())) return;

@@ -26,8 +26,8 @@ public class NPCImpl implements NPC {
 
     private final String id;
     private final UUID entityUUID;
-    private final int entityId;
     private final NPCManagerImpl manager;
+    private int entityId;
 
     private Location location;
     private String displayName;
@@ -39,6 +39,7 @@ public class NPCImpl implements NPC {
 
     private ServerPlayer fakePlayer;
     private NPCHologram hologram;
+    private final Map<UUID, BukkitTask> pendingTabRemovals = new ConcurrentHashMap<>();
 
     public NPCImpl(@NotNull String id,
                    @NotNull UUID entityUUID,
@@ -72,12 +73,30 @@ public class NPCImpl implements NPC {
 
     @Override
     public void teleport(@NotNull Location location) {
+        ServerPlayer oldFakePlayer = fakePlayer;
+        boolean changedWorld = !Objects.equals(this.location.getWorld(), location.getWorld());
         this.location = location.clone();
+
+        if (changedWorld) {
+            recreateFakePlayer();
+            respawnAll(oldFakePlayer);
+            if (hologram != null) {
+                hologram.moveTo(holoLocation(location));
+            }
+            return;
+        }
+
         fakePlayer.setPos(location.getX(), location.getY(), location.getZ());
         fakePlayer.setYRot(location.getYaw());
         fakePlayer.setXRot(location.getPitch());
+        fakePlayer.setYHeadRot(location.getYaw());
+
         for (Player viewer : getViewers()) {
-            PacketHelper.sendTeleportPacket(viewer, fakePlayer, location);
+            if (canRenderTo(viewer)) {
+                PacketHelper.sendTeleportPacket(viewer, fakePlayer, location);
+            } else {
+                sendDespawnPackets(viewer, fakePlayer);
+            }
         }
         if (hologram != null) {
             hologram.moveTo(holoLocation(location));
@@ -97,8 +116,9 @@ public class NPCImpl implements NPC {
     @Override
     public void setSkin(@NotNull SkinData skin) {
         this.skin = skin;
-        this.fakePlayer = PacketHelper.createFakePlayer(entityUUID, buildTabName(), skin, location);
-        respawnAll();
+        ServerPlayer oldFakePlayer = fakePlayer;
+        recreateFakePlayer();
+        respawnAll(oldFakePlayer);
     }
 
     @Override public boolean isListedInTab() { return listedInTab; }
@@ -107,38 +127,57 @@ public class NPCImpl implements NPC {
     public void setListedInTab(boolean listed) {
         this.listedInTab = listed;
         if (!listed) {
-            for (Player viewer : getViewers()) PacketHelper.sendTabRemovePacket(viewer, fakePlayer);
+            for (Player viewer : getViewers()) {
+                cancelTabRemoval(viewer);
+                PacketHelper.sendTabRemovePacket(viewer, fakePlayer);
+            }
         } else {
-            for (Player viewer : getViewers()) PacketHelper.sendTabAddPacket(viewer, fakePlayer);
+            for (Player viewer : getViewers()) {
+                cancelTabRemoval(viewer);
+                PacketHelper.sendTabAddPacket(viewer, fakePlayer);
+            }
         }
     }
 
     @Override
     public void show(@NotNull Player player) {
-        if (viewers.contains(player.getUniqueId())) return;
-        viewers.add(player.getUniqueId());
-
-        PacketHelper.sendSpawnPackets(player, fakePlayer);
-
-        if (!listedInTab) {
-            Bukkit.getScheduler().runTaskLater(manager.getPlugin(), () -> {
-                if (player.isOnline() && isVisible(player)) {
-                    PacketHelper.sendTabRemovePacket(player, fakePlayer);
-                }
-            }, 60L);
+        boolean added = viewers.add(player.getUniqueId());
+        if (!canRenderTo(player)) {
+            return;
         }
 
+        if (added) {
+            sendSpawnPackets(player);
+            if (hologram != null) hologram.showTo(player);
+            new NPCSpawnEvent(this, player).callEvent();
+        } else {
+            refresh(player);
+        }
+    }
+
+    @Override
+    public void refresh(@NotNull Player player) {
+        if (!viewers.contains(player.getUniqueId())) return;
+
+        if (!canRenderTo(player)) {
+            cancelTabRemoval(player);
+            sendDespawnPackets(player, fakePlayer);
+            if (hologram != null) hologram.hideFrom(player);
+            return;
+        }
+
+        sendDespawnPackets(player, fakePlayer);
+        sendSpawnPackets(player);
         if (hologram != null) {
-            hologram.showTo(player);
+            hologram.refreshTo(player);
         }
-
-        new NPCSpawnEvent(this, player).callEvent();
     }
 
     @Override
     public void hide(@NotNull Player player) {
         if (!viewers.remove(player.getUniqueId())) return;
-        PacketHelper.sendDespawnPackets(player, fakePlayer);
+        cancelTabRemoval(player);
+        sendDespawnPackets(player, fakePlayer);
         if (hologram != null) hologram.hideFrom(player);
         new NPCDespawnEvent(this, player, NPCDespawnEvent.DespawnReason.HIDDEN).callEvent();
     }
@@ -146,9 +185,12 @@ public class NPCImpl implements NPC {
     @Override
     public void remove() {
         for (Player viewer : getViewers()) {
-            PacketHelper.sendDespawnPackets(viewer, fakePlayer);
+            cancelTabRemoval(viewer);
+            sendDespawnPackets(viewer, fakePlayer);
             new NPCDespawnEvent(this, viewer, NPCDespawnEvent.DespawnReason.REMOVED).callEvent();
         }
+        pendingTabRemovals.values().forEach(BukkitTask::cancel);
+        pendingTabRemovals.clear();
         viewers.clear();
         if (hologram != null) {
             hologram.removeAll();
@@ -184,13 +226,17 @@ public class NPCImpl implements NPC {
 
     @Override
     public void swingArm(boolean offHand) {
-        for (Player viewer : getViewers()) PacketHelper.sendSwingArmPacket(viewer, fakePlayer, offHand);
+        for (Player viewer : getViewers()) {
+            if (canRenderTo(viewer)) PacketHelper.sendSwingArmPacket(viewer, fakePlayer, offHand);
+        }
     }
 
     @Override
     public void lookAt(@NotNull Location target) {
         float[] angles = PacketHelper.getAngles(location, target);
-        for (Player viewer : getViewers()) PacketHelper.sendLookPacket(viewer, fakePlayer, angles[0], angles[1]);
+        for (Player viewer : getViewers()) {
+            if (canRenderTo(viewer)) PacketHelper.sendLookPacket(viewer, fakePlayer, angles[0], angles[1]);
+        }
     }
 
     @Override
@@ -200,20 +246,24 @@ public class NPCImpl implements NPC {
 
     public void onViewerQuit(@NotNull Player player) {
         if (viewers.remove(player.getUniqueId())) {
+            cancelTabRemoval(player);
             if (hologram != null) hologram.hideFrom(player);
             new NPCDespawnEvent(this, player, NPCDespawnEvent.DespawnReason.PLAYER_QUIT).callEvent();
         }
     }
 
-    private void respawnAll() {
+    private void respawnAll(@NotNull ServerPlayer oldFakePlayer) {
         Set<Player> current = new HashSet<>(getViewers());
-        for (Player viewer : current) PacketHelper.sendDespawnPackets(viewer, fakePlayer);
         for (Player viewer : current) {
-            PacketHelper.sendSpawnPackets(viewer, fakePlayer);
-            if (!listedInTab) {
-                Bukkit.getScheduler().runTaskLater(manager.getPlugin(), () -> {
-                    if (viewer.isOnline()) PacketHelper.sendTabRemovePacket(viewer, fakePlayer);
-                }, 60L);
+            cancelTabRemoval(viewer);
+            sendDespawnPackets(viewer, oldFakePlayer);
+        }
+        for (Player viewer : current) {
+            if (canRenderTo(viewer)) {
+                sendSpawnPackets(viewer);
+                if (hologram != null) hologram.refreshTo(viewer);
+            } else if (hologram != null) {
+                hologram.hideFrom(viewer);
             }
         }
     }
@@ -232,6 +282,46 @@ public class NPCImpl implements NPC {
 
     private Location holoLocation(Location base) {
         return base.clone().add(0, 2.1, 0);
+    }
+
+    private boolean canRenderTo(@NotNull Player player) {
+        return player.isOnline()
+                && player.getWorld().equals(location.getWorld());
+    }
+
+    private void recreateFakePlayer() {
+        int oldEntityId = entityId;
+        this.fakePlayer = PacketHelper.createFakePlayer(entityUUID, buildTabName(), skin, location);
+        this.entityId = fakePlayer.getId();
+        manager.updateEntityId(this, oldEntityId);
+    }
+
+    private void sendSpawnPackets(@NotNull Player player) {
+        PacketHelper.sendSpawnPackets(player, fakePlayer);
+        if (!listedInTab) {
+            scheduleTabRemoval(player);
+        }
+    }
+
+    private void sendDespawnPackets(@NotNull Player player, @NotNull ServerPlayer target) {
+        PacketHelper.sendDespawnPackets(player, target);
+    }
+
+    private void scheduleTabRemoval(@NotNull Player player) {
+        cancelTabRemoval(player);
+        UUID viewerId = player.getUniqueId();
+        BukkitTask task = Bukkit.getScheduler().runTaskLater(manager.getPlugin(), () -> {
+            pendingTabRemovals.remove(viewerId);
+            if (player.isOnline() && isVisible(player) && canRenderTo(player) && !listedInTab) {
+                PacketHelper.sendTabRemovePacket(player, fakePlayer);
+            }
+        }, 60L);
+        pendingTabRemovals.put(viewerId, task);
+    }
+
+    private void cancelTabRemoval(@NotNull Player player) {
+        BukkitTask task = pendingTabRemovals.remove(player.getUniqueId());
+        if (task != null) task.cancel();
     }
 
     public static String colorizer(String message) {
