@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.7",
-  "update_message": "26.1 Support, Settings Improvements & Bug Fixes",
+  "latest_version": "2.8",
+  "update_message": "Quest System Overhaul & Quality of Life Improvements",
   "update_messages": {
     "2.2": "LevelSystem, Changes and Bug Fixes",
     "2.2.1": "Bug Fixes",
@@ -11,6 +11,7 @@
     "2.5.1": "Bug Fixes",
     "2.5.2": "Server Health Monitoring & Fixes",
     "2.6": "Periodic Stats, Improvements & Fixes",
-    "2.7": "26.1 Support, Settings Improvements & Bug Fixes"
+    "2.7": "26.1 Support, Settings Improvements & Bug Fixes",
+    "2.8": "Quest System Overhaul & Quality of Life Improvements"
   }
 }
