@@ -1,11 +1,12 @@
 {
-  "latest_version": "1.3",
-  "update_message": "Major Update: Settings, QoL & Bug Fixes",
+  "latest_version": "1.4",
+  "update_message": "Quest System Overhaul & Quality of Life Improvements",
   "update_messages": {
     "1.1": "LevelSystem, Changes and Bug Fixes",
     "1.1.1": "Bug Fixes",
     "1.2": "Lobby System, Leaderboard Hologram, and more...",
     "1.2.1": "Bug Fixes",
-    "1.3": "Major Update: Settings, QoL & Bug Fixes"
+    "1.3": "Major Update: Settings, QoL & Bug Fixes",
+    "1.4": "Quest System Overhaul & Quality of Life Improvements"
   }
 }
