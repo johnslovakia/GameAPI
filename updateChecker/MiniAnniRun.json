@@ -13,6 +13,9 @@
     "2.2.3": "Big Fixes and Improvements",
     "2.3": "Periodic Stats, Improvements & Fixes",
     "2.4": "Quest System Overhaul & Quality of Life Improvements",
-    "2.4.1": "26.2 support"
+    "2.4.1": {
+      "message": "26.2 support",
+      "suppress_message": true
+    }
   }
 }
