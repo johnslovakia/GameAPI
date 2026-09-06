@@ -13,6 +13,9 @@
     "2.3.3": "Bug Fixes and Improvements",
     "2.4": "Enhanced World Generation, Bug Fixes & More",
     "2.5": "Quest System Overhaul & Quality of Life Improvements",
-    "2.5.1": "26.2 support"
+    "2.5.1": {
+      "message": "26.2 support",
+      "suppress_message": true
+    }
   }
 }
