@@ -8,6 +8,9 @@
     "1.2.1": "Bug Fixes",
     "1.3": "Major Update: Settings, QoL & Bug Fixes",
     "1.4": "Quest System Overhaul & Quality of Life Improvements",
-    "1.4.1": "26.2 support"
+    "1.4.1": {
+      "message": "26.2 support",
+      "suppress_message": true
+    }
   }
 }
