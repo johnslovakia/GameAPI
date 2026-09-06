@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.3",
-  "update_message": "Quest System Overhaul & Quality of Life Improvements",
+  "latest_version": "2.3.1",
+  "update_message": "26.2 support",
   "update_messages": {
     "2.0": "MAJOR UPDATE: custom resourcepack, 1.21 support and more!",
     "2.1": "Lobby System, Leaderboard Hologram, and more...",
@@ -8,6 +8,7 @@
     "2.2": "New Settings, Improvements, Bug Fixes, and more...",
     "2.2.1": "Improvements & Bug Fixes",
     "2.2.2": "Improvements & Bug Fixes",
-    "2.3": "Quest System Overhaul & Quality of Life Improvements"
+    "2.3": "Quest System Overhaul & Quality of Life Improvements",
+    "2.3.1": "26.2 support"
   }
 }
