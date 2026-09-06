@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.5",
-  "update_message": "Quest System Overhaul & Quality of Life Improvements",
+  "latest_version": "2.5.1",
+  "update_message": "26.2 support",
   "update_messages": {
     "2.1": "LevelSystem, Changes and Bug Fixes",
     "2.1.1": "Bug Fixes",
@@ -12,6 +12,7 @@
     "2.3.2": "Bug Fixes",
     "2.3.3": "Bug Fixes and Improvements",
     "2.4": "Enhanced World Generation, Bug Fixes & More",
-    "2.5": "Quest System Overhaul & Quality of Life Improvements"
+    "2.5": "Quest System Overhaul & Quality of Life Improvements",
+    "2.5.1": "26.2 support"
   }
 }
