@@ -13,6 +13,9 @@
     "2.6": "Periodic Stats, Improvements & Fixes",
     "2.7": "26.1 Support, Settings Improvements & Bug Fixes",
     "2.8": "Quest System Overhaul & Quality of Life Improvements",
-    "2.8.1": "26.2 support"
+    "2.8.1": {
+      "message": "26.2 support",
+      "suppress_message": true
+    }
   }
 }
