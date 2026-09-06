@@ -9,6 +9,9 @@
     "2.2.1": "Improvements & Bug Fixes",
     "2.2.2": "Improvements & Bug Fixes",
     "2.3": "Quest System Overhaul & Quality of Life Improvements",
-    "2.3.1": "26.2 support"
+    "2.3.1": {
+      "message": "26.2 support",
+      "suppress_message": true
+    }
   }
 }
